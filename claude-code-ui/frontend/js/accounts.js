@@ -82,3 +82,24 @@ cancelBtn.onclick = () => {
   loginScreen.classList.add('hidden');
   loginBtn.disabled = false;
 };
+
+// Header Accounts icon (5th icon): opens the Accounts panel under the header.
+const accBtn = document.getElementById('accounts-btn');
+const accPanel = document.getElementById('accounts-panel');
+const closeAcc = () => { accPanel.classList.add('hidden'); accBtn.classList.remove('active'); };
+accBtn.onclick = (e) => {
+  e.stopPropagation();
+  const open = accPanel.classList.toggle('hidden');
+  accBtn.classList.toggle('active', !open);
+  if (!open) {
+    for (const id of ['settings', 'sessions']) {
+      document.getElementById(id + '-panel').classList.add('hidden');
+      document.getElementById(id + '-btn').classList.remove('active');
+    }
+  }
+};
+document.addEventListener('click', (e) => {
+  if (accPanel.classList.contains('hidden')) return;
+  if (accPanel.contains(e.target) || accBtn.contains(e.target)) return;
+  closeAcc();
+});

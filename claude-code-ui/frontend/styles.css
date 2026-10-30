@@ -1223,3 +1223,29 @@ pre:hover > .copy-btn, .copy-btn:focus { opacity: 1; }
 .header-right { flex: 0 0 auto; }
 .account-label { max-width: 70px; flex: 0 1 auto; color: var(--accent); font-weight: 600; }
 @media (max-width: 600px) { .brand-name { display: none; } }
+
+/* ── 1.17.0-my7: header look D (one joined bar of 5 icons, full-width panels under the header) ── */
+.icon-group { display: flex; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface-2); flex: 0 0 auto; }
+.icon-group .icon-btn { width: 42px; height: 40px; border-radius: 0; padding: 0; border-left: 1px solid var(--border); flex: none; }
+.icon-group .icon-btn:first-child { border-left: 0; }
+.icon-group .icon-btn:hover { background: var(--surface); }
+.icon-group .icon-btn.active { background: var(--accent); color: #111; }
+.header-right { gap: 6px; }
+.accounts-panel {
+  position: absolute; top: 52px; right: 16px; z-index: 60;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,.45); padding: 8px 12px 12px; width: 340px; max-width: calc(100vw - 24px);
+  max-height: calc(var(--app-height, 100dvh) - 68px); overflow-y: auto;
+}
+.accounts-panel.hidden { display: none; }
+.accounts-panel .sessions-head { padding-left: 0; }
+.accounts-panel .settings-btn, .acc-confirm-row .settings-btn { min-height: 44px; }
+@media (max-width: 600px) {
+  .header { padding: 8px 8px; }
+  .perm-mode-select { max-width: 74px; }
+  .settings-panel, .sessions-panel, .accounts-panel {
+    left: 0; right: 0; top: 56px; width: auto; max-width: none;
+    border-radius: 0 0 14px 14px; border-top: 0;
+  }
+  .settings-panel, .sessions-panel, .accounts-panel { max-height: calc(var(--app-height, 100dvh) - 64px); overflow-y: auto; }
+}

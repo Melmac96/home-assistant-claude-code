@@ -32,6 +32,7 @@
           <option value="acceptEdits">Accept edits</option>
           <option value="bypass">Bypass</option>
         </select>
+        <div class="icon-group">
         <button id="find-btn" class="icon-btn" title="Find in chat (Ctrl+F)" aria-label="Find in chat">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="7"/>
@@ -57,6 +58,13 @@
             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>
           </svg>
         </button>
+        <button id="accounts-btn" class="icon-btn" title="Accounts" aria-label="Accounts">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 21a8 8 0 0 1 16 0"/>
+          </svg>
+        </button>
+        </div>
       </div>
     </header>
     <div id="usage-bars" class="usage-bars hidden" role="button" tabindex="0" aria-label="Usage detail, tap to open">
@@ -121,15 +129,18 @@
       <div class="settings-row">
         <button type="button" id="notify-test" class="settings-btn">Send test</button>
       </div>
-      <div class="settings-row accounts-head"><label>Accounts</label></div>
+      <p class="settings-hint" id="notify-hint">
+        Sent through Home Assistant (e.g. the companion app) while no tab is open and visible.
+      </p>
+    </div>
+
+    <div id="accounts-panel" class="accounts-panel hidden">
+      <div class="sessions-head">Accounts</div>
       <div id="accounts-list" class="accounts-list"></div>
       <div id="account-confirm" class="account-confirm hidden"></div>
       <div class="settings-row">
         <button type="button" id="account-add" class="settings-btn">Sign in to another account</button>
       </div>
-      <p class="settings-hint" id="notify-hint">
-        Sent through Home Assistant (e.g. the companion app) while no tab is open and visible.
-      </p>
     </div>
 
     <div id="login-screen" class="login-screen hidden">
