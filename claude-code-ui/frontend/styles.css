@@ -1249,3 +1249,10 @@ pre:hover > .copy-btn, .copy-btn:focus { opacity: 1; }
   }
   .settings-panel, .sessions-panel, .accounts-panel { max-height: calc(var(--app-height, 100dvh) - 64px); overflow-y: auto; }
 }
+
+/* ── 1.17.0-my9: header icons filled in Home Assistant blue, outline when selected ── */
+.icon-group .icon-btn { color: #2196f3; }
+.icon-group .icon-btn .ic-o { display: none; }
+.icon-group .icon-btn.active .ic-f { display: none; }
+.icon-group .icon-btn.active .ic-o { display: inline; }
+.icon-group .icon-btn.active { background: rgba(33,150,243,.18); color: #2196f3; }
