@@ -3,6 +3,7 @@
  * every message the server sends.
  */
 import { S } from './state.js';
+import { updateUsage } from './usage.js';
 import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } from './banners.js';
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
@@ -331,8 +332,8 @@ export function handleServerMessage(msg) {
       break;
 
     case 'rate_limit':
-      // Live utilization telemetry; the banner is driven by the pending/cancel
-      // messages, so nothing to render here for now.
+      // Live usage telemetry: drives the two bars under the header.
+      updateUsage(msg);
       break;
   }
 }

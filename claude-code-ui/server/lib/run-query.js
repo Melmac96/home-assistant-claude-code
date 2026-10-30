@@ -381,8 +381,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
         log('INFO', `usage update: ${JSON.stringify(info)}`);
         vlog(`rate_limit: status=${info.status} type=${info.rateLimitType} ` +
           `resetsAt=${info.resetsAt || 'n/a'} util=${info.utilization ?? 'n/a'}`);
-        broadcast({ type: 'rate_limit', status: info.status, rateLimitType: info.rateLimitType,
-          resetsAt: info.resetsAt, utilization: info.utilization });
+        runtime.lastUsage = { status: info.status, rateLimitType: info.rateLimitType,
+          resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
+        broadcast({ type: 'rate_limit', ...runtime.lastUsage });
         if (info.status === 'rejected' && info.rateLimitType === 'five_hour' && info.resetsAt) {
           limitHit = { resetsAt: info.resetsAt, rateLimitType: info.rateLimitType };
           log('WARN', `usage limit reached (five_hour); resets at ${new Date(info.resetsAt * 1000).toISOString()}`);

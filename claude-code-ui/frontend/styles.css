@@ -1194,3 +1194,12 @@ pre:hover > .copy-btn, .copy-btn:focus { opacity: 1; }
   border-radius: var(--radius-sm);
 }
 .settings-btn:hover { border-color: #555; }
+
+/* ── My Claude Code UI: usage bars (look 2) ── */
+.usage-bars { cursor: pointer; padding: 5px 0; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.usage-bars.hidden, .usage-panel.hidden { display: none; }
+.ub { height: 5px; background: #111; margin: 2px 0; }
+.ub i { display: block; height: 100%; width: 0; transition: width .4s; }
+.usage-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; flex-shrink: 0; cursor: pointer; }
+.up-row { margin: 6px 0; font-size: 14px; }
+.up-sub { color: var(--text-muted); font-size: 12px; margin-top: 2px; }

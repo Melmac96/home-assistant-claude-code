@@ -5,6 +5,7 @@
  * The inbound half is a dispatch table rather than a chain of `else if`s, so the
  * set of messages the client may send is a list you can read.
  */
+import { readFileSync } from 'fs';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
 import { log } from './log.js';
 import { runtime } from './state.js';
@@ -53,6 +54,19 @@ function greet(ws) {
   if (runtime.backgroundTasks.size) {
     send(ws, { type: 'background_tasks', tasks: [...runtime.backgroundTasks.values()] });
   }
+
+  // My Claude Code UI: show the usage bars straight away on connect, from the
+  // last update this run saw, or failing that the last one saved to disk.
+  let lastUsage = runtime.lastUsage;
+  if (!lastUsage) {
+    try {
+      const lines = readFileSync('/data/usage-events.jsonl', 'utf8').trim().split('\n');
+      const i = JSON.parse(lines[lines.length - 1]).event.rate_limit_info;
+      lastUsage = { status: i.status, rateLimitType: i.rateLimitType, resetsAt: i.resetsAt,
+        utilization: i.utilization, unifiedWindows: i.unifiedWindows };
+    } catch { /* nothing recorded yet */ }
+  }
+  if (lastUsage) send(ws, { type: 'rate_limit', ...lastUsage });
 
   // Replay a scheduled resume so a reconnecting tab shows the countdown, or —
   // when nothing is scheduled — the standing offer to turn one on.
