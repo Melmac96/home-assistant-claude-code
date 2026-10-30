@@ -6,7 +6,8 @@
  * forces a guess; the strip above the composer is the way back to either.
  */
 import { S } from './state.js';
-import { dialogBack, dialogBody, dialogLater, dialogOverlay, dialogProgress, dialogSkip, dialogSubmit, dialogTitle, permAllow, permAlways, permAlwaysHint, permDeny, permInputEl, permLater, permOverlay, permTitle, permToolChip, questionStrip, questionStripOpen, questionStripText } from './dom.js';
+import { scrollBottom } from './scroll.js';
+import { dialogBack, dialogBody, dialogLater, dialogOverlay, dialogProgress, dialogSkip, dialogSubmit, dialogTitle, permAllow, permAlways, permAlwaysHint, permDeny, permInputEl, permLater, permOverlay, messagesEl, permTitle, permToolChip, questionStrip, questionStripOpen, questionStripText } from './dom.js';
 
 // ── Things waiting on you ────────────────────────────────────────────────────
 // Both the permission card and Claude's questions can be *set aside* rather than
@@ -153,8 +154,14 @@ export function openDialog(id) {
   if (!entry) return;
   dismissedDialogs.delete(id);
   if (!dialogBuild || dialogBuild.id !== id) buildDialog(id, entry.questions);
+  // My Claude Code UI: the question sits in the chat itself, as the last thing
+  // in the conversation, instead of a pop-up over it. appendChild moves the
+  // card to the end each time, so it is never stranded above newer messages.
+  dialogOverlay.classList.add('inline');
+  messagesEl.appendChild(dialogOverlay);
   dialogOverlay.classList.remove('hidden');
   refreshQuestionStrip();
+  scrollBottom(true);
 }
 
 export function buildDialog(id, questions) {
@@ -182,13 +189,20 @@ export function buildDialog(id, questions) {
     const group = `q${qi}-${Math.random().toString(36).slice(2)}`;
     const optionInputs = [];
 
-    const mkOption = (labelText, description) => {
+    let optionCount = 0;
+    const mkOption = (labelText, description, isOther) => {
       const label = document.createElement('label');
       label.className = 'dialog-option';
       const input = document.createElement('input');
       input.type = q.multiSelect ? 'checkbox' : 'radio';
       input.name = group;
       label.appendChild(input);
+      if (!isOther) {
+        const letter = document.createElement('span');
+        letter.className = 'dialog-letter';
+        letter.textContent = String.fromCharCode(65 + optionCount++);
+        label.appendChild(letter);
+      }
       const textWrap = document.createElement('span');
       textWrap.className = 'dialog-option-text';
       const lab = document.createElement('span');
@@ -203,6 +217,8 @@ export function buildDialog(id, questions) {
       }
       label.appendChild(textWrap);
       input.addEventListener('change', () => {
+        // Picking one of the lettered answers replaces anything typed in the box.
+        if (!isOther && !q.multiSelect && typeof otherText !== 'undefined') otherText.value = '';
         page.querySelectorAll('.dialog-option').forEach((o) => {
           o.classList.toggle('selected', o.querySelector('input').checked);
         });
@@ -220,11 +236,11 @@ export function buildDialog(id, questions) {
     // Always offered. Claude is told not to include an "Other" of its own, so
     // this is the only one — and typing in it implies picking it, without also
     // having to hit the radio button.
-    const other = mkOption('Other', null);
+    const other = mkOption('Other', null, true);
     const otherText = document.createElement('input');
     otherText.type = 'text';
     otherText.className = 'dialog-other-text';
-    otherText.placeholder = 'Type your own answer…';
+    otherText.placeholder = 'Or type your own answer…';
     otherText.addEventListener('input', () => {
       other.input.checked = true;
       other.input.dispatchEvent(new Event('change'));
@@ -249,7 +265,7 @@ export function renderDialogPage() {
   dialogProgress.textContent = `${index + 1}/${pages.length}`;
   dialogProgress.classList.toggle('hidden', pages.length <= 1);
   dialogBack.classList.toggle('hidden', index === 0);
-  dialogSubmit.textContent = index < pages.length - 1 ? 'Next' : 'Submit';
+  dialogSubmit.textContent = index < pages.length - 1 ? 'Next' : 'Send answer';
   updateDialogSubmit();
   dialogBody.scrollTop = 0;
 }
