@@ -13,13 +13,17 @@ const addBtn = document.getElementById('account-add');
 const label = document.getElementById('account-label');
 const cancelBtn = document.getElementById('login-cancel');
 
+// Header shows a short name; the full email is in Settings > Accounts.
+const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd' };
+const shortName = (email) => SHORT[email.toLowerCase()] || email.split('@')[0];
+
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
 export function showAccounts(msg) {
   const cur = msg.current;
   cancelBtn.classList.add('hidden');
-  label.textContent = cur ? cur.email : '';
+  label.textContent = cur ? shortName(cur.email) : '';
   label.classList.toggle('hidden', !cur);
   list.innerHTML = '';
   for (const a of (msg.saved || [])) {

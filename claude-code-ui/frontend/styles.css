@@ -1217,3 +1217,9 @@ pre:hover > .copy-btn, .copy-btn:focus { opacity: 1; }
 .acc-confirm-row { display: flex; gap: 8px; margin-top: 10px; }
 .acc-confirm-row .settings-btn { flex: 1; }
 .acc-yes { background: var(--accent); color: #111; font-weight: 700; }
+
+/* Hotfix 1.17.0-my6: a long header label pushed the 4 icons off a phone screen. */
+.header-left { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.header-right { flex: 0 0 auto; }
+.account-label { max-width: 70px; flex: 0 1 auto; color: var(--accent); font-weight: 600; }
+@media (max-width: 600px) { .brand-name { display: none; } }
