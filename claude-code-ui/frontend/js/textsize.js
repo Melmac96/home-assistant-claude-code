@@ -24,5 +24,23 @@
     document.getElementById('ts-up').addEventListener('click', function () { set(ts + 10); });
     s.addEventListener('change', function () { font = s.value; put(K2, font); apply(ts, font); show(); });
     show();
+    window.ccuiShowTs = show;
   });
+  // my11: two-finger pinch changes the text size (same setting as the slider), remembered per device
+  var pd = 0, p0 = 100, raf = 0;
+  function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) { pd = dist(e.touches); p0 = ts; } else pd = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 2 || !pd) return;
+    e.preventDefault();
+    var n = Math.max(80, Math.min(250, Math.round(p0 * dist(e.touches) / pd / 5) * 5));
+    if (n === ts || raf) return;
+    raf = requestAnimationFrame(function () { raf = 0; ts = n; apply(ts, font); });
+  }, { passive: false });
+  document.addEventListener('touchend', function () {
+    if (!pd) return;
+    pd = 0; put(K1, ts); if (window.ccuiShowTs) window.ccuiShowTs();
+  }, { passive: true });
 })();
