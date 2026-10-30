@@ -21,6 +21,7 @@
           </svg>
         </span>
         <span class="brand-name" style="font-size:12px;opacity:.75;margin-left:6px">My Claude Code UI</span>
+        <span id="account-label" class="account-label hidden"></span>
         <span id="status-dot" class="status-dot"></span>
       </div>
       <div class="header-right">
@@ -120,6 +121,12 @@
       <div class="settings-row">
         <button type="button" id="notify-test" class="settings-btn">Send test</button>
       </div>
+      <div class="settings-row accounts-head"><label>Accounts</label></div>
+      <div id="accounts-list" class="accounts-list"></div>
+      <div id="account-confirm" class="account-confirm hidden"></div>
+      <div class="settings-row">
+        <button type="button" id="account-add" class="settings-btn">Sign in to another account</button>
+      </div>
       <p class="settings-hint" id="notify-hint">
         Sent through Home Assistant (e.g. the companion app) while no tab is open and visible.
       </p>
@@ -144,6 +151,7 @@
           </div>
         </form>
         <p id="login-waiting" class="login-waiting hidden">Waiting for authentication&#8230;</p>
+        <button id="login-cancel" type="button" class="btn btn-deny hidden">Cancel (keep my current account)</button>
       </div>
     </div>
 

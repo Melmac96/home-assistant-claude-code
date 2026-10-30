@@ -4,6 +4,7 @@
  */
 import { S } from './state.js';
 import { updateUsage } from './usage.js';
+import { showAccounts, showAccountResult } from './accounts.js';
 import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } from './banners.js';
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
@@ -329,6 +330,14 @@ export function handleServerMessage(msg) {
       appendErrorBubble('Auto-continue stopped — still rate-limited after several attempts. Try again later.');
       S.isRunning = false;
       updateSendBtn();
+      break;
+
+    case 'accounts':
+      showAccounts(msg);
+      break;
+
+    case 'account_result':
+      showAccountResult(msg);
       break;
 
     case 'rate_limit':

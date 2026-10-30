@@ -11,13 +11,14 @@ import { log } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import {
-  isAuthenticated, isSubscriptionAuth, startLoginFlow, loginUrl, loginProcess,
+  isAuthenticated, isSubscriptionAuth, startLoginFlow, loginUrl, loginProcess, stopLoginProc,
 } from './auth.js';
 import { listSessions, parseSession, deleteSession, saveActive } from './sessions.js';
 import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
 import { runQuery, abortActive } from './run-query.js';
+import { saveCurrent, listAccounts, switchTo } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 
@@ -54,6 +55,11 @@ function greet(ws) {
   if (runtime.backgroundTasks.size) {
     send(ws, { type: 'background_tasks', tasks: [...runtime.backgroundTasks.values()] });
   }
+
+  // My Claude Code UI: keep the live sign-in saved (this is how the first
+  // account is registered) and tell the tab who is signed in.
+  try { saveCurrent(); } catch { /* never block a connection on this */ }
+  send(ws, { type: 'accounts', ...listAccounts() });
 
   // My Claude Code UI: show the usage bars straight away on connect, from the
   // last update this run saw, or failing that the last one saved to disk.
@@ -108,7 +114,26 @@ const handlers = {
   },
 
   auth_login() {
-    startLoginFlow(broadcast, () => { runtime.credentialsExpired = false; });
+    startLoginFlow(broadcast, () => {
+      runtime.credentialsExpired = false;
+      saveCurrent();   // a newly signed-in account is saved straight away
+      broadcast({ type: 'accounts', ...listAccounts() });
+    });
+  },
+
+  // Abandon an 'add another account' sign-in; the current sign-in was never touched.
+  auth_cancel() {
+    stopLoginProc();
+  },
+
+  account_switch(ws, msg) {
+    if (runtime.activeQuery) {
+      send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
+      return;
+    }
+    const r = switchTo(msg.id);
+    send(ws, { type: 'account_result', ...r });
+    broadcast({ type: 'accounts', ...listAccounts() });
   },
 
   auth_code(_ws, msg) {
