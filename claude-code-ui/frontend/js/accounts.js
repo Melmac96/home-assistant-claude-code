@@ -103,3 +103,21 @@ document.addEventListener('click', (e) => {
   if (accPanel.contains(e.target) || accBtn.contains(e.target)) return;
   closeAcc();
 });
+
+// my8: only ONE of the five header icons is lit / open at a time. Before an icon's own
+// handler runs (capture phase), close whatever the OTHER icons opened.
+const PANELS = { 'settings-btn': 'settings-panel', 'sessions-btn': 'sessions-panel', 'accounts-btn': 'accounts-panel' };
+function closeOthers(keepBtnId) {
+  for (const [bid, pid] of Object.entries(PANELS)) {
+    if (bid === keepBtnId) continue;
+    document.getElementById(pid).classList.add('hidden');
+    document.getElementById(bid).classList.remove('active');
+  }
+  if (keepBtnId !== 'find-btn') {
+    const fb = document.getElementById('find-bar');
+    if (fb && !fb.classList.contains('hidden')) document.getElementById('find-close').click();
+  }
+}
+for (const id of ['find-btn', 'sessions-btn', 'settings-btn', 'accounts-btn', 'new-session-btn']) {
+  document.getElementById(id).addEventListener('click', () => closeOthers(id), true);
+}
