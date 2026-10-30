@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>My Claude Code UI</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="js/textsize.js"></script>
 </head>
 <body>
   <div id="app">
@@ -71,6 +72,22 @@
     </div>
 
     <div id="settings-panel" class="settings-panel hidden">
+      <div class="text-box">
+        <div class="settings-row"><label for="font-select">Text style</label>
+          <select id="font-select" class="settings-select">
+            <option value="">Normal (default)</option>
+            <option value="'CC Atkinson'">Atkinson (easy to read)</option>
+            <option value="'CC Lexend'">Lexend (easy to read)</option>
+            <option value="'CC Comfortaa'">Comfortaa (your glow headings)</option>
+            <option value="'CC Nunito'">Nunito (your top bar)</option>
+          </select></div>
+        <div class="settings-row"><label for="ts-range">Text size</label></div>
+        <div class="ts-controls"><button type="button" class="ts-btn" id="ts-down" aria-label="Smaller">A-</button>
+          <input type="range" id="ts-range" min="80" max="250" step="5" value="100">
+          <button type="button" class="ts-btn" id="ts-up" aria-label="Bigger">A+</button>
+          <span class="ts-val" id="ts-val">100%</span></div>
+        <p class="ts-preview" id="ts-preview">This is how your text will look. Change the size and style above.</p>
+      </div>
       <div class="settings-row">
         <label for="model-select">Model</label>
         <select id="model-select" class="settings-select">
