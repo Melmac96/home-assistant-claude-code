@@ -18,6 +18,7 @@
  * spawned has actually finished defers that close until it is genuinely safe.
  */
 import { query } from '@anthropic-ai/claude-agent-sdk';
+import { appendFileSync, statSync, writeFileSync } from 'fs';
 import {
   WORK_DIR, PLUGINS, EFFORT_LEVELS, DEFAULT_PERMISSION_MODE, STALL_WARN_MS, STALL_CHECK_MS,
 } from './config.js';
@@ -370,6 +371,14 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
         // Subscription usage-limit telemetry. A 'rejected' five_hour is the
         // auto-continue trigger; warnings are surfaced but ignored.
         const info = event.rate_limit_info || {};
+        // My Claude Code UI: keep every raw usage update (timestamped) so we can see
+        // exactly what the engine reports before designing a usage screen.
+        try {
+          const f = '/data/usage-events.jsonl';
+          try { if (statSync(f).size > 200000) writeFileSync(f, ''); } catch {}
+          appendFileSync(f, JSON.stringify({ at: new Date().toISOString(), event }) + '\n');
+        } catch {}
+        log('INFO', `usage update: ${JSON.stringify(info)}`);
         vlog(`rate_limit: status=${info.status} type=${info.rateLimitType} ` +
           `resetsAt=${info.resetsAt || 'n/a'} util=${info.utilization ?? 'n/a'}`);
         broadcast({ type: 'rate_limit', status: info.status, rateLimitType: info.rateLimitType,
