@@ -20,14 +20,45 @@ import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendE
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
-export function connect() {
-  S.ws = new WebSocket(wsUrl);
+// my12 (2026-11-01): one reconnect timer, fast first retry, and a check when the page comes back to the front.
+// A phone that slept leaves a dead socket that can still look open, so after 5 s away the socket is replaced at once.
+let reconnectTimer = null;
+let reconnectTries = 0;
+let hiddenAt = 0;
 
-  S.ws.onopen    = () => { S.isConnected = true;  setStatus('connected'); announcePresence(); };
-  S.ws.onclose   = () => { S.isConnected = false; S.isRunning = false; setStatus('disconnected'); updateSendBtn(); setTimeout(connect, 3000); };
-  S.ws.onerror   = () => S.ws.close();
-  S.ws.onmessage = (e) => handleServerMessage(JSON.parse(e.data));
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  const wait = reconnectTries === 0 ? 300 : Math.min(3000, 600 * reconnectTries);
+  reconnectTries++;
+  reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, wait);
 }
+
+export function connect() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (S.ws && (S.ws.readyState === WebSocket.OPEN || S.ws.readyState === WebSocket.CONNECTING)) return;
+  const ws = new WebSocket(wsUrl);
+  S.ws = ws;
+
+  ws.onopen    = () => { if (S.ws !== ws) return; reconnectTries = 0; S.isConnected = true;  setStatus('connected'); announcePresence(); };
+  ws.onclose   = () => { if (S.ws !== ws) return; S.isConnected = false; S.isRunning = false; setStatus('disconnected'); updateSendBtn(); scheduleReconnect(); };
+  ws.onerror   = () => ws.close();
+  ws.onmessage = (e) => { if (S.ws === ws) handleServerMessage(JSON.parse(e.data)); };
+}
+
+function pageBack() {
+  const away = hiddenAt ? Date.now() - hiddenAt : 0;
+  hiddenAt = 0;
+  if (!S.ws || S.ws.readyState === WebSocket.CLOSED || S.ws.readyState === WebSocket.CLOSING) { connect(); return; }
+  if (S.ws.readyState === WebSocket.OPEN && away > 5000) {
+    const old = S.ws;
+    S.ws = null;
+    try { old.onclose = null; old.onerror = null; old.onmessage = null; old.close(); } catch { /* ignore */ }
+    S.isConnected = false; setStatus('disconnected'); connect();
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else pageBack(); });
+window.addEventListener('pageshow', () => pageBack());
+window.addEventListener('online', () => pageBack());
 
 export function setAuthenticated(authenticated) {
   if (authenticated) {
