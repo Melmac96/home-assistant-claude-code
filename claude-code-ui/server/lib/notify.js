@@ -85,7 +85,7 @@ async function getPanelUrl() {
     const res = await fetch(`${SUPERVISOR_URL}/addons/self/info`,
       { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
     const slug = res.ok ? (await res.json())?.data?.slug : null;
-    panelUrl = slug ? `/hassio/ingress/${slug}` : null;
+    panelUrl = slug ? `http://192.168.1.168/${slug}` : null;   // my13: the old /hassio/ingress/ link gives 404 on this HA
   } catch { panelUrl = null; }
   return panelUrl;
 }

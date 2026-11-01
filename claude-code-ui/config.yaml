@@ -1,5 +1,5 @@
 name: "My Claude Code UI"
-version: "1.17.0-my12"
+version: "1.17.0-my13"
 slug: "my-claude-code-ui"
 description: "Claude Code in your browser with Home Assistant integration and mobile-friendly chat UI."
 url: "https://github.com/Melmac96/home-assistant-claude-code"
