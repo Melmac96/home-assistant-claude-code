@@ -1,5 +1,5 @@
 name: "My Claude Code UI"
-version: "1.17.0-my13"
+version: "1.17.0-my14"
 slug: "my-claude-code-ui"
 description: "Claude Code in your browser with Home Assistant integration and mobile-friendly chat UI."
 url: "https://github.com/Melmac96/home-assistant-claude-code"
@@ -15,6 +15,7 @@ homeassistant_api: true
 auth_api: true
 hassio_api: true
 hassio_role: manager
+usb: true
 # Both legacy map types are gone: `config` was deprecated in Supervisor 2023.11
 # (it mounted HA's config at /config) and `all_addon_configs` in 2026.07 (the
 # add-on -> app rename). The explicit `path` on each keeps the in-container
