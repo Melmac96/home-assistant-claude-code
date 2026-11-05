@@ -119,6 +119,16 @@ export function truncateOutput(raw) {
  * `toolNames` is tool_use id → tool name, carried across the whole transcript by
  * parseSession: a tool_result line only ever carries the id.
  */
+// My Claude Code UI (my15): Claude Code's harness inserts a placeholder assistant
+// message "No response requested." (model '<synthetic>') that buries the real report
+// above it. Only that exact placeholder is ever hidden; real replies are never touched.
+export function isNoResponsePlaceholder(ev) {
+  const m = ev && ev.message;
+  if (!m || m.model !== '<synthetic>' || !Array.isArray(m.content)) return false;
+  const text = m.content.filter((b) => b && b.type === 'text').map((b) => b.text || '').join('').trim();
+  return text === 'No response requested.' && m.content.every((b) => b && b.type === 'text');
+}
+
 export function lineToItems(line, toolNames = new Map()) {
   const items = [];
   const msg = line.message;
@@ -166,7 +176,7 @@ export function lineToItems(line, toolNames = new Map()) {
         }
       }
     }
-  } else if (line.type === 'assistant') {
+  } else if (line.type === 'assistant' && !isNoResponsePlaceholder(line)) {
     for (const b of (msg.content || [])) {
       if (b.type === 'text' && b.text) push({ kind: 'text', text: b.text });
       else if (b.type === 'tool_use') {

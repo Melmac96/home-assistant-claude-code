@@ -26,7 +26,7 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
-import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput } from './sessions.js';
+import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
 import { refreshHaLinks } from './ha-links.js';
@@ -322,7 +322,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
           broadcast({ type: 'task_notice', taskId: event.task_id, status: event.status, summary: event.summary });
         }
 
-      } else if (event.type === 'assistant') {
+      } else if (event.type === 'assistant' && !isNoResponsePlaceholder(event)) {
         for (const block of (event.message?.content || [])) {
           if (block.type === 'text' && block.text) {
             vlog(`text: ${block.text.length} chars`);
