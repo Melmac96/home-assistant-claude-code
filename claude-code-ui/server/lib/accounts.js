@@ -56,8 +56,34 @@ export function saveCurrent() {
 /** Which mode the chat settings are in. Never includes the key itself. */
 export function modeState() {
   const env = readJson(SETTINGS())?.env || {};
-  return { free: String(env.ANTHROPIC_BASE_URL || '').startsWith('https://openrouter.ai'),
-           hasKey: existsSync(KEYFILE()) && existsSync(SWITCH) };
+  // my17: any free provider counts (OR_PROVIDER is written by openrouter_switch.py), not just OpenRouter's address.
+  const free = !!env.OR_PROVIDER || String(env.ANTHROPIC_BASE_URL || '').startsWith('https://openrouter.ai');
+  const pool = readJson(path.join(CLAUDE_CONFIG_DIR, 'openrouter-models.json'))?.models || [];
+  return { free, provider: env.OR_PROVIDER || (free ? 'openrouter' : ''), model: free ? (env.ANTHROPIC_MODEL || '') : '',
+           hasKey: existsSync(KEYFILE()) && existsSync(SWITCH),
+           pool: pool.slice(0, 40).map((m) => ({ id: m.id, context: m.context || 0 })) };
+}
+
+/** my17: the model to use for every new prompt while Free mode is on, so a model chosen mid-chat (from the menu, or by the
+ *  model advisor running 'openrouter_switch.py setmodel') applies to the NEXT message of the SAME chat. Null in Paid mode. */
+export function freeModelOverride() {
+  const env = readJson(SETTINGS())?.env || {};
+  return env.OR_PROVIDER && env.ANTHROPIC_MODEL ? env.ANTHROPIC_MODEL : null;
+}
+
+/** my17: choose a free model from the live pool. Returns { ok, model } or { ok:false, error }. */
+export function setFreeModel(id) {
+  if (typeof id !== 'string' || !/^[A-Za-z0-9._:\/-]{3,120}$/.test(id)) return { ok: false, error: 'That model name is not valid.' };
+  if (!modeState().free) return { ok: false, error: 'Free mode is not on.' };
+  try {
+    const r = spawnSync('python3', ['-I', SWITCH, 'setmodel', id], { encoding: 'utf8', timeout: 25000, env: process.env });
+    if (r.status !== 0) { log('ERROR', `setmodel failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'That model is not on the free list right now. Nothing was changed.' }; }
+    log('INFO', `free model set to ${id}`);
+    return { ok: true, model: id };
+  } catch (e) {
+    log('ERROR', `setmodel failed: ${e?.message || e}`);
+    return { ok: false, error: 'The model change did not work. Nothing was changed.' };
+  }
 }
 
 /** Switch to Free (true) or Paid (false). Returns { ok, free } or { ok:false, error }. */

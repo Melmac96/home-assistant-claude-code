@@ -26,6 +26,7 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
+import { freeModelOverride } from './accounts.js';
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
@@ -66,6 +67,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text });
     runtime.activeRun.channel.push(text);
     log('INFO', `prompt queued into backgrounded run (waiting on ${runtime.backgroundTasks.size} task(s)): promptLen=${text.length}`);
+    const fm0 = freeModelOverride(); if (fm0) model = fm0;   // my17
     if (model && model !== runtime.activeRun.model) {
       runtime.activeRun.model = model;
       runtime.activeRun.q.setModel(model).catch((e) => log('WARN', `setModel on backgrounded run failed: ${e?.message || e}`));
@@ -109,7 +111,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
     cwd: WORK_DIR, abortController, plugins: PLUGINS, settings: MCP_FREE_SETTINGS,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
   };
-  if (model) opts.model = model;
+  const fm = freeModelOverride();   // my17: in Free mode the chosen free model wins over the dropdown
+  if (fm) opts.model = fm;
+  else if (model) opts.model = model;
   // Only override effort when the UI asked for a level; otherwise the SDK's own
   // model default applies.
   if (effort && EFFORT_LEVELS.has(effort)) opts.effort = effort;

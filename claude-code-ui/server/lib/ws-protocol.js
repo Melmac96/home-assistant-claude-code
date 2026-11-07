@@ -18,7 +18,7 @@ import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
 import { runQuery, abortActive } from './run-query.js';
-import { saveCurrent, listAccounts, switchTo, setMode } from './accounts.js';
+import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 
@@ -133,6 +133,16 @@ const handlers = {
     }
     const r = switchTo(msg.id);
     send(ws, { type: 'account_result', ...r });
+    broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
+  // my17: pick another FREE model; applies to the very next message of this same chat (no new chat needed).
+  model_set(ws, msg) {
+    const r = setFreeModel(msg.model);
+    if (r.ok && runtime.activeRun?.q?.setModel) {
+      runtime.activeRun.q.setModel(r.model).catch((e) => log('WARN', `setModel on the running chat failed: ${e?.message || e}`));
+    }
+    send(ws, { type: 'account_result', ...r, modelSet: true });
     broadcast({ type: 'accounts', ...listAccounts() });
   },
 

@@ -46,7 +46,8 @@ export function showAccounts(msg) {
   if (msg.mode) {
     const m = msg.mode;
     const row = mk('div', 'acc-row' + (m.free ? ' acc-free' : ''));
-    const who = mk('div', 'acc-who', 'Free models (OpenRouter)');
+    const PN = { openrouter: 'OpenRouter', google: 'Google', groq: 'Groq', mistral: 'Mistral', cerebras: 'Cerebras', huggingface: 'Hugging Face', nvidia: 'NVIDIA', ollama: 'Ollama', auto: 'Automatic' };
+    const who = mk('div', 'acc-who', 'Free models (' + (PN[m.provider] || 'OpenRouter') + ')');
     who.appendChild(mk('small', '', m.free ? 'In use now. Weaker, no cost. Your Claude sign-in is untouched.'
       : (m.hasKey ? 'No cost, weaker. For simple jobs.' : 'No OpenRouter key saved yet.')));
     row.appendChild(who);
@@ -55,6 +56,13 @@ export function showAccounts(msg) {
       const b = mk('button', 'settings-btn', 'Back to paid'); b.type = 'button';
       b.onclick = () => askMode(false);
       row.appendChild(b);
+      if (m.provider === 'openrouter' && (m.pool || []).length) {
+        const sel = document.createElement('select'); sel.className = 'settings-btn acc-model';
+        for (const o of m.pool) { const op = mk('option', '', o.id.replace(':free', '') + (o.context ? '  ' + Math.round(o.context / 1000) + 'k' : '')); op.value = o.id; if (o.id === m.model) op.selected = true; sel.appendChild(op); }
+        const go = mk('button', 'settings-btn', 'Use this model'); go.type = 'button';
+        go.onclick = () => { go.disabled = true; send({ type: 'model_set', model: sel.value }); };
+        const r2 = mk('div', 'acc-confirm-row'); r2.append(sel, go); list.appendChild(row); list.appendChild(r2); return;
+      }
     } else if (m.hasKey) {
       const b = mk('button', 'settings-btn', 'Switch'); b.type = 'button';
       b.onclick = () => askMode(true);
@@ -97,6 +105,12 @@ function askSwitch(a) {
 
 export function showAccountResult(msg) {
   confirmBox.innerHTML = '';
+  if (msg.ok && msg.modelSet) {
+    confirmBox.appendChild(mk('b', '', 'Done: now using ' + msg.model));
+    confirmBox.appendChild(mk('div', 'settings-hint', 'Your next message in this chat uses it. Nothing is lost.'));
+    confirmBox.classList.remove('hidden');
+    return;
+  }
   if (msg.ok && msg.mode) {
     confirmBox.appendChild(mk('b', '', msg.free ? 'Done: Free models are on.' : 'Done: your paid Claude account is back.'));
     confirmBox.appendChild(mk('div', 'settings-hint', 'Open a NEW chat now for it to take effect. This chat will close shortly.'));
