@@ -163,7 +163,7 @@ setup_esphome() {
 start_server() {
     local port=7681
 
-    bashio::log.info "Starting Claude Code UI server on port ${port}..."
+    bashio::log.info "Starting HA AI server on port ${port}..."
 
     # Export API key if set in app config (overrides any saved credentials)
     local api_key
@@ -206,7 +206,7 @@ start_server() {
 # Main
 # ---------------------------------------------------------------------------
 main() {
-    bashio::log.info "Starting Claude Code UI app..."
+    bashio::log.info "Starting HA AI app..."
 
     # Whether the assistant may access other apps' config folders
     # (/addon_configs). Read once and exported so both the context generator and
