@@ -10,6 +10,8 @@ import { loginBtn, loginDesc, loginTitle, loginScreen } from './dom.js';
 const list = document.getElementById('accounts-list');
 const confirmBox = document.getElementById('account-confirm');
 const freeList = document.getElementById('accounts-free');
+const paidProv = document.getElementById('accounts-paid-prov');
+const freeProv = document.getElementById('accounts-prov');
 const addBtn = document.getElementById('account-add');
 const label = document.getElementById('account-label');
 const cancelBtn = document.getElementById('login-cancel');
@@ -46,6 +48,7 @@ function setBadge(cur, m) {
 }
 
 export function showAccounts(msg) {
+  setTimeout(() => { if (lastStats) showStats(lastStats); }, 0);
   const cur = msg.current;
   cancelBtn.classList.add('hidden');
   const free = !!(msg.mode && msg.mode.free);
@@ -132,6 +135,12 @@ function askSwitch(a) {
 
 export function showAccountResult(msg) {
   confirmBox.innerHTML = '';
+  if (msg.ok && msg.providerSet) {
+    confirmBox.appendChild(mk('b', '', 'Done: Free mode will use ' + msg.provider));
+    confirmBox.appendChild(mk('div', 'settings-hint', 'Open a NEW chat for it to take effect.'));
+    confirmBox.classList.remove('hidden');
+    return;
+  }
   if (msg.ok && msg.modelSet) {
     confirmBox.appendChild(mk('b', '', 'Done: now using ' + msg.model));
     confirmBox.appendChild(mk('div', 'settings-hint', 'Your next message in this chat uses it. Nothing is lost.'));
@@ -173,6 +182,7 @@ const accPanel = document.getElementById('accounts-panel');
 const closeAcc = () => { accPanel.classList.add('hidden'); accBtn.classList.remove('active'); };
 accBtn.onclick = (e) => {
   e.stopPropagation();
+  send({ type: 'stats_get' });
   const open = accPanel.classList.toggle('hidden');
   accBtn.classList.toggle('active', !open);
   if (!open) {
@@ -204,4 +214,27 @@ function closeOthers(keepBtnId) {
 }
 for (const id of ['find-btn', 'sessions-btn', 'settings-btn', 'accounts-btn', 'new-session-btn']) {
   document.getElementById(id).addEventListener('click', () => closeOthers(id), true);
+}
+
+
+// my25: one row per provider with usage lines (requests, tokens, credit, limits). Paid ones (Hugging Face) sit above the blue line.
+let lastStats = null;
+export function showStats(msg) {
+  lastStats = msg;
+  paidProv.innerHTML = ''; freeProv.innerHTML = '';
+  if (msg.error) { freeProv.appendChild(mk('div', 'settings-hint', msg.error)); return; }
+  const freeOn = !!document.querySelector('#accounts-free .acc-free .acc-tag-free');
+  for (const p of msg.providers || []) {
+    const row = mk('div', 'acc-prov' + (p.active ? ' acc-on' : '') + (p.ready ? '' : ' acc-off'));
+    const top = mk('div', 'acc-prov-top');
+    const nm = mk('div', 'acc-who', (p.paid ? 'PAID - ' : '') + p.label);
+    if (p.model) nm.appendChild(mk('small', '', p.model.replace(/^[^/]+\//, '')));
+    top.appendChild(nm);
+    if (p.active) top.appendChild(mk('span', 'acc-tag', 'In use'));
+    else if (p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = true; send({ type: 'provider_use', id: p.id }); }; top.appendChild(b); }
+    else top.appendChild(mk('span', 'acc-tag acc-tag-off', p.ready ? 'Ready' : 'Not ready'));
+    row.appendChild(top);
+    for (const l of p.lines || []) row.appendChild(mk('div', 'acc-stat', l));
+    (p.paid ? paidProv : freeProv).appendChild(row);
+  }
 }

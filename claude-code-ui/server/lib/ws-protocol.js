@@ -18,7 +18,7 @@ import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
 import { runQuery, abortActive } from './run-query.js';
-import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel } from './accounts.js';
+import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel, providerStats, useProvider } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 import * as deviceAuth from './device-auth.js';
@@ -145,6 +145,15 @@ const handlers = {
     }
     send(ws, { type: 'account_result', ...r, modelSet: true });
     broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
+  // my25: usage lines for every provider (read-only) and choosing the Free-mode provider
+  stats_get(ws) { providerStats((r) => send(ws, { type: 'provider_stats', ...r })); },
+  provider_use(ws, msg) {
+    const r = useProvider(msg.id);
+    send(ws, { type: 'account_result', ...r });
+    broadcast({ type: 'accounts', ...listAccounts() });
+    providerStats((x) => broadcast({ type: 'provider_stats', ...x }));
   },
 
   // my16: Free / Paid mode from the Accounts menu (same busy rule as an account switch).

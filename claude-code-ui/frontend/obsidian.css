@@ -174,3 +174,12 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .ctx-chip.hidden{display:none}
 .embedded .title-row,.embedded #pair-section{display:none!important}
 .embedded .header{max-height:52px}
+
+/* ── my25: provider rows with usage lines ── */
+.acc-prov{background:var(--surface);border:1px solid var(--border-2);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.acc-prov.acc-on{border-color:var(--accent);background:var(--accent-bg)}
+.acc-prov.acc-off{opacity:.55}
+.acc-prov-top{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+.acc-stat{font-size:calc(11.5px * var(--ts,1));color:var(--text-muted);line-height:1.35}
+.acc-tag-off{color:var(--text-muted)}
+#accounts-paid-prov:empty,#accounts-prov:empty{display:none}

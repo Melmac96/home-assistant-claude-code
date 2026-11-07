@@ -9,7 +9,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync } from 'fs';
 import path from 'path';
-import { spawnSync } from 'child_process';
+import { spawnSync, execFile } from 'child_process';
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
 
@@ -141,4 +141,25 @@ export function switchTo(id) {
     log('ERROR', `account switch failed: ${e?.message || e}`);
     return { ok: false, error: 'The switch failed. Your previous sign-in is backed up.' };
   }
+}
+
+/** my25: per-provider usage lines for the Accounts menu (tools/provider_stats.py: translator usage log, OpenRouter credit, rate-limit headers). */
+const STATS = '/config/opencode/tools/provider_stats.py';
+export function providerStats(cb) {
+  execFile('python3', ['-I', STATS], { encoding: 'utf8', timeout: 60000, maxBuffer: 1 << 20 }, (err, out) => {
+    if (err) { log('ERROR', `provider stats failed: ${err.message}`); return cb({ providers: [], error: 'Could not read the usage figures just now.' }); }
+    try { cb(JSON.parse(out)); } catch { cb({ providers: [], error: 'Could not read the usage figures just now.' }); }
+  });
+}
+
+/** my25: pick which provider Free mode uses for the NEXT new chat. Only while Free mode is on. */
+export function useProvider(id) {
+  if (typeof id !== 'string' || !/^[a-z0-9]{2,20}$/.test(id)) return { ok: false, error: 'That provider name is not valid.' };
+  if (!modeState().free) return { ok: false, error: 'Free mode is not on. Switch to Free models first.' };
+  try {
+    const r = spawnSync('python3', ['-I', SWITCH, 'useprovider', id], { encoding: 'utf8', timeout: 25000, env: process.env });
+    if (r.status !== 0) { log('ERROR', `useprovider failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'That provider is not ready, so nothing was changed.' }; }
+    log('INFO', `free provider set to ${id}`);
+    return { ok: true, providerSet: true, provider: id };
+  } catch (e) { return { ok: false, error: 'The provider change did not work. Nothing was changed.' }; }
 }
