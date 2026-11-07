@@ -149,3 +149,18 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 /* ── my20: shade the chat behind any open pull-down ── */
 .chat-scroll,.input-form{transition:opacity .15s}
 #app:has(.settings-panel:not(.hidden),.sessions-panel:not(.hidden),.accounts-panel:not(.hidden),.usage-panel:not(.hidden)) :is(.chat-scroll,.input-form){opacity:.28}
+
+/* ── my21: HA AI title, look B (lines + Claude symbols either side; HA grey, AI blue), centred ── */
+#app{position:relative}
+.brand-logo,.brand-name{display:none!important}
+.title-row{display:flex;align-items:center;gap:8px;padding:8px 12px 0;background:#000;flex-shrink:0;pointer-events:none}
+.title-row u{flex:1;height:1px;background:var(--line-blue);min-width:12px}
+.title-row .tl-st{width:calc(16px * var(--ts,1));height:calc(16px * var(--ts,1));color:var(--accent);flex:none}
+.title-row .tl-name{font-weight:700;font-size:calc(16px * var(--ts,1));letter-spacing:.08em;white-space:nowrap}
+.title-row b{color:#9a9da4;font-weight:700}
+.title-row em{color:var(--accent);font-style:normal}
+.header{border-top:0}
+@media (min-width:700px){
+  .title-row{position:absolute;top:0;left:240px;right:260px;height:64px;padding:0;z-index:5;background:transparent;justify-content:center}
+  .title-row u{flex:0 0 40px}
+}
