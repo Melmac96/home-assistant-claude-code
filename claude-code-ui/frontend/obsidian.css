@@ -131,3 +131,17 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
   .header{padding:8px 8px 8px 12px}
   .settings-panel,.sessions-panel,.accounts-panel{left:10px;right:10px;top:60px;border-radius:16px;border-top:1px solid var(--border-2);max-height:calc(var(--app-height,100dvh) - 80px)}
 }
+
+/* ── my19: badge beside the green dot, Ask in Settings, dark blue dividers, blue lines top + bottom of every pull-down ── */
+:root{--line-blue:#1f5fae}
+.header-left{flex:1 1 auto;min-width:0;align-items:center}
+.header-left .svc-badge{margin-left:10px;min-width:0;max-width:none;flex:0 1 auto;overflow:hidden;padding:4px 10px}
+.header-left .svc-badge .sb-a{font-size:calc(12px * var(--ts,1))}
+.header-left .svc-badge .sb-m{font-size:calc(10px * var(--ts,1))}
+.blue-rule{height:2px;background:var(--line-blue);border:0;margin:12px 0;border-radius:2px;flex:none}
+.settings-panel,.sessions-panel,.accounts-panel,.usage-panel{border-top:2px solid var(--line-blue)!important;border-bottom:2px solid var(--line-blue)!important}
+.settings-panel .perm-mode-select{max-width:none;border-radius:10px;min-height:0;padding:8px 10px;font-weight:400}
+.acc-email{color:var(--text-muted)}
+.acc-email .acc-paid{display:block;color:#fff;font-weight:700;font-size:calc(14px * var(--ts,1));margin-top:2px}
+#accounts-list,#accounts-free{display:flex;flex-direction:column;gap:8px}
+.accounts-panel .account-confirm{margin:8px 0}

@@ -9,12 +9,17 @@ import { loginBtn, loginDesc, loginTitle, loginScreen } from './dom.js';
 
 const list = document.getElementById('accounts-list');
 const confirmBox = document.getElementById('account-confirm');
+const freeList = document.getElementById('accounts-free');
 const addBtn = document.getElementById('account-add');
 const label = document.getElementById('account-label');
 const cancelBtn = document.getElementById('login-cancel');
 
 // Header shows a short name; the full email is in Settings > Accounts.
 const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd' };
+// my19: paid accounts listed Main first, with a white PAID line under a grey email.
+const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account' };
+const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com'];
+const rank = (e) => { const i = ORDER.indexOf(String(e).toLowerCase()); return i < 0 ? 99 : i; };
 const shortName = (email) => SHORT[email.toLowerCase()] || email.split('@')[0];
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
@@ -47,11 +52,12 @@ export function showAccounts(msg) {
   label.textContent = cur ? shortName(cur.email) + (free ? ' · Free' : '') : '';
   label.classList.toggle('hidden', !cur);
   setBadge(cur, msg.mode);
-  list.innerHTML = '';
-  for (const a of (msg.saved || [])) {
+  list.innerHTML = ''; freeList.innerHTML = '';
+  const saved = (msg.saved || []).slice().sort((x, y) => rank(x.email) - rank(y.email));
+  for (const a of saved) {
     const row = mk('div', 'acc-row' + (a.active ? ' acc-on' : ''));
-    const who = mk('div', 'acc-who', a.email);
-    if (a.displayName) who.appendChild(mk('small', '', a.displayName));
+    const who = mk('div', 'acc-who acc-email', a.email);
+    who.appendChild(mk('small', 'acc-paid', PAID[a.email.toLowerCase()] || 'PAID - Claude account'));
     row.appendChild(who);
     if (a.active) row.appendChild(mk('span', 'acc-tag', 'Signed in'));
     else {
@@ -82,14 +88,14 @@ export function showAccounts(msg) {
         for (const o of m.pool) { const op = mk('option', '', o.id.replace(':free', '') + (o.context ? '  ' + Math.round(o.context / 1000) + 'k' : '')); op.value = o.id; if (o.id === m.model) op.selected = true; sel.appendChild(op); }
         const go = mk('button', 'settings-btn', 'Use this model'); go.type = 'button';
         go.onclick = () => { go.disabled = true; send({ type: 'model_set', model: sel.value }); };
-        const r2 = mk('div', 'acc-confirm-row'); r2.append(sel, go); list.appendChild(row); list.appendChild(r2); return;
+        const r2 = mk('div', 'acc-confirm-row'); r2.append(sel, go); freeList.appendChild(row); freeList.appendChild(r2); return;
       }
     } else if (m.hasKey) {
       const b = mk('button', 'settings-btn', 'Switch'); b.type = 'button';
       b.onclick = () => askMode(true);
       row.appendChild(b);
     }
-    list.appendChild(row);
+    freeList.appendChild(row);
   }
 }
 

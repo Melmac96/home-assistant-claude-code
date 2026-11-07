@@ -25,6 +25,7 @@
         <span class="brand-name">HA AI</span>
         <span id="account-label" class="account-label hidden"></span>
         <span id="status-dot" class="status-dot"></span>
+        <div id="svc-badge" class="svc-badge" aria-live="polite"><span class="sb-a">Claude</span><span class="sb-m">…</span></div>
       </div>
       <div class="header-right">
         <div class="icon-group">
@@ -46,15 +47,6 @@
         </div>
       </div>
     </header>
-    <div class="subbar"><select id="perm-mode" class="perm-mode-select" title="Permission mode">
-        <option value="ask">Ask</option>
-        <option value="plan">Plan</option>
-        <option value="auto">Auto</option>
-        <option value="acceptEdits">Accept edits</option>
-        <option value="bypass">Bypass</option>
-      </select>
-      <div id="svc-badge" class="svc-badge" aria-live="polite"><span class="sb-a">Claude</span><span class="sb-m">…</span></div>
-    </div>
     <div id="usage-bars" class="usage-bars hidden" role="button" tabindex="0" aria-label="Usage detail, tap to open">
       <div class="ub"><i id="ub-5h"></i></div><div class="ub"><i id="ub-7d"></i></div>
     </div>
@@ -91,6 +83,7 @@
           <span class="ts-val" id="ts-val">100%</span></div>
         <p class="ts-preview" id="ts-preview">This is how your text will look. Change the size and style above.</p>
       </div>
+      <div class="blue-rule" role="separator"></div>
       <div class="settings-row">
         <label for="model-select">Model</label>
         <select id="model-select" class="settings-select">
@@ -111,6 +104,17 @@
           <option value="max">Max</option>
         </select>
       </div>
+      <div class="settings-row">
+        <label for="perm-mode">Ask</label>
+        <select id="perm-mode" class="settings-select perm-mode-select" title="Permission mode">
+          <option value="ask">Ask</option>
+          <option value="plan">Plan</option>
+          <option value="auto">Auto</option>
+          <option value="acceptEdits">Accept edits</option>
+          <option value="bypass">Bypass</option>
+        </select>
+      </div>
+      <div class="blue-rule" role="separator"></div>
       <div class="settings-row settings-row-toggle" id="auto-continue-row">
         <label for="auto-continue-toggle">Auto-continue on limit</label>
         <input type="checkbox" id="auto-continue-toggle" class="settings-toggle">
@@ -140,11 +144,13 @@
 
     <div id="accounts-panel" class="accounts-panel hidden">
       <div class="sessions-head">Accounts</div>
-      <div id="accounts-list" class="accounts-list"></div>
       <div id="account-confirm" class="account-confirm hidden"></div>
+      <div id="accounts-list" class="accounts-list"></div>
       <div class="settings-row">
         <button type="button" id="account-add" class="settings-btn">Sign in to another account</button>
       </div>
+      <div class="blue-rule" role="separator"></div>
+      <div id="accounts-free" class="accounts-list"></div>
     </div>
 
     <div id="login-screen" class="login-screen hidden">
