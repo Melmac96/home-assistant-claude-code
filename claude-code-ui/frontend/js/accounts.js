@@ -20,12 +20,33 @@ const shortName = (email) => SHORT[email.toLowerCase()] || email.split('@')[0];
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
+
+// my18: the service + model badge next to the Ask box (not a menu, it just says what is in use).
+// Paid: "Claude" over the account (Main / 2nd). Free: the service over the model.
+const badge = document.getElementById('svc-badge');
+const BN = { openrouter: 'OpenRouter', google: 'Google', groq: 'Groq', mistral: 'Mistral', cerebras: 'Cerebras', huggingface: 'Hugging Face', nvidia: 'NVIDIA', ollama: 'Ollama', auto: 'Free Auto' };
+const prettyModel = (id) => String(id || '').split('/').pop().replace(/:free$/, '');
+function setBadge(cur, m) {
+  if (!badge) return;
+  const a = badge.querySelector('.sb-a'), b = badge.querySelector('.sb-m');
+  const free = !!(m && m.free);
+  badge.classList.toggle('free', free);
+  if (free) {
+    a.textContent = BN[m.provider] || 'Free';
+    b.textContent = prettyModel(m.model) || (m.provider === 'auto' ? 'Automatic' : 'Free model');
+  } else {
+    a.textContent = 'Claude';
+    b.textContent = cur ? shortName(cur.email) : 'Signed out';
+  }
+}
+
 export function showAccounts(msg) {
   const cur = msg.current;
   cancelBtn.classList.add('hidden');
   const free = !!(msg.mode && msg.mode.free);
   label.textContent = cur ? shortName(cur.email) + (free ? ' · Free' : '') : '';
   label.classList.toggle('hidden', !cur);
+  setBadge(cur, msg.mode);
   list.innerHTML = '';
   for (const a of (msg.saved || [])) {
     const row = mk('div', 'acc-row' + (a.active ? ' acc-on' : ''));
