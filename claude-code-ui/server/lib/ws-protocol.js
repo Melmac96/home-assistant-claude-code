@@ -21,6 +21,7 @@ import { runQuery, abortActive } from './run-query.js';
 import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
+import * as deviceAuth from './device-auth.js';
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
@@ -243,6 +244,21 @@ const handlers = {
   // tab is — a dropped or hidden socket is exactly the phone-in-pocket case.
   presence(ws, msg) {
     ws.visible = !!msg.visible;
+  },
+
+  // haAi (my23): device pairing. ONLY from the ingress port (inside Home Assistant); never from a paired device.
+  pair_start(ws) {
+    if (ws.direct) return;
+    send(ws, { type: 'pair_code', ...deviceAuth.startPairing() });
+  },
+  devices_list(ws) {
+    if (ws.direct) return;
+    send(ws, { type: 'devices', list: deviceAuth.listDevices() });
+  },
+  device_remove(ws, msg) {
+    if (ws.direct) return;
+    deviceAuth.removeDevice(String(msg.id || ''));
+    send(ws, { type: 'devices', list: deviceAuth.listDevices() });
   },
 
   set_notify(_ws, msg) {

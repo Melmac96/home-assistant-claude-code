@@ -141,6 +141,14 @@
       <p class="settings-hint" id="notify-hint">
         Sent through Home Assistant (e.g. the companion app) while no tab is open and visible.
       </p>
+      <div id="pair-section">
+        <div class="blue-rule" role="separator"></div>
+        <div class="settings-row"><label>Paired devices</label>
+          <button type="button" id="pair-btn" class="settings-btn">Pair a device</button></div>
+        <div id="pair-code" class="account-confirm hidden"></div>
+        <div id="devices-list" class="accounts-list"></div>
+        <p class="settings-hint">Devices that can open haAi directly, like the haAi app. Remove one to stop it.</p>
+      </div>
     </div>
 
     <div id="accounts-panel" class="accounts-panel hidden">

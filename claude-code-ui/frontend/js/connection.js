@@ -5,6 +5,7 @@
 import { S } from './state.js';
 import { updateUsage } from './usage.js';
 import { showAccounts, showAccountResult } from './accounts.js';
+import { showPairCode, showDevices } from './devices.js';
 import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } from './banners.js';
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
@@ -365,6 +366,14 @@ export function handleServerMessage(msg) {
 
     case 'accounts':
       showAccounts(msg);
+      break;
+
+    case 'pair_code':
+      showPairCode(msg);
+      break;
+
+    case 'devices':
+      showDevices(msg);
       break;
 
     case 'account_result':

@@ -1,5 +1,5 @@
 name: "haAi"
-version: "1.17.0-my22"
+version: "1.17.0-my23"
 slug: "my-claude-code-ui"
 description: "Claude Code in your browser with Home Assistant integration and mobile-friendly chat UI."
 url: "https://github.com/Melmac96/home-assistant-claude-code"
@@ -10,6 +10,10 @@ startup: services
 boot: manual
 ingress: true
 ingress_port: 7681
+ports:
+  7682/tcp: 7682
+ports_description:
+  7682/tcp: "haAi app direct port (needs a paired device)"
 panel_icon: mdi:creation
 homeassistant_api: true
 auth_api: true

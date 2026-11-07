@@ -164,3 +164,7 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
   .title-row{position:absolute;top:0;left:240px;right:260px;height:64px;padding:0;z-index:5;background:transparent;justify-content:center}
   .title-row u{flex:0 0 40px}
 }
+
+/* ── my23: paired devices ── */
+.pair-big{font-size:calc(34px * var(--ts,1));letter-spacing:.12em;font-weight:700;color:#fff;text-align:center;font-family:var(--mono);margin:8px 0}
+#pair-section.hidden{display:none}

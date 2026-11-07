@@ -45,11 +45,37 @@ import { attach } from './lib/ws-protocol.js';
 import { runQuery } from './lib/run-query.js';
 import * as autoContinue from './lib/auto-continue.js';
 import * as notifier from './lib/notify.js';
+import * as deviceAuth from './lib/device-auth.js';
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+// haAi (my23): a second, published port for the stand-alone app. Everything on it needs a paired-device key.
+const directServer = createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+function onUpgrade(req, socket, head) {
+  const direct = deviceAuth.isDirect(req);
+  if ((req.url || '').split('?')[0] !== '/ws') { socket.destroy(); return; }
+  if (direct && !deviceAuth.deviceFor(req)) { socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n'); socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, (ws) => { ws.direct = direct; wss.emit('connection', ws, req); });
+}
+server.on('upgrade', onUpgrade);
+directServer.on('upgrade', onUpgrade);
+
+app.use((req, res, next) => {
+  if (!deviceAuth.isDirect(req)) return next();
+  if (req.method === 'POST' && req.path === '/pair') return next();
+  if (deviceAuth.deviceFor(req)) return next();
+  if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) return res.status(401).type('html').send(deviceAuth.PAIR_PAGE);
+  res.status(401).json({ error: 'not paired' });
+});
+app.post('/pair', express.json({ limit: '1kb' }), (req, res) => {
+  if (!deviceAuth.isDirect(req)) return res.status(404).end();
+  const r = deviceAuth.redeem(String(req.body?.code || ''), req.body?.name);
+  if (r.error) return res.status(403).json({ ok: false, error: r.error });
+  res.setHeader('Set-Cookie', deviceAuth.cookieHeader(r.key));
+  res.json({ ok: true });
+});
 
 app.use(express.static(FRONTEND_DIR));
 
@@ -79,6 +105,7 @@ cleanupUploads();          // drop attachments older than a week
 refreshHaLinks();          // populate entity/automation link targets
 autoContinue.rearmOnBoot();
 
+directServer.listen(deviceAuth.DIRECT_PORT, '0.0.0.0');
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Claude Code UI listening on port ${PORT}`);
   console.log(`  Working dir: ${WORK_DIR}`);
