@@ -9,6 +9,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync } from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
 
@@ -16,6 +17,13 @@ const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
 const LIVE = () => path.join(CLAUDE_CONFIG_DIR, '.credentials.json');
 const IDENT = () => path.join(process.env.HOME || path.join(DATA_DIR, 'home'), '.claude.json');
+
+// my16: Free (OpenRouter) / Paid (Claude) mode, a third choice next to the saved accounts. The switching itself is done by the
+// house tool openrouter_switch.py (the same one the dashboard button and the 'free mode' / 'paid mode' phrases use), so the
+// Home Assistant helper, the chat settings and the lighter rules all stay in step. It never touches the Claude sign-in.
+const SWITCH = '/config/opencode/tools/openrouter_switch.py';
+const SETTINGS = () => path.join(CLAUDE_CONFIG_DIR, 'settings.json');
+const KEYFILE = () => path.join(CLAUDE_CONFIG_DIR, 'openrouter.key');
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const slug = (email) => email.toLowerCase().replace(/[^a-z0-9._-]+/g, '_');
@@ -45,6 +53,27 @@ export function saveCurrent() {
   return who;
 }
 
+/** Which mode the chat settings are in. Never includes the key itself. */
+export function modeState() {
+  const env = readJson(SETTINGS())?.env || {};
+  return { free: String(env.ANTHROPIC_BASE_URL || '').startsWith('https://openrouter.ai'),
+           hasKey: existsSync(KEYFILE()) && existsSync(SWITCH) };
+}
+
+/** Switch to Free (true) or Paid (false). Returns { ok, free } or { ok:false, error }. */
+export function setMode(free) {
+  if (free && !modeState().hasKey) return { ok: false, error: 'No OpenRouter key is saved yet.' };
+  try {
+    const r = spawnSync('python3', ['-I', SWITCH, free ? 'on' : 'off'], { encoding: 'utf8', timeout: 20000, env: process.env });
+    if (r.status !== 0) { log('ERROR', `mode switch failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'The mode switch did not work. Nothing was changed.' }; }
+    log('INFO', `mode switched to ${free ? 'free' : 'paid'}`);
+    return { ok: true, free: !!free, mode: true };
+  } catch (e) {
+    log('ERROR', `mode switch failed: ${e?.message || e}`);
+    return { ok: false, error: 'The mode switch did not work. Nothing was changed.' };
+  }
+}
+
 /** What the browser may see: emails and which one is signed in now. */
 export function listAccounts() {
   const cur = currentIdentity();
@@ -58,7 +87,7 @@ export function listAccounts() {
     }
   } catch { /* nothing saved yet */ }
   saved.sort((a, b) => a.email.localeCompare(b.email));
-  return { current: cur, saved };
+  return { current: cur, saved, mode: modeState() };
 }
 
 /** Switch the live sign-in to a saved account. Returns { ok, error? }. */

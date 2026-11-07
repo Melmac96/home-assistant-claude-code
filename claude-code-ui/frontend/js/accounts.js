@@ -23,7 +23,8 @@ const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
 export function showAccounts(msg) {
   const cur = msg.current;
   cancelBtn.classList.add('hidden');
-  label.textContent = cur ? shortName(cur.email) : '';
+  const free = !!(msg.mode && msg.mode.free);
+  label.textContent = cur ? shortName(cur.email) + (free ? ' · Free' : '') : '';
   label.classList.toggle('hidden', !cur);
   list.innerHTML = '';
   for (const a of (msg.saved || [])) {
@@ -41,6 +42,42 @@ export function showAccounts(msg) {
     list.appendChild(row);
   }
   if (!(msg.saved || []).length) list.appendChild(mk('div', 'settings-hint', 'No accounts saved yet.'));
+  // my16: the Free / Paid model choice, one more option under the accounts.
+  if (msg.mode) {
+    const m = msg.mode;
+    const row = mk('div', 'acc-row' + (m.free ? ' acc-free' : ''));
+    const who = mk('div', 'acc-who', 'Free models (OpenRouter)');
+    who.appendChild(mk('small', '', m.free ? 'In use now. Weaker, no cost. Your Claude sign-in is untouched.'
+      : (m.hasKey ? 'No cost, weaker. For simple jobs.' : 'No OpenRouter key saved yet.')));
+    row.appendChild(who);
+    if (m.free) {
+      row.appendChild(mk('span', 'acc-tag acc-tag-free', 'In use'));
+      const b = mk('button', 'settings-btn', 'Back to paid'); b.type = 'button';
+      b.onclick = () => askMode(false);
+      row.appendChild(b);
+    } else if (m.hasKey) {
+      const b = mk('button', 'settings-btn', 'Switch'); b.type = 'button';
+      b.onclick = () => askMode(true);
+      row.appendChild(b);
+    }
+    list.appendChild(row);
+  }
+}
+
+function askMode(free) {
+  confirmBox.innerHTML = '';
+  confirmBox.appendChild(mk('b', '', free ? 'Switch to FREE models (OpenRouter)?' : 'Switch back to your paid Claude account?'));
+  confirmBox.appendChild(mk('div', 'settings-hint',
+    'It applies to your next NEW chat. This chat will close, and a short summary of where you are is saved first. Your Claude sign-in is never touched.'
+    + (free ? ' Free models are weaker: for big jobs switch back.' : '')));
+  const row = mk('div', 'acc-confirm-row');
+  const no = mk('button', 'settings-btn', 'Cancel'); no.type = 'button';
+  const yes = mk('button', 'settings-btn acc-yes', 'Switch'); yes.type = 'button';
+  no.onclick = () => confirmBox.classList.add('hidden');
+  yes.onclick = () => { yes.disabled = true; send({ type: 'mode_switch', free }); };
+  row.append(no, yes);
+  confirmBox.appendChild(row);
+  confirmBox.classList.remove('hidden');
 }
 
 function askSwitch(a) {
@@ -60,6 +97,12 @@ function askSwitch(a) {
 
 export function showAccountResult(msg) {
   confirmBox.innerHTML = '';
+  if (msg.ok && msg.mode) {
+    confirmBox.appendChild(mk('b', '', msg.free ? 'Done: Free models are on.' : 'Done: your paid Claude account is back.'));
+    confirmBox.appendChild(mk('div', 'settings-hint', 'Open a NEW chat now for it to take effect. This chat will close shortly.'));
+    confirmBox.classList.remove('hidden');
+    return;
+  }
   if (msg.ok) {
     confirmBox.classList.add('hidden');
     return;

@@ -18,7 +18,7 @@ import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
 import { runQuery, abortActive } from './run-query.js';
-import { saveCurrent, listAccounts, switchTo } from './accounts.js';
+import { saveCurrent, listAccounts, switchTo, setMode } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 
@@ -132,6 +132,17 @@ const handlers = {
       return;
     }
     const r = switchTo(msg.id);
+    send(ws, { type: 'account_result', ...r });
+    broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
+  // my16: Free / Paid mode from the Accounts menu (same busy rule as an account switch).
+  mode_switch(ws, msg) {
+    if (runtime.activeQuery) {
+      send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
+      return;
+    }
+    const r = setMode(!!msg.free);
     send(ws, { type: 'account_result', ...r });
     broadcast({ type: 'accounts', ...listAccounts() });
   },
