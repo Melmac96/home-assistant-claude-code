@@ -36,6 +36,7 @@ import { watchViewport } from './js/viewport.js';
 
 // Modules with no exported entry point still have to be loaded: each one wires
 // up its own listeners as it evaluates.
+import './js/embed.js';
 import './js/attachments.js';
 import './js/commands.js';
 import './js/dialogs.js';

@@ -3,6 +3,7 @@
  * keyboard shortcuts.
  */
 import { S } from './state.js';
+import { contextLine } from './embed.js';
 import { attachments, clearAttachments, fileToDataURL } from './attachments.js';
 import { SEND_ICON, STOP_ICON, UI_COMMANDS, clearScreen, hideCmdMenu, showHelp, showUsage } from './commands.js';
 import { confirmInterrupt } from './confirm.js';
@@ -79,7 +80,7 @@ inputForm.onsubmit = async (e) => {
   // the SDK use its default (which it reports back via the 'model' event).
   S.ws.send(JSON.stringify({
     type: 'prompt',
-    text,
+    text: contextLine() + text,
     attachments: payload.length ? payload : undefined,
     permissionMode: permModeSelect.value,
     model: localStorage.getItem('model') || undefined,

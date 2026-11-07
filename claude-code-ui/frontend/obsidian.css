@@ -168,3 +168,9 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 /* ── my23: paired devices ── */
 .pair-big{font-size:calc(34px * var(--ts,1));letter-spacing:.12em;font-weight:700;color:#fff;text-align:center;font-family:var(--mono);margin:8px 0}
 #pair-section.hidden{display:none}
+
+/* ── my24: haAi inside the Home Assistant pop-up card (?embed=1) ── */
+.ctx-chip{font-family:var(--mono);font-size:calc(11px * var(--ts,1));color:var(--lite);border:1px solid var(--line-blue);border-radius:9px;margin:6px 10px 0;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctx-chip.hidden{display:none}
+.embedded .title-row,.embedded #pair-section{display:none!important}
+.embedded .header{max-height:52px}
