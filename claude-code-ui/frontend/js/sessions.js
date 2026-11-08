@@ -30,7 +30,7 @@ function showSection(name, open) {
 function applySections() {
   const saved = savedSections();
   showSection('waiting', !!saved.waiting);
-  showSection('chats', S.searchResults ? true : !!saved.chats);
+  showSection('chats', (S.searchResults || S.searching) ? true : !!saved.chats);
 }
 for (const name of Object.keys(SECTIONS)) {
   document.getElementById(SECTIONS[name][0]).onclick = () => {
@@ -45,8 +45,15 @@ for (const name of Object.keys(SECTIONS)) {
 export function renderSessions() {
   sessionsListEl.innerHTML = '';
   const list = S.searchResults || S.sessions;   // my28
-  document.getElementById('chats-count').textContent = S.searchResults ? `(${list.length} found)` : `(${list.length})`;   // my29
+  document.getElementById('chats-count').textContent = S.searching ? '' : S.searchResults ? `(${list.length} found)` : `(${list.length})`;   // my29
   applySections();
+  if (S.searching) {   // my30: the search of every chat takes a few seconds
+    const wait = document.createElement('div');
+    wait.className = 'sessions-empty';
+    wait.textContent = 'Searching all chats…';
+    sessionsListEl.appendChild(wait);
+    return;
+  }
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'sessions-empty';
@@ -118,6 +125,7 @@ export function closeSessions() {
   const box = document.getElementById('sessions-search');   // my28
   if (box) box.value = '';
   S.searchResults = null;
+  S.searching = false;   // my30
   sessionsPanel.classList.add('hidden');
   sessionsBtn.classList.remove('active');
 }
@@ -125,16 +133,31 @@ export function closeSessions() {
 // my28: search every saved chat, from the box at the top of the Sessions menu.
 const searchBox = document.getElementById('sessions-search');
 let searchTimer = null, searchSeq = 0;
-if (searchBox) searchBox.oninput = () => {
+// my30: the keyboard's search key runs it at once and puts the keyboard away.
+function startSearch() {
   clearTimeout(searchTimer);
   const q = searchBox.value.trim();
-  if (q.length < 2) { searchSeq++; S.searchResults = null; renderSessions(); return; }
-  searchTimer = setTimeout(() => {
-    if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'sessions_search', q, seq: ++searchSeq }));
-  }, 400);
-};
+  if (q.length < 2 || !S.ws || !S.isConnected) return;
+  S.searching = true;
+  renderSessions();
+  S.ws.send(JSON.stringify({ type: 'sessions_search', q, seq: ++searchSeq }));
+}
+if (searchBox) {
+  searchBox.oninput = () => {
+    clearTimeout(searchTimer);
+    if (searchBox.value.trim().length < 2) { searchSeq++; S.searchResults = null; S.searching = false; renderSessions(); return; }
+    searchTimer = setTimeout(startSearch, 400);
+  };
+  searchBox.onkeydown = (e) => {
+    if (e.key !== 'Enter' && e.keyCode !== 13) return;
+    e.preventDefault();
+    startSearch();
+    searchBox.blur();
+  };
+}
 export function onSearchResults(msg) {
   if (msg.seq !== searchSeq) return;
+  S.searching = false;   // my30
   S.searchResults = msg.results || [];
   renderSessions();
 }
