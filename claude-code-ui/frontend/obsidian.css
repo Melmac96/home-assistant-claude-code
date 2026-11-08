@@ -193,9 +193,10 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .answer-send{display:block;width:100%;margin:10px 0 8px;background:var(--accent,#4da3ff);color:#000;border:0;border-radius:10px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
 .answer-send:disabled{opacity:.45}
 /* my28: his own messages, solid blue (look 2A) */
-.bubble-user{background:#4da3ff;border-color:#4da3ff}
-.bubble-user .bubble-content{color:#000;font-weight:500}
-.bubble-user .msg-time{color:#10233a}
+/* my31: his own messages = no box, just a blue line above and below */
+.bubble-user{background:transparent;border:0;border-top:2px solid var(--line-blue);border-bottom:2px solid var(--line-blue);border-radius:0}
+.bubble-user .bubble-content{color:var(--text)}
+.bubble-user .msg-time{color:var(--text-muted)}
 /* my28: quick jobs, quick replies, waiting list, search, new chat card */
 .quick-tiles{padding:6px 0 10px}
 .quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
