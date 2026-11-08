@@ -8,6 +8,7 @@ import { resizeTextarea, updateSendBtn } from './composer.js';
 import { acBanner, acBannerCancel, acBannerEnable, acBannerText, autoContinueToggle, bgTasksStrip, bgTasksText, inputForm, messagesEl, permModeSelect, promptInput, settingsBtn, settingsPanel } from './dom.js';
 import { scrollBottom } from './scroll.js';
 import { endToolGroup } from './transcript.js';
+import { onJobsChanged } from './jobs.js';   // my44
 
 export let acCountdownTimer = null;
 
@@ -103,6 +104,7 @@ export function appendLimitNotice({ resetsAt, scheduled, supported }) {
 // just shows or hides, with no strip/popup pairing like the question strip has.
 export function refreshBgTasksStrip() {
   const tasks = S.backgroundTasks;
+  onJobsChanged();   // my44
   if (!tasks.length) { bgTasksStrip.classList.add('hidden'); return; }
   const label = tasks.length === 1
     ? `Background task running: ${tasks[0].description}`

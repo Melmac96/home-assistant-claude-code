@@ -59,3 +59,12 @@ export function advisorPrompt(model, effort) {
     'Still answer the request normally in the same reply. If it is not a clear case, write NOTHING about the advisor. Never suggest twice in a row for the same kind of job.' + skip,
   ].join(' ');
 }
+
+// my44: JOBS under one chat. Standing instruction so side jobs show up as numbered jobs with the model named.
+export function jobsPrompt() {
+  return [
+    'JOBS (haAi): when a request has a separate side job that can run while you carry on talking (a long check, a tidy-up, a search),',
+    'you may run it as a background subagent. Start its description with the model in square brackets, e.g. "[Haiku] check Apple TV drops" or "[Sonnet] tidy the sleep page",',
+    'and use the cheapest model that can do it well (Haiku for simple read-only jobs). Never put health, money or security jobs on anything but Claude. Do not start side jobs he did not ask for.',
+  ].join(' ');
+}
