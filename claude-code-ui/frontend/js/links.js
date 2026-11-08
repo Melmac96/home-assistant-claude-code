@@ -7,6 +7,7 @@
  */
 import { enhanceQuestions } from './answers.js';   // my28
 import { decorateStar } from './extras.js';   // my40
+import { takeAdvice, adviceFound } from './advisor.js';   // my42
 import { S } from './state.js';
 import { messagesEl } from './dom.js';
 
@@ -151,6 +152,7 @@ export function fixAnchorTargets(root) {
 }
 
 export function renderMarkdown(el, raw) {
+  const adv = takeAdvice(raw); raw = adv.text;   // my42: hide the advisor line
   // my32: a line of the 8 blue diamonds becomes a row across the whole width, with the next text on its own line.
   el.innerHTML = marked.parse(raw.replace(/^(?:🔹){8}[ \t]*$/gm, '<div class="diamond-row"></div>\n'));
   linkifyEntities(el);
@@ -158,6 +160,7 @@ export function renderMarkdown(el, raw) {
   el.querySelectorAll('pre').forEach(addCopyButton);
   enhanceQuestions(el);   // my28
   decorateStar(el);   // my40
+  if (adv.fields) adviceFound(el, adv.fields, adv.key);   // my42
 }
 
 // Copy text to the clipboard, with a fallback for non-secure contexts (the HA

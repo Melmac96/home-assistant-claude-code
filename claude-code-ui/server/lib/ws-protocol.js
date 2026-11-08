@@ -28,6 +28,7 @@ import { getHomeHealth, startHomeHealthCheck } from './homehealth.js';   // my34
 import * as keep from './keep.js';   // my35
 import * as extras from './extras.js';   // my40
 import { getPrefs, setPrefs } from './prefs.js';   // my41
+import { getAdvisor, setAdvisor } from './advisor.js';   // my42
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -73,6 +74,7 @@ function greet(ws) {
   send(ws, { type: 'keep', list: keep.list() });   // my35
   send(ws, { type: 'stars', list: extras.listStars() });   // my40
   send(ws, { type: 'prefs', ...getPrefs() });   // my41
+  send(ws, { type: 'advisor', ...getAdvisor() });   // my42
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
   if (runtime.lastCtx && runtime.lastCtx.sid && runtime.lastCtx.sid === runtime.activeSessionId) send(ws, runtime.lastCtx);   // my40
   if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
@@ -220,6 +222,7 @@ const handlers = {
 
   new_session(_ws, msg) {
     const old = runtime.activeSessionId;
+    if (getAdvisor().advised) { broadcast({ type: 'prefs', ...setPrefs({ model: 'latest-sonnet', effort: 'medium' }) }); broadcast({ type: 'advisor', ...setAdvisor({ advised: false }) }); }   // my42: a new chat starts on Sonnet/Medium
     abortActive();
     startFresh();
     if (msg.save) handover.saveInBackground(old);   // my28: the old chat's notes, behind the scenes
@@ -233,6 +236,7 @@ const handlers = {
     else broadcast({ type: 'keep', list: keep.list() });
   },
   keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
+  advisor_set(_ws, msg) { broadcast({ type: 'advisor', ...setAdvisor({ enabled: typeof msg.enabled === 'boolean' ? msg.enabled : undefined, advised: typeof msg.advised === 'boolean' ? msg.advised : undefined, declineKind: msg.declineKind, clearDeclined: msg.clearDeclined === true }) }); },   // my42
   prefs_set(_ws, msg) { broadcast({ type: 'prefs', ...setPrefs(msg) }); },   // my41
   star_add(_ws, msg) { broadcast({ type: 'stars', list: extras.addStar(msg, runtime.activeSessionId) }); },   // my40
   star_remove(_ws, msg) { broadcast({ type: 'stars', list: extras.removeStar(msg.id) }); },

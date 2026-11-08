@@ -305,3 +305,15 @@ body{--ts:1}
 .aq-bar i{display:block;height:100%}
 .aq-sub{font-size:12px;color:#7d8087;margin-top:2px}
 .aq-note{font-size:12px;color:#7d8087;margin-top:6px}
+
+/* my42 model advisor */
+.adv-card{display:block;width:100%;margin:0 0 6px;padding:10px 12px;border:1.5px solid var(--accent,#4da3ff);border-radius:10px;background:rgba(77,163,255,.08);font:14px system-ui,sans-serif;color:#e6e8ec}
+.adv-card.hidden{display:none}
+.adv-title{font-weight:700;color:var(--lite,#9cc8ff);margin-bottom:3px}
+.adv-reason{margin-bottom:3px}
+.adv-note{font-size:12px;color:#9a9da4;margin-bottom:8px}
+.adv-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.adv-slim{justify-content:space-between}
+.adv-yes,.adv-no{padding:9px 14px;border-radius:9px;font:700 14px system-ui,sans-serif;cursor:pointer;min-height:40px}
+.adv-yes{border:1.5px solid var(--accent,#4da3ff);background:var(--accent,#4da3ff);color:#001326}
+.adv-no{border:1.5px solid #4a4d55;background:transparent;color:#d0d3d9}

@@ -10,6 +10,7 @@
 import { S } from './state.js';
 import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
+import { onAdvisorMessage } from './advisor.js';   // my42
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -236,6 +237,7 @@ document.getElementById('accounts-btn')?.addEventListener('click', () => send({ 
 // ── Messages from the server ─────────────────────────────────────────────────
 export function onExtrasMessage(msg) {
   switch (msg.type) {
+    case 'advisor': onAdvisorMessage(msg); break;   // my42
     case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {
