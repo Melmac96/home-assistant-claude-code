@@ -6,6 +6,7 @@
  * link "configuration.yaml".
  */
 import { enhanceQuestions } from './answers.js';   // my28
+import { decorateStar } from './extras.js';   // my40
 import { S } from './state.js';
 import { messagesEl } from './dom.js';
 
@@ -156,6 +157,7 @@ export function renderMarkdown(el, raw) {
   fixAnchorTargets(el);
   el.querySelectorAll('pre').forEach(addCopyButton);
   enhanceQuestions(el);   // my28
+  decorateStar(el);   // my40
 }
 
 // Copy text to the clipboard, with a fallback for non-secure contexts (the HA

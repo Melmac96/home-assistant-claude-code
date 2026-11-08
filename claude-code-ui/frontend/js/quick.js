@@ -74,6 +74,11 @@ let replyEditing = false;
 function drawReplies() {
   sheet.innerHTML = '';
   sheet.append(el('div', 'quick-head', 'Quick replies'));
+  // my40: Refresh screens acts straight away (no message to Claude); the answer shows on the pill.
+  const rf = el('button', 'quick-pill quick-refresh', '⟳ Refresh screens');
+  rf.type = 'button';
+  rf.onclick = (e) => { e.stopPropagation(); rf.disabled = true; rf.textContent = 'Refreshing…'; wsSend({ type: 'refresh_screens' }); };
+  sheet.append(rf);
   quick.replies.forEach((r, i) => {
     const b = el('button', 'quick-pill', replyEditing ? '✕ ' + r : r);
     b.type = 'button';

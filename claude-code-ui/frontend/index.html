@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>haAi</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="obsidian.css?v=my39">
+  <link rel="stylesheet" href="obsidian.css?v=my40">
   <script src="js/textsize.js?v=my39"></script>
 </head>
 <body>
@@ -32,6 +32,9 @@
       </div>
       <div class="header-right">
         <div class="icon-group">
+        <button id="stars-btn" class="icon-btn" title="Starred replies" aria-label="Starred replies">
+          <svg viewBox="0 0 24 24" width="22" height="22" stroke-linecap="round" stroke-linejoin="round"><g class="ic-f" fill="currentColor" stroke="currentColor" stroke-width="1.6"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></g><g class="ic-o" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/></g></svg>
+        </button>
         <button id="find-btn" class="icon-btn" title="Find in chat (Ctrl+F)" aria-label="Find in chat">
           <svg viewBox="0 0 24 24" width="22" height="22" stroke-linecap="round" stroke-linejoin="round"><g class="ic-f" fill="currentColor" stroke="currentColor" stroke-width="1.6"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21" fill="none"/></g><g class="ic-o" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></g></svg>
         </button>
@@ -91,6 +94,9 @@
           <span class="ts-val" id="ts-val">100%</span></div>
         <p class="ts-preview" id="ts-preview">This is how your text will look. Change the size and style above.</p>
       </div>
+      <div class="blue-rule" role="separator"></div>
+      <div class="settings-row"><label>haAi phone app</label><button type="button" id="app-update-check" class="settings-btn">Check for app update</button></div>
+      <p class="settings-hint" id="app-update-out"></p>
       <div class="blue-rule" role="separator"></div>
       <div class="settings-row">
         <label for="model-select">Model</label>
@@ -156,6 +162,11 @@
         <div id="devices-list" class="accounts-list"></div>
         <p class="settings-hint">Devices that can open haAi directly, like the haAi app. Remove one to stop it.</p>
       </div>
+    </div>
+
+    <div id="stars-panel" class="sessions-panel stars-panel hidden">
+      <div class="sessions-head">Starred replies <span id="stars-count" class="sec-count"></span></div>
+      <div id="stars-list" class="stars-list"></div>
     </div>
 
     <div id="accounts-panel" class="accounts-panel hidden">

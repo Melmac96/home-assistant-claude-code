@@ -280,3 +280,28 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 
 /* my39: everything outside the chat is locked to normal size, whatever an older page copy has set */
 body{--ts:1}
+/* my40: chat length strip, pinned question, stars, app update, accounts quota */
+.ctx-strip{display:block;width:100%;margin:0 0 6px;padding:8px 10px;border:1.5px solid #f3736c;border-radius:10px;background:rgba(243,115,108,.1);color:#f3736c;font:700 13px system-ui,sans-serif;text-align:left;cursor:pointer}
+.ctx-strip.hidden,.q-pin.hidden,.star-full.hidden,.star-snip.hidden,.stars-panel.hidden{display:none}
+.q-pin{display:block;width:100%;flex:none;padding:8px 12px;border:0;border-bottom:1px solid var(--accent);background:#0a0f17;color:var(--lite,#9cc8ff);font:600 14px system-ui,sans-serif;text-align:left;cursor:pointer;max-height:4.6em;overflow:hidden}
+.bubble-assistant{position:relative}
+.star-btn{position:absolute;top:2px;right:0;width:30px;height:30px;padding:0;border:0;background:transparent;color:#7d8087;font-size:19px;line-height:30px;cursor:pointer}
+.star-btn.on{color:#ffd166}
+.bubble-assistant>.bubble-content{padding-right:26px}
+#stars-btn{color:#c9a54a}
+.stars-list{max-height:65vh;overflow-y:auto}
+.star-row{padding:8px 2px;border-top:1px solid #1c1d20}
+.star-when{font-size:12px;color:#7d8087;margin-bottom:3px}
+.star-snip{font-size:14px;color:#d6d7da;cursor:pointer}
+.star-full{font-size:14px;cursor:pointer}
+.star-rm{margin-top:6px;min-height:32px;padding:0 10px;border:1px solid #26282d;border-radius:8px;background:transparent;color:#f3736c;font:600 12px system-ui,sans-serif}
+.quick-refresh{border-color:var(--accent)!important;color:var(--lite,#9cc8ff)!important}
+.app-get{display:inline-block;margin-top:6px;text-decoration:none}
+.acc-row{flex-wrap:wrap}
+.acc-quota{flex-basis:100%;margin-top:6px}
+.aq-line{display:flex;justify-content:space-between;font-size:13px;color:#b9bbc0;margin-top:6px}
+.aq-pct{color:#ececee}
+.aq-bar{height:6px;border-radius:3px;background:#1c1d20;overflow:hidden;margin-top:3px}
+.aq-bar i{display:block;height:100%}
+.aq-sub{font-size:12px;color:#7d8087;margin-top:2px}
+.aq-note{font-size:12px;color:#7d8087;margin-top:6px}

@@ -5,6 +5,7 @@
 import { onQuickMessage } from './quick.js';   // my28
 import { onHomeHealth } from './homehealth.js';   // my34
 import { onKeepMessage } from './keep.js';   // my35
+import { onExtrasMessage } from './extras.js';   // my40
 import { onSearchResults } from './sessions.js';   // my28
 import { S } from './state.js';
 import { updateUsage } from './usage.js';
@@ -382,6 +383,10 @@ export function handleServerMessage(msg) {
 
     case 'keep': case 'keep_error':   // my35
       onKeepMessage(msg);
+      break;
+
+    case 'stars': case 'refresh_result': case 'app_latest': case 'quota':   // my40
+      onExtrasMessage(msg);
       break;
 
     case 'home_health':   // my34

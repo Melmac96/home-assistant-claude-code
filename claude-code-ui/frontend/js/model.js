@@ -37,6 +37,7 @@ export function fmtTokens(n) {
 }
 
 export function updateCtxHint() {
+  queueMicrotask(() => window.dispatchEvent(new Event('haai-ctx')));   // my40: chat length strip
   ctxTokensEl.classList.remove('ctx-warn', 'ctx-danger');
   if (!S.ctxUsage || !S.ctxUsage.totalTokens) { ctxTokensEl.classList.add('hidden'); return; }
   const { totalTokens, maxTokens, autoCompactThreshold, autoCompactEnabled } = S.ctxUsage;

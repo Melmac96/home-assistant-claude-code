@@ -36,6 +36,7 @@ import { usableSlashCommands } from './slash-commands.js';
 import { makeInputChannel } from './input-channel.js';
 import { notify } from './notify.js';
 import * as autoContinue from './auto-continue.js';
+import { noteUsage } from './extras.js';   // my40
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
 // before the log says so, and how often it checks — only while a turn is
@@ -166,13 +167,15 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   const reportContextUsage = async (q) => {
     try {
       const u = await q.getContextUsage();
-      broadcast({
+      const ctxMsg = {
         type: 'context_usage',
         totalTokens: u.totalTokens,
         maxTokens: u.maxTokens,
         autoCompactThreshold: u.autoCompactThreshold,
         autoCompactEnabled: u.isAutoCompactEnabled,
-      });
+      };
+      broadcast(ctxMsg);
+      runtime.lastCtx = { ...ctxMsg, sid: runtime.activeSessionId };   // my40: chat length strip after a reload
       const limit = (u.isAutoCompactEnabled && u.autoCompactThreshold) || u.maxTokens;
       const pct = limit ? Math.round((u.totalTokens / limit) * 100) : 0;
       const detail = `context ${u.totalTokens}/${limit} tokens (${pct}%)` +
@@ -405,6 +408,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         runtime.lastUsage = { status: info.status, rateLimitType: info.rateLimitType,
           resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
+        try { noteUsage(info.unifiedWindows); } catch {}   // my40: Accounts quota, account in use
         if (info.status === 'rejected' && info.rateLimitType === 'five_hour' && info.resetsAt) {
           limitHit = { resetsAt: info.resetsAt, rateLimitType: info.rateLimitType };
           log('WARN', `usage limit reached (five_hour); resets at ${new Date(info.resetsAt * 1000).toISOString()}`);
