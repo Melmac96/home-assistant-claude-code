@@ -5,6 +5,7 @@
  * Only entity ids the server says exist are linked — a regex alone would happily
  * link "configuration.yaml".
  */
+import { enhanceQuestions } from './answers.js';   // my28
 import { S } from './state.js';
 import { messagesEl } from './dom.js';
 
@@ -153,6 +154,7 @@ export function renderMarkdown(el, raw) {
   linkifyEntities(el);
   fixAnchorTargets(el);
   el.querySelectorAll('pre').forEach(addCopyButton);
+  enhanceQuestions(el);   // my28
 }
 
 // Copy text to the clipboard, with a fallback for non-secure contexts (the HA

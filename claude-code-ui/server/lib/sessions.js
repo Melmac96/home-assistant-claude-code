@@ -7,6 +7,7 @@
  * only thing this app keeps of its own is a pointer to the active session.
  */
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'fs';
+import { readFile } from 'fs/promises';   // my28
 import path from 'path';
 import { STORE_DIR, ACTIVE_FILE } from './config.js';
 import { runtime } from './state.js';
@@ -202,6 +203,7 @@ export function parseSession(id) {
 }
 
 export function sessionTitle(id) {
+  let greeting = null;
   try {
     for (const ln of readFileSync(sessionFile(id), 'utf8').split('\n')) {
       if (!ln.trim()) continue;
@@ -215,10 +217,14 @@ export function sessionTitle(id) {
       const text = typeof c === 'string' ? c : Array.isArray(c) ? (c.find((b) => b.type === 'text')?.text || '') : '';
       if (isHarnessEcho(text) || parseTaskNotification(text)) continue;
       const t = (text || '').replace(/\s+/g, ' ').trim();
-      if (t) return t.length > 80 ? t.slice(0, 80) + '…' : t;
+      if (!t) continue;
+      const shown = t.length > 80 ? t.slice(0, 80) + '…' : t;
+      // my28: a bare greeting makes a useless title, so use the first real message when there is one.
+      if (/^(hi|hello|hey)( claude| there)?[\s!.,]*$/i.test(t)) { greeting = greeting || shown; continue; }
+      return shown;
     }
   } catch {}
-  return null;
+  return greeting;
 }
 
 export function listSessions() {
@@ -238,4 +244,40 @@ export function listSessions() {
 export function deleteSession(id) {
   try { unlinkSync(sessionFile(id)); return true; }
   catch (e) { console.warn('Could not delete session:', e.message); return false; }
+}
+
+// my28: search every saved chat, words only (what Michael typed and what Claude said), newest first.
+export async function searchSessions(q) {
+  const needle = String(q || '').toLowerCase();
+  if (needle.length < 2 || !existsSync(STORE_DIR)) return [];
+  const raw = !/["\\]/.test(needle);   // a quick test on the raw file is only safe with nothing JSON would escape
+  const files = readdirSync(STORE_DIR).filter((f) => f.endsWith('.jsonl')).map((f) => {
+    let m = 0; try { m = statSync(path.join(STORE_DIR, f)).mtimeMs; } catch {}
+    return { f, m };
+  }).sort((a, b) => b.m - a.m);
+  const out = [];
+  for (const { f, m } of files) {
+    if (out.length >= 30) break;
+    let body;
+    try { body = await readFile(path.join(STORE_DIR, f), 'utf8'); } catch { continue; }
+    if (raw && !body.toLowerCase().includes(needle)) continue;
+    let snippet = null;
+    for (const ln of body.split('\n')) {
+      if (!ln.trim()) continue;
+      let obj; try { obj = JSON.parse(ln); } catch { continue; }
+      for (const it of lineToItems(obj)) {
+        if (it.kind !== 'user' && it.kind !== 'text') continue;
+        const t = it.text.replace(/\s+/g, ' ');
+        const at = t.toLowerCase().indexOf(needle);
+        if (at < 0) continue;
+        snippet = (at > 50 ? '…' : '') + t.slice(Math.max(0, at - 50), at + needle.length + 70) + '…';
+        break;
+      }
+      if (snippet) break;
+    }
+    if (!snippet) continue;
+    const id = f.slice(0, -6);
+    out.push({ id, title: sessionTitle(id) || 'Chat', updatedAt: m, snippet });
+  }
+  return out;
 }

@@ -17,14 +17,15 @@ export function relTime(ms) {
 
 export function renderSessions() {
   sessionsListEl.innerHTML = '';
-  if (!S.sessions.length) {
+  const list = S.searchResults || S.sessions;   // my28
+  if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'sessions-empty';
-    empty.textContent = 'No saved sessions yet.';
+    empty.textContent = S.searchResults ? 'Nothing found.' : 'No saved sessions yet.';
     sessionsListEl.appendChild(empty);
     return;
   }
-  for (const s of S.sessions) {
+  for (const s of list) {
     const item = document.createElement('div');
     item.className = 'session-item' + (s.id === S.activeSessionId ? ' active' : '');
 
@@ -37,6 +38,7 @@ export function renderSessions() {
     time.className = 'session-time';
     time.textContent = relTime(s.updatedAt);
     main.append(title, time);
+    if (s.snippet) { const sn = document.createElement('div'); sn.className = 'session-snippet'; sn.textContent = s.snippet; main.append(sn); }   // my28
 
     const del = document.createElement('button');
     del.className = 'session-del';
@@ -78,12 +80,32 @@ export function renderSessions() {
 }
 
 export function openSessions() {
-  if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'sessions_list' }));
+  if (S.ws && S.isConnected) { S.ws.send(JSON.stringify({ type: 'sessions_list' })); S.ws.send(JSON.stringify({ type: 'waiting_get' })); }   // my28 waiting
   renderSessions();
   sessionsPanel.classList.remove('hidden');
   sessionsBtn.classList.add('active');
 }
 export function closeSessions() {
+  const box = document.getElementById('sessions-search');   // my28
+  if (box) box.value = '';
+  S.searchResults = null;
   sessionsPanel.classList.add('hidden');
   sessionsBtn.classList.remove('active');
+}
+
+// my28: search every saved chat, from the box at the top of the Sessions menu.
+const searchBox = document.getElementById('sessions-search');
+let searchTimer = null, searchSeq = 0;
+if (searchBox) searchBox.oninput = () => {
+  clearTimeout(searchTimer);
+  const q = searchBox.value.trim();
+  if (q.length < 2) { searchSeq++; S.searchResults = null; renderSessions(); return; }
+  searchTimer = setTimeout(() => {
+    if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'sessions_search', q, seq: ++searchSeq }));
+  }, 400);
+};
+export function onSearchResults(msg) {
+  if (msg.seq !== searchSeq) return;
+  S.searchResults = msg.results || [];
+  renderSessions();
 }

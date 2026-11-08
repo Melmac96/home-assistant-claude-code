@@ -3,9 +3,10 @@
  * and the autocomplete menu that offers them.
  */
 import { S } from './state.js';
-import { requestNewSession, resizeTextarea, runUiCommand, updateSendBtn } from './composer.js';
+import { resizeTextarea, runUiCommand, updateSendBtn } from './composer.js';
 import { cmdMenu, messagesEl, newSessionBtn, promptInput, sessionsBtn, sessionsPanel } from './dom.js';
 import { updateCtxHint } from './model.js';
+import { openNewChat, showQuickJobs } from './quick.js';   // my28
 
 import { closeSessions, openSessions } from './sessions.js';
 import { appendInfoBubble, toolCallEls } from './transcript.js';
@@ -144,6 +145,7 @@ export function clearScreen() {
   S.usage = { messages: 0, turns: 0, cost: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
   S.ctxUsage = null;
   updateCtxHint();
+  showQuickJobs();   // my28
 }
 
 export function showHelp() {
@@ -153,7 +155,7 @@ export function showHelp() {
 
 // The current session is preserved in the store (browsable via Sessions), so
 // requestNewSession only asks when a query is actively running.
-newSessionBtn.onclick = () => { requestNewSession(); };
+newSessionBtn.onclick = () => { openNewChat(); };   // my28 card
 
 sessionsBtn.onclick = (e) => {
   e.stopPropagation();

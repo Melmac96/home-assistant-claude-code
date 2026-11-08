@@ -2,6 +2,8 @@
  * The WebSocket: connecting, reconnecting, authentication, and the dispatch of
  * every message the server sends.
  */
+import { onQuickMessage } from './quick.js';   // my28
+import { onSearchResults } from './sessions.js';   // my28
 import { S } from './state.js';
 import { updateUsage } from './usage.js';
 import { showAccounts, showAccountResult, showStats } from './accounts.js';
@@ -370,6 +372,14 @@ export function handleServerMessage(msg) {
       appendErrorBubble('Auto-continue stopped — still rate-limited after several attempts. Try again later.');
       S.isRunning = false;
       updateSendBtn();
+      break;
+
+    case 'quick': case 'waiting': case 'handover_status': case 'handover_ready':   // my28
+      onQuickMessage(msg);
+      break;
+
+    case 'search_results':   // my28
+      onSearchResults(msg);
       break;
 
     case 'accounts':

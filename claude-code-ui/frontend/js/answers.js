@@ -1,69 +1,130 @@
 /*
- * my26: tap-to-answer buttons. When Claude's reply holds a marked question block
- * (⟦QUESTION⟧ ... ⟦/QUESTION⟧ with **A.** **B.** options, several questions labelled
- * **Q1** **Q2**), the options also show as buttons under that reply. Tapping one puts
- * the answer into the message box ("A", or "Q1. A" / "Q2. B" for several questions);
- * Michael then taps Send. The question itself stays as normal chat text.
+ * my28: tap your answer inside each question. A marked question block (⟦QUESTION⟧ ... ⟦/QUESTION⟧,
+ * options **A.** **B.**, several questions labelled **Q1** **Q2**) has each option turned into a
+ * full-width card right where it stands, then one "Send my answers" button at the end.
+ * Picks are remembered in localStorage, because the chat is rebuilt whenever the app reconnects
+ * (coming back to the phone) and anything held only in memory was lost: that was the my26 bug.
  */
-import { promptInput } from './dom.js';
+import { inputForm, messagesEl, promptInput } from './dom.js';
 
-export function parseQuestions(md) {
-  const open = md.lastIndexOf('⟦QUESTION⟧');
-  if (open < 0) return null;
-  const close = md.indexOf('⟦/QUESTION⟧', open);
-  if (close < 0) return null;
-  const qs = [];
-  let cur = null;
-  for (const line of md.slice(open, close).split('\n')) {
-    const qm = line.match(/^\s*\*\*(Q\d+)\*\*/);
-    if (qm) { cur = { label: qm[1], opts: [] }; qs.push(cur); continue; }
-    const om = line.match(/^\s*\*\*([A-Z])\.\*\*\s*(.*)$/);
-    if (om) {
-      if (!cur || (om[1] === 'A' && cur.opts.length)) { cur = { label: '', opts: [] }; qs.push(cur); }
-      cur.opts.push({ letter: om[1], text: om[2].replace(/\*\*/g, '').trim() });
-    }
+const KEY = 'haai-answers';
+const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
+function load(id) { try { const v = JSON.parse(localStorage.getItem(KEY) || 'null'); return v && v.id === id ? v.picks : {}; } catch { return {}; } }
+function save(id, picks) { try { localStorage.setItem(KEY, JSON.stringify({ id, picks })); } catch { /* storage full or blocked */ } }
+
+const leadStrong = (p) => { const f = p.firstElementChild; return f && f.tagName === 'STRONG' && p.textContent.trim().startsWith(f.textContent.trim()) ? f.textContent.trim() : ''; };
+
+function isStale(content) {
+  const bubble = content.parentElement;
+  for (let n = bubble && bubble.nextElementSibling; n; n = n.nextElementSibling) {
+    if (n.classList.contains('bubble-user') || n.querySelector?.('.answer-card')) return true;
   }
-  const usable = qs.filter((q) => q.opts.length >= 2);
-  if (!usable.length) return null;
-  if (usable.length > 1) usable.forEach((q, i) => { if (!q.label) q.label = 'Q' + (i + 1); });
-  return usable;
+  return false;
 }
 
-export function refreshAnswerButtons(content) {
-  const bubble = content && content.parentElement;
-  if (!bubble) return;
-  const old = bubble.querySelector(':scope > .answer-bar');
-  if (old) old.remove();
-  const qs = parseQuestions(content._rawMd || '');
-  if (!qs) return;
-  // only the newest question gets buttons
-  document.querySelectorAll('.answer-bar').forEach((b) => b.remove());
-  const bar = document.createElement('div');
-  bar.className = 'answer-bar';
-  const chosen = {};
-  const fill = () => {
-    const parts = qs.filter((q) => chosen[q.label || '_']).map((q) =>
-      q.label ? `${q.label}. ${chosen[q.label]}` : chosen['_']);
-    promptInput.value = parts.join('\n');
-    promptInput.dispatchEvent(new Event('input'));
-    promptInput.focus();
-  };
-  for (const q of qs) {
-    const row = document.createElement('div');
-    row.className = 'answer-row';
-    if (q.label) { const l = document.createElement('span'); l.className = 'answer-label'; l.textContent = q.label; row.appendChild(l); }
-    for (const o of q.opts) {
+export function enhanceQuestions(content) {
+  const raw = content._rawMd || '';
+  if (!raw.includes('⟦/QUESTION⟧')) return;
+  const kids = [...content.children];
+  let start = -1, end = -1;
+  kids.forEach((k, i) => { if (k.textContent.includes('⟦QUESTION⟧')) start = i; });
+  for (let i = start + 1; start >= 0 && i < kids.length; i++) if (kids[i].textContent.includes('⟦/QUESTION⟧')) { end = i; break; }
+  if (end < 0) return;
+
+  const groups = [];
+  let cur = null;
+  for (let i = start + 1; i < end; i++) {
+    const p = kids[i];
+    if (p.tagName !== 'P') continue;
+    const lead = leadStrong(p);
+    if (/^Q\d+$/.test(lead)) { cur = { label: lead, cards: [] }; groups.push(cur); continue; }
+    if (/^[A-Z]\.$/.test(lead)) {
+      const letter = lead[0];
+      if (!cur || (letter === 'A' && cur.cards.length)) { cur = { label: '', cards: [] }; groups.push(cur); }
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'answer-btn'; b.textContent = o.letter;
-      b.title = o.text; b.setAttribute('aria-label', o.letter + ': ' + o.text);
-      b.onclick = () => {
-        chosen[q.label || '_'] = o.letter;
-        row.querySelectorAll('.answer-btn').forEach((x) => x.classList.toggle('picked', x === b));
-        fill();
-      };
-      row.appendChild(b);
+      b.type = 'button'; b.className = 'answer-card'; b.innerHTML = p.innerHTML;
+      b._letter = letter; b._other = /any other answer/i.test(p.textContent);
+      p.replaceWith(b);
+      cur.cards.push(b);
     }
-    bar.appendChild(row);
   }
-  bubble.appendChild(bar);
+  const usable = groups.filter((g) => g.cards.length >= 2);
+  if (!usable.length) return;
+  if (usable.length > 1) usable.forEach((g, i) => { if (!g.label) g.label = 'Q' + (i + 1); });
+
+  const id = hash(raw);
+  const picks = load(id);
+  const send = document.createElement('button');
+  send.type = 'button'; send.className = 'answer-send';
+
+  const paint = () => {
+    let n = 0;
+    for (const g of usable) {
+      const p = picks[g.label || '_'];
+      if (p) n++;
+      for (const c of g.cards) {
+        const on = !!p && p.l === c._letter;
+        c.classList.toggle('picked', on);
+        if (c._box) c._box.hidden = !on;
+      }
+    }
+    send.disabled = !n;
+    send.textContent = usable.length > 1 && n < usable.length ? `Send my answers (${n} of ${usable.length})` : 'Send my answers';
+  };
+
+  for (const g of usable) {
+    const k = g.label || '_';
+    for (const c of g.cards) {
+      if (c._other) {
+        const box = document.createElement('input');
+        box.type = 'text'; box.className = 'answer-other'; box.placeholder = 'Type your answer'; box.hidden = true;
+        if (picks[k] && picks[k].l === c._letter) box.value = picks[k].t || '';
+        box.oninput = () => { if (picks[k]) { picks[k].t = box.value; save(id, picks); } };
+        c.after(box);
+        c._box = box;
+      }
+      c.onclick = () => {
+        if (picks[k] && picks[k].l === c._letter) delete picks[k];
+        else picks[k] = { l: c._letter, t: c._box ? c._box.value : '' };
+        save(id, picks);
+        paint();
+        if (c._box && !c._box.hidden) c._box.focus();
+      };
+    }
+  }
+
+  send.onclick = () => {
+    const lines = usable.filter((g) => picks[g.label || '_']).map((g) => {
+      const p = picks[g.label || '_'];
+      const a = p.t && p.t.trim() ? `${p.l}: ${p.t.trim()}` : p.l;
+      return g.label ? `${g.label}. ${a}` : a;
+    });
+    if (!lines.length) return;
+    const draft = promptInput.value.trim();
+    promptInput.value = lines.join('\n') + (draft ? '\n\n' + draft : '');
+    promptInput.dispatchEvent(new Event('input'));
+    localStorage.removeItem(KEY);
+    inputForm.dispatchEvent(new Event('submit'));
+  };
+
+  const last = usable[usable.length - 1].cards.slice(-1)[0];
+  (last._box || last).after(send);
+  paint();
+  if (isStale(content)) lock(content);
+}
+
+function lock(root) {
+  root.querySelectorAll('.answer-send').forEach((b) => b.remove());
+  root.querySelectorAll('.answer-other').forEach((b) => { if (!b.value) b.remove(); else b.disabled = true; });
+  root.querySelectorAll('.answer-card').forEach((b) => { b.disabled = true; b.classList.add('locked'); });
+}
+
+/** A message has gone in, so every question above it is finished with. */
+export function lockAnswers() { lock(messagesEl); }
+
+/** After the chat is rebuilt, only the newest unanswered question can still be answered. */
+export function syncAnswers() {
+  for (const c of messagesEl.querySelectorAll('.bubble-assistant .bubble-content')) {
+    if (c.querySelector('.answer-card') && isStale(c)) lock(c);
+  }
 }

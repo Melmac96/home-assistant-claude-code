@@ -12,6 +12,7 @@ import { openFind } from './find.js';
 import { scrollBottom } from './scroll.js';
 import { openSessions } from './sessions.js';
 import { hideThinking, showThinking } from './thinking.js';
+import { openNewChat } from './quick.js';   // my28
 import { appendErrorBubble, appendUserBubble } from './transcript.js';
 
 // ── Input form ─────────────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ export function doNewSession() {
   clearScreen();
   S.isRunning = false;
   updateSendBtn();
-  if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'new_session' }));
+  if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'new_session', save: true }));   // my28
 }
 
 /**
@@ -127,7 +128,7 @@ export async function requestNewSession() {
 }
 
 export function runUiCommand(name) {
-  if (name === 'new')   requestNewSession();
+  if (name === 'new')   openNewChat();   // my28
   else if (name === 'clear') clearScreen();
   else if (name === 'usage') showUsage();
   else if (name === 'resume') openSessions();

@@ -13,7 +13,8 @@ import { connections, send, broadcast } from './broadcast.js';
 import {
   isAuthenticated, isSubscriptionAuth, startLoginFlow, loginUrl, loginProcess, stopLoginProc,
 } from './auth.js';
-import { listSessions, parseSession, deleteSession, saveActive } from './sessions.js';
+import { listSessions, parseSession, deleteSession, saveActive, searchSessions } from './sessions.js';
+import * as handover from './handover.js';   // my28
 import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
@@ -56,6 +57,10 @@ function greet(ws) {
   if (runtime.backgroundTasks.size) {
     send(ws, { type: 'background_tasks', tasks: [...runtime.backgroundTasks.values()] });
   }
+
+  // my28: quick jobs/replies, and a Continue this job that finished while this tab was away
+  send(ws, { type: 'quick', ...handover.getQuick() });
+  if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
 
   // My Claude Code UI: keep the live sign-in saved (this is how the first
   // account is registered) and tell the tab who is signed in.
@@ -106,6 +111,15 @@ function sendNotifyState(ws) {
 
 function broadcastSessions() {
   broadcast({ type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
+}
+
+function startFresh() {
+  autoContinue.cancel('new-session');
+  autoContinue.clearLimitOffer('new-session');
+  runtime.activeSessionId = null;
+  saveActive();
+  broadcast({ type: 'cleared' });
+  broadcastSessions();
 }
 
 /** Everything the browser may send. One entry per message type. */
@@ -184,15 +198,25 @@ const handlers = {
     abortActive();
   },
 
-  new_session() {
+  new_session(_ws, msg) {
+    const old = runtime.activeSessionId;
     abortActive();
-    autoContinue.cancel('new-session');
-    autoContinue.clearLimitOffer('new-session');
-    runtime.activeSessionId = null;
-    saveActive();
-    broadcast({ type: 'cleared' });
-    broadcastSessions();
+    startFresh();
+    if (msg.save) handover.saveInBackground(old);   // my28: the old chat's notes, behind the scenes
   },
+
+  // my28: quick jobs and replies, Waiting for you, search, Continue this job
+  quick_save(_ws, msg) { broadcast({ type: 'quick', ...handover.saveQuick(msg) }); },
+  waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
+  waiting_done(_ws, msg) {
+    handover.waitingDone(String(msg.id || ''));
+    broadcast({ type: 'waiting', list: handover.getWaiting() });
+  },
+  sessions_search(ws, msg) {
+    searchSessions(msg.q).then((results) => send(ws, { type: 'search_results', seq: msg.seq, results }))
+      .catch((e) => { log('ERROR', `search failed: ${e?.message || e}`); send(ws, { type: 'search_results', seq: msg.seq, results: [] }); });
+  },
+  handover(ws) { handover.continueJob(ws, startFresh); },
 
   sessions_list(ws) {
     send(ws, { type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
