@@ -290,7 +290,12 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     for await (const event of q) {
       lastEventAt = Date.now();
       // my26: activity after a result means an added message is being answered
-      if (runtime.activeRun?.waitTimer) { clearTimeout(runtime.activeRun.waitTimer); runtime.activeRun.waitTimer = null; }
+      // my27: only REAL work (a reply, a tool step, streamed text) counts. The CLI's own
+      // system events after a result (e.g. session_state_changed idle) used to cancel
+      // the 20 s timer, so the run never ended and the screen showed 'working' for ever.
+      if (runtime.activeRun?.waitTimer && (event.type === 'assistant' || event.type === 'user' || event.type === 'stream_event')) {
+        clearTimeout(runtime.activeRun.waitTimer); runtime.activeRun.waitTimer = null;
+      }
       lastEventKind = event.type === 'system' ? `system/${event.subtype}` : event.type;
 
       if (event.type === 'system' && event.subtype === 'init') {
