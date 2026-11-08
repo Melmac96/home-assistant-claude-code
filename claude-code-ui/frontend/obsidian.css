@@ -237,3 +237,7 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 
 /* my32: Claude's row of blue diamonds runs the full width on any screen, heading on the next line */
 .diamond-row{height:calc(14px * var(--ts,1));margin:2px 0 10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 14'%3E%3Cpolygon points='8.5,3 12.5,7 8.5,11 4.5,7' fill='%234da3ff'/%3E%3C/svg%3E");background-size:calc(17px * var(--ts,1)) 100%;background-repeat:round no-repeat}
+
+/* my33: Update button beside the name button, only while an update is waiting (look B) */
+.update-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;height:32px;margin-left:6px;padding:0 8px;border:1.5px solid var(--accent);border-radius:10px;color:var(--lite);font-size:calc(12px * var(--ts,1));font-weight:700;text-decoration:none}
+.update-btn.hidden{display:none}

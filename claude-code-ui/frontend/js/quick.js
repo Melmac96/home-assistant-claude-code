@@ -163,6 +163,12 @@ export function onQuickMessage(msg) {
       if (!messagesEl.children.length || document.getElementById('quick-tiles')) showQuickJobs();
       break;
     case 'waiting': drawWaiting(msg.list || []); break;
+    case 'self_update': {   // my33: only there while haAi has an update waiting
+      const btn = document.getElementById('update-btn');
+      if (msg.url) btn.href = msg.url;
+      btn.classList.toggle('hidden', !msg.available);
+      break;
+    }
     case 'handover_status': appendInfoLine(msg.text); break;
     case 'handover_ready': sendText(msg.text); break;
   }

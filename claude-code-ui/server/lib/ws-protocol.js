@@ -23,6 +23,9 @@ import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel, providerSta
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 import * as deviceAuth from './device-auth.js';
+import { getSelfUpdate, startSelfUpdateCheck } from './selfupdate.js';   // my33
+
+startSelfUpdateCheck();
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
@@ -60,6 +63,7 @@ function greet(ws) {
 
   // my28: quick jobs/replies, and a Continue this job that finished while this tab was away
   send(ws, { type: 'quick', ...handover.getQuick() });
+  send(ws, { type: 'self_update', ...getSelfUpdate() });   // my33
   if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
 
   // My Claude Code UI: keep the live sign-in saved (this is how the first

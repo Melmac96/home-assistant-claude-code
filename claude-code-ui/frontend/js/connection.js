@@ -374,7 +374,7 @@ export function handleServerMessage(msg) {
       updateSendBtn();
       break;
 
-    case 'quick': case 'waiting': case 'handover_status': case 'handover_ready':   // my28
+    case 'quick': case 'waiting': case 'handover_status': case 'handover_ready': case 'self_update':   // my28, my33
       onQuickMessage(msg);
       break;
 
