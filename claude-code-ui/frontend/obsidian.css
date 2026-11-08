@@ -234,3 +234,6 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .sec-arrow{width:16px;height:16px;flex:none;stroke:var(--accent);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
 .sessions-section[aria-expanded="true"] .sec-arrow{transform:rotate(90deg)}
 .sec-count{color:var(--text-muted);font-weight:400}
+
+/* my32: Claude's row of blue diamonds runs the full width on any screen, heading on the next line */
+.diamond-row{height:calc(14px * var(--ts,1));margin:2px 0 10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 14'%3E%3Cpolygon points='8.5,3 12.5,7 8.5,11 4.5,7' fill='%234da3ff'/%3E%3C/svg%3E");background-size:calc(17px * var(--ts,1)) 100%;background-repeat:round no-repeat}

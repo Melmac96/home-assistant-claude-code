@@ -150,7 +150,8 @@ export function fixAnchorTargets(root) {
 }
 
 export function renderMarkdown(el, raw) {
-  el.innerHTML = marked.parse(raw);
+  // my32: a line of the 8 blue diamonds becomes a row across the whole width, with the next text on its own line.
+  el.innerHTML = marked.parse(raw.replace(/^(?:🔹){8}[ \t]*$/gm, '<div class="diamond-row"></div>\n'));
   linkifyEntities(el);
   fixAnchorTargets(el);
   el.querySelectorAll('pre').forEach(addCopyButton);
