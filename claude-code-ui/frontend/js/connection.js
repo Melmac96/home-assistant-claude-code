@@ -4,6 +4,7 @@
  */
 import { onQuickMessage } from './quick.js';   // my28
 import { onHomeHealth } from './homehealth.js';   // my34
+import { onKeepMessage } from './keep.js';   // my35
 import { onSearchResults } from './sessions.js';   // my28
 import { S } from './state.js';
 import { updateUsage } from './usage.js';
@@ -377,6 +378,10 @@ export function handleServerMessage(msg) {
 
     case 'quick': case 'waiting': case 'handover_status': case 'handover_ready': case 'self_update':   // my28, my33
       onQuickMessage(msg);
+      break;
+
+    case 'keep': case 'keep_error':   // my35
+      onKeepMessage(msg);
       break;
 
     case 'home_health':   // my34

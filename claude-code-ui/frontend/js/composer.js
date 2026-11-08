@@ -13,7 +13,8 @@ import { scrollBottom } from './scroll.js';
 import { openSessions } from './sessions.js';
 import { hideThinking, showThinking } from './thinking.js';
 import { openNewChat } from './quick.js';   // my28
-import { appendErrorBubble, appendUserBubble } from './transcript.js';
+import { appendErrorBubble, appendInfoLine, appendUserBubble } from './transcript.js';
+import { joinKept, keepItems, keepSettled, updateKeepBtn } from './keep.js';   // my35
 
 // ── Input form ─────────────────────────────────────────────────────────────
 
@@ -33,12 +34,21 @@ sendBtn.onclick = (e) => {
 inputForm.onsubmit = async (e) => {
   e.preventDefault();
   hideCmdMenu();
-  const text = promptInput.value.trim();
-  const hasAtt = attachments.length > 0;
-  if ((!text && !hasAtt) || !S.isConnected) return;
+  // my35: only the real Send takes the waiting tray. Buttons that send for you (quick jobs,
+  // answers, Ask Claude to look) leave it alone, so nothing goes before you are ready.
+  const useKeep = e.isTrusted;
+  if (useKeep && !(await keepSettled())) {
+    appendInfoLine('Your photos are still being saved. Nothing has been sent, please press Send again in a moment.');
+    return;
+  }
+  const kept = useKeep ? keepItems.slice() : [];
+  const boxText = promptInput.value.trim();
+  const text = joinKept(kept, boxText);
+  const hasAtt = attachments.some((a) => useKeep || !a.cid);
+  if ((!text && !hasAtt && !kept.length) || !S.isConnected) return;
 
   // UI slash command? handle locally (only when there's no attachment).
-  const ui = !hasAtt && UI_COMMANDS.find((c) => '/' + c.name === text);
+  const ui = !hasAtt && !kept.length && UI_COMMANDS.find((c) => '/' + c.name === text);
   if (ui) {
     runUiCommand(ui.name);
     promptInput.value = '';
@@ -51,9 +61,9 @@ inputForm.onsubmit = async (e) => {
   const adding = S.isRunning;   // my26: Add into the running chat, never a stop
 
   // Read the attachments to base64 for upload + the message bubble thumbnails.
-  const pending = attachments.slice();
+  const pending = attachments.filter((a) => useKeep || !a.cid);
   let payload = [];
-  let bubbleAtts = [];
+  let bubbleAtts = kept.filter((i) => i.kind === 'file').map((i) => ({ name: i.name, isImage: i.isImage, dataUrl: i.thumb }));
   let readFailed = 0;
   for (const a of pending) {
     let dataUrl = null;
@@ -67,7 +77,7 @@ inputForm.onsubmit = async (e) => {
     bubbleAtts.push({ name, isImage: a.isImage, dataUrl });
   }
   if (readFailed) appendErrorBubble(`${readFailed} attachment${readFailed > 1 ? 's' : ''} could not be read and ${readFailed > 1 ? 'were' : 'was'} skipped.`);
-  if (!payload.length && !text) { updateSendBtn(); return; }   // nothing usable to send
+  if (!payload.length && !text && !kept.length) { updateSendBtn(); return; }   // nothing usable to send
 
   appendUserBubble(text, undefined, bubbleAtts);
   scrollBottom(true);   // sending a prompt re-pins to the bottom
@@ -86,6 +96,7 @@ inputForm.onsubmit = async (e) => {
     type: 'prompt',
     text: contextLine() + text,
     attachments: payload.length ? payload : undefined,
+    keepIds: kept.length ? kept.map((i) => i.id) : undefined,   // my35
     permissionMode: permModeSelect.value,
     model: localStorage.getItem('model') || undefined,
     effort: localStorage.getItem('effort') || undefined,
@@ -142,6 +153,7 @@ export function resizeTextarea() {
 }
 
 export function updateSendBtn() {
+  updateKeepBtn();   // my35
   if (S.isRunning && hasDraft()) {
     sendBtn.disabled = !S.isConnected;
     sendBtn.innerHTML = ADD_ICON;
@@ -155,7 +167,7 @@ export function updateSendBtn() {
     sendBtn.setAttribute('aria-label', 'Stop');
     sendBtn.classList.add('stop');
   } else {
-    sendBtn.disabled = (!promptInput.value.trim() && !attachments.length) || !S.isConnected;
+    sendBtn.disabled = (!promptInput.value.trim() && !attachments.length && !keepItems.length) || !S.isConnected;
     sendBtn.innerHTML = SEND_ICON;
     sendBtn.setAttribute('aria-label', 'Send');
     sendBtn.classList.remove('stop');

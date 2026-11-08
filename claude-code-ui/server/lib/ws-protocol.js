@@ -25,6 +25,7 @@ import * as notifier from './notify.js';
 import * as deviceAuth from './device-auth.js';
 import { getSelfUpdate, startSelfUpdateCheck } from './selfupdate.js';   // my33
 import { getHomeHealth, startHomeHealthCheck } from './homehealth.js';   // my34
+import * as keep from './keep.js';   // my35
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -67,6 +68,7 @@ function greet(ws) {
   send(ws, { type: 'quick', ...handover.getQuick() });
   send(ws, { type: 'self_update', ...getSelfUpdate() });   // my33
   send(ws, { type: 'home_health', ...getHomeHealth() });   // my34
+  send(ws, { type: 'keep', list: keep.list() });   // my35
   if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
 
   // My Claude Code UI: keep the live sign-in saved (this is how the first
@@ -194,6 +196,11 @@ const handlers = {
   },
 
   prompt(ws, msg) {
+    if (Array.isArray(msg.keepIds) && msg.keepIds.length) {   // my35: Send takes everything waiting in the tray
+      msg.attachments = [...keep.take(msg.keepIds.map(String)), ...(Array.isArray(msg.attachments) ? msg.attachments : [])];
+      broadcast({ type: 'keep', list: keep.list() });
+    }
+    delete msg.keepIds;
     if (Array.isArray(msg.attachments) && msg.attachments.length) {
       msg.text = describeAttachments(msg.text, saveAttachments(msg.attachments));
     }
@@ -214,6 +221,12 @@ const handlers = {
 
   // my28: quick jobs and replies, Waiting for you, search, Continue this job
   quick_save(_ws, msg) { broadcast({ type: 'quick', ...handover.saveQuick(msg) }); },
+  keep_add(ws, msg) {   // my35
+    const r = keep.add(msg);
+    if (r.error) send(ws, { type: 'keep_error', cid: msg.cid, text: r.error });
+    else broadcast({ type: 'keep', list: keep.list() });
+  },
+  keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
   waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
   waiting_done(_ws, msg) {
     handover.waitingDone(String(msg.id || ''));

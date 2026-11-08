@@ -6,6 +6,7 @@
  * several of them raw is slow enough to look broken.
  */
 import { updateSendBtn } from './composer.js';
+import { flushKeep } from './keep.js';   // my35
 import { attachBtn, attachInput, attachPreview, inputForm, promptInput } from './dom.js';
 import { appendErrorBubble } from './transcript.js';
 
@@ -44,6 +45,7 @@ export function addFiles(fileList) {
   renderAttachments();
   updateSendBtn();
   persistAttachments();
+  flushKeep();   // my35: chosen photos go straight into the waiting tray
 }
 
 // my26: chosen photos/files survive an app or page reload (kept in this device's
