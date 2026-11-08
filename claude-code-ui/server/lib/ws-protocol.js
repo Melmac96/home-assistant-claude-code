@@ -27,6 +27,7 @@ import { getSelfUpdate, startSelfUpdateCheck } from './selfupdate.js';   // my33
 import { getHomeHealth, startHomeHealthCheck } from './homehealth.js';   // my34
 import * as keep from './keep.js';   // my35
 import * as extras from './extras.js';   // my40
+import { getPrefs, setPrefs } from './prefs.js';   // my41
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -71,6 +72,7 @@ function greet(ws) {
   send(ws, { type: 'home_health', ...getHomeHealth() });   // my34
   send(ws, { type: 'keep', list: keep.list() });   // my35
   send(ws, { type: 'stars', list: extras.listStars() });   // my40
+  send(ws, { type: 'prefs', ...getPrefs() });   // my41
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
   if (runtime.lastCtx && runtime.lastCtx.sid && runtime.lastCtx.sid === runtime.activeSessionId) send(ws, runtime.lastCtx);   // my40
   if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
@@ -231,6 +233,7 @@ const handlers = {
     else broadcast({ type: 'keep', list: keep.list() });
   },
   keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
+  prefs_set(_ws, msg) { broadcast({ type: 'prefs', ...setPrefs(msg) }); },   // my41
   star_add(_ws, msg) { broadcast({ type: 'stars', list: extras.addStar(msg, runtime.activeSessionId) }); },   // my40
   star_remove(_ws, msg) { broadcast({ type: 'stars', list: extras.removeStar(msg.id) }); },
   async refresh_screens(ws) { send(ws, { type: 'refresh_result', ...(await extras.refreshScreens()) }); },

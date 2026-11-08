@@ -97,4 +97,5 @@ export function applyModelCatalog(models) {
   } else if (hasValue(prevValue)) {
     modelSelect.value = prevValue;
   }
+  window.dispatchEvent(new Event('haai-models'));   // my41: re-pick the newest Sonnet
 }

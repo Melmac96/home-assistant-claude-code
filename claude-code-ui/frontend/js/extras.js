@@ -8,7 +8,7 @@
  *  6. Accounts: 5-hour and weekly use for each paid account, as USED bars matching the top bars.
  */
 import { S } from './state.js';
-import { inputForm, messagesEl } from './dom.js';
+import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
@@ -32,8 +32,11 @@ function drawCtx() {
   const u = S.ctxUsage;
   const limit = u ? ((u.autoCompactEnabled && u.autoCompactThreshold) || u.maxTokens) : 0;
   const pct = u && limit ? Math.min(100, Math.round(u.totalTokens / limit * 100)) : 0;
-  strip.classList.toggle('hidden', pct < 80);
-  strip.textContent = `Chat is ${pct}% full. Tap to start a new chat`;
+  // my41 (user, 2026-11-08): warn when the chat gets COSTLY (150,000 tokens), not only when the memory is nearly full.
+  const tokens = u ? u.totalTokens : 0;
+  const costly = tokens >= 150000;
+  strip.classList.toggle('hidden', !(costly || pct >= 80));
+  strip.textContent = costly ? `This chat is long (${Math.round(tokens / 1000)}k tokens) and costs more each reply. Tap to start a new chat` : `Chat is ${pct}% full. Tap to start a new chat`;
 }
 window.addEventListener('haai-ctx', drawCtx);
 
@@ -145,6 +148,35 @@ if (starBtn) {
   }
 }
 
+// ── 7. Model and thinking effort: one shared choice, default newest Sonnet on Medium ──
+let prefs = null;
+const verOf = (s) => (String(s).match(/\d+/g) || []).map(Number);
+const cmpVer = (a, b) => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = (b[i] || 0) - (a[i] || 0); if (d) return d; } return 0; };
+function latestSonnet() {
+  const opts = [...modelSelect.options].filter((o) => /sonnet/i.test(o.value + ' ' + (o.dataset.resolvedModel || '')));
+  if (!opts.length) return 'claude-sonnet-5-5';
+  opts.sort((x, y) => cmpVer(verOf(x.dataset.resolvedModel || x.value), verOf(y.dataset.resolvedModel || y.value)));
+  return opts[0].value;
+}
+function applyPrefs() {
+  if (!prefs) return;
+  const id = prefs.model === 'latest-sonnet' ? latestSonnet() : prefs.model;
+  if (![...modelSelect.options].some((o) => o.value === id)) {
+    const op = document.createElement('option'); op.value = id; op.textContent = id; modelSelect.appendChild(op);
+  }
+  modelSelect.value = id;
+  localStorage.setItem('model', id);
+  effortSelect.value = prefs.effort;
+  localStorage.setItem('effort', prefs.effort);
+}
+window.addEventListener('haai-models', applyPrefs);
+const savePrefs = () => {
+  const m = modelSelect.value === latestSonnet() ? 'latest-sonnet' : modelSelect.value;
+  send({ type: 'prefs_set', model: m, effort: effortSelect.value || 'medium' });
+};
+modelSelect.addEventListener('change', savePrefs);
+effortSelect.addEventListener('change', savePrefs);
+
 // ── 5. haAi phone app update (Settings) ──────────────────────────────────────
 let latest = null;
 const appBtn = document.getElementById('app-update-check');
@@ -204,6 +236,7 @@ document.getElementById('accounts-btn')?.addEventListener('click', () => send({ 
 // ── Messages from the server ─────────────────────────────────────────────────
 export function onExtrasMessage(msg) {
   switch (msg.type) {
+    case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {
       const p = document.querySelector('.quick-refresh');
