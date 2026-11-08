@@ -269,9 +269,17 @@ export function handleServerMessage(msg) {
       S.usage.outputTokens += msg.outputTokens || 0;
       S.usage.cacheReadTokens  += msg.cacheReadTokens  || 0;
       S.usage.cacheWriteTokens += msg.cacheWriteTokens || 0;
+      if (msg.more) { showThinking(); break; }   // my26: an added message is still being answered
       S.isRunning = false;
       updateSendBtn();
       if (!msg.background) attentionCue('Claude finished', 'Your reply is ready.');
+      break;
+
+    case 'run_idle':   // my26: the added message was already answered inside the last turn
+      hideThinking();
+      S.isRunning = false;
+      updateSendBtn();
+      attentionCue('Claude finished', 'Your reply is ready.');
       break;
 
     case 'context_usage':

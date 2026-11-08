@@ -5,7 +5,7 @@
 import { S } from './state.js';
 import { contextLine } from './embed.js';
 import { attachments, clearAttachments, fileToDataURL } from './attachments.js';
-import { SEND_ICON, STOP_ICON, UI_COMMANDS, clearScreen, hideCmdMenu, showHelp, showUsage } from './commands.js';
+import { ADD_ICON, SEND_ICON, STOP_ICON, UI_COMMANDS, clearScreen, hideCmdMenu, showHelp, showUsage } from './commands.js';
 import { confirmInterrupt } from './confirm.js';
 import { inputForm, permModeSelect, promptInput, sendBtn, statusDot } from './dom.js';
 import { openFind } from './find.js';
@@ -16,8 +16,11 @@ import { appendErrorBubble, appendUserBubble } from './transcript.js';
 
 // ── Input form ─────────────────────────────────────────────────────────────
 
+// my26: while Claude is working, text (or a photo) in the box turns Stop into Add.
+const hasDraft = () => !!(promptInput.value.trim() || attachments.length);
+
 sendBtn.onclick = (e) => {
-  if (S.isRunning) {
+  if (S.isRunning && !hasDraft()) {
     e.preventDefault();
     S.isRunning = false;
     hideThinking();
@@ -44,7 +47,7 @@ inputForm.onsubmit = async (e) => {
     return;
   }
 
-  if (S.isRunning) return;
+  const adding = S.isRunning;   // my26: Add into the running chat, never a stop
 
   // Read the attachments to base64 for upload + the message bubble thumbnails.
   const pending = attachments.slice();
@@ -85,7 +88,18 @@ inputForm.onsubmit = async (e) => {
     permissionMode: permModeSelect.value,
     model: localStorage.getItem('model') || undefined,
     effort: localStorage.getItem('effort') || undefined,
+    add: adding || undefined,
   }));
+};
+
+// my26: "What were you doing?" button: one tap asks Claude to repeat its last full report.
+const repeatBtn = document.getElementById('repeat-btn');
+if (repeatBtn) repeatBtn.onclick = () => {
+  if (!S.isConnected) return;
+  const ask = 'What were you doing? Please repeat your last full report: what you did, and any question still waiting.';
+  promptInput.value = promptInput.value.trim() ? promptInput.value.trim() + '\n\n' + ask : ask;
+  promptInput.dispatchEvent(new Event('input'));
+  inputForm.dispatchEvent(new Event('submit'));
 };
 
 export function doNewSession() {
@@ -127,7 +141,14 @@ export function resizeTextarea() {
 }
 
 export function updateSendBtn() {
-  if (S.isRunning) {
+  if (S.isRunning && hasDraft()) {
+    sendBtn.disabled = !S.isConnected;
+    sendBtn.innerHTML = ADD_ICON;
+    sendBtn.setAttribute('aria-label', 'Add to the chat without stopping');
+    sendBtn.classList.remove('stop');
+    sendBtn.classList.add('add');
+  } else if (S.isRunning) {
+    sendBtn.classList.remove('add');
     sendBtn.disabled = false;
     sendBtn.innerHTML = STOP_ICON;
     sendBtn.setAttribute('aria-label', 'Stop');
@@ -137,6 +158,7 @@ export function updateSendBtn() {
     sendBtn.innerHTML = SEND_ICON;
     sendBtn.setAttribute('aria-label', 'Send');
     sendBtn.classList.remove('stop');
+    sendBtn.classList.remove('add');
   }
 }
 

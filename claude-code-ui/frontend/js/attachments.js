@@ -43,6 +43,39 @@ export function addFiles(fileList) {
   if (!added && !skipped) appendErrorBubble('Could not attach the selected file(s).');
   renderAttachments();
   updateSendBtn();
+  persistAttachments();
+}
+
+// my26: chosen photos/files survive an app or page reload (kept in this device's
+// browser storage until sent or removed).
+const DB = 'haai-draft', ST = 'atts';
+function idb() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(ST);
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+let restoring = false;
+export async function persistAttachments() {
+  if (restoring) return;
+  try {
+    const db = await idb();
+    const tx = db.transaction(ST, 'readwrite');
+    tx.objectStore(ST).put(attachments.map((a) => ({ name: a.name, type: a.mediaType, blob: a.file })), 'list');
+  } catch {}
+}
+async function restoreAttachments() {
+  try {
+    const db = await idb();
+    const list = await new Promise((res) => {
+      const r = db.transaction(ST).objectStore(ST).get('list');
+      r.onsuccess = () => res(r.result || []); r.onerror = () => res([]);
+    });
+    if (!list.length || attachments.length) return;
+    restoring = true;
+    addFiles(list.map((x) => new File([x.blob], x.name || 'file', { type: x.type || x.blob.type || '' })));
+  } catch {} finally { restoring = false; }
 }
 
 export function removeAttachment(i) {
@@ -51,12 +84,14 @@ export function removeAttachment(i) {
   attachments.splice(i, 1);
   renderAttachments();
   updateSendBtn();
+  persistAttachments();
 }
 
 export function clearAttachments() {
   for (const a of attachments) if (a.url) URL.revokeObjectURL(a.url);
   attachments = [];
   renderAttachments();
+  persistAttachments();
 }
 
 export function renderAttachments() {
@@ -124,6 +159,7 @@ export function fileToDataURL(file, isImage) {
 }
 
 attachBtn.onclick = () => attachInput.click();
+restoreAttachments();   // my26
 attachInput.onchange = () => { addFiles(attachInput.files); attachInput.value = ''; };
 
 // Paste an image (e.g. a screenshot) straight into the prompt.

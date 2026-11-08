@@ -56,7 +56,17 @@ export function abortActive() {
   }
 }
 
-export async function runQuery(ws, { text, permissionMode, model, effort, autoAttempts = 0 }) {
+export async function runQuery(ws, { text, permissionMode, model, effort, add, autoAttempts = 0 }) {
+  // my26: the Add button. A message sent WHILE a turn is running goes into that same
+  // running chat instead of stopping it (the old way aborted the turn). If the run has
+  // just ended (channel closed), it falls through and is sent as a normal new message.
+  if (autoAttempts === 0 && add && runtime.activeRun?.phase === 'turn' && runtime.activeRun.channel.push(text)) {
+    runtime.activeRun.pendingAdds = (runtime.activeRun.pendingAdds || 0) + 1;
+    for (const c of connections) if (c !== ws) send(c, { type: 'user', text });
+    log('INFO', `my26: message added into the running turn (no stop): promptLen=${text.length}`);
+    return;
+  }
+
   // The previous turn already reported its `result`, but a background task it
   // spawned (a subagent, a backgrounded shell command) is still running. Push
   // the new message into that SAME still-open run instead of aborting it below
@@ -279,6 +289,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
     runtime.activeRun.q = q;
     for await (const event of q) {
       lastEventAt = Date.now();
+      // my26: activity after a result means an added message is being answered
+      if (runtime.activeRun?.waitTimer) { clearTimeout(runtime.activeRun.waitTimer); runtime.activeRun.waitTimer = null; }
       lastEventKind = event.type === 'system' ? `system/${event.subtype}` : event.type;
 
       if (event.type === 'system' && event.subtype === 'init') {
@@ -394,6 +406,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
         }
 
       } else if (event.type === 'result') {
+        // my26: an added message may still be waiting for its own answer
+        const arun = runtime.activeRun && runtime.activeRun.channel === channel ? runtime.activeRun : null;
+        const more = !!(arun && arun.pendingAdds > 0);
         // Not trusted to mean the turn finished: a usage-limit rejection can be
         // followed by a 'result' claiming subtype:'success' (cost $0, 1 turn)
         // before the generator throws for real — confirmed live. `limitHit`, set
@@ -415,8 +430,23 @@ export async function runQuery(ws, { text, permissionMode, model, effort, autoAt
           cacheReadTokens: event.usage?.cache_read_input_tokens ?? 0,
           cacheWriteTokens: event.usage?.cache_creation_input_tokens ?? 0,
           background: runtime.backgroundTasks.size > 0,
+          more,
         });
         await reportContextUsage(q);
+        if (more) {
+          // Keep the run open for the added message. If the CLI already folded it into
+          // the turn just finished, nothing more arrives: close after 20 s of quiet.
+          arun.pendingAdds--;
+          arun.waitTimer = setTimeout(() => {
+            arun.waitTimer = null;
+            if (runtime.activeRun !== arun) return;
+            arun.pendingAdds = 0;
+            resultSeen = true;
+            broadcast({ type: 'run_idle' });
+            maybeEndRun();
+          }, 20000);
+          continue;
+        }
         // A single streamed query can legitimately emit more than one `result`
         // — confirmed live: once for the foreground turn, then another each
         // time a background task's completion hands control back for a short

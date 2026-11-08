@@ -7,6 +7,7 @@ import { clearScreen } from './commands.js';
 import { messagesEl } from './dom.js';
 import { addCopyButton, renderMarkdown } from './links.js';
 import { scrollBottom } from './scroll.js';
+import { refreshAnswerButtons } from './answers.js';   // my26
 
 // ── Message rendering ──────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ export function appendAssistantText(text, ts) {
   const content = S.lastAssistantBubble.querySelector('.bubble-content');
   content._rawMd = (content._rawMd || '') + text;
   renderMarkdown(content, content._rawMd);
+  refreshAnswerButtons(content);   // my26 tap-to-answer
   scrollBottom();
 }
 
