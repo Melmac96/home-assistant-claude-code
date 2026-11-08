@@ -13,7 +13,7 @@ const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o));
 const saveQuick = () => wsSend({ type: 'quick_save', jobs: quick.jobs, replies: quick.replies });
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
-function sendText(t) {
+export function sendText(t) {
   if (!S.isConnected) return;
   promptInput.value = t;
   promptInput.dispatchEvent(new Event('input'));

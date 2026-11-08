@@ -241,3 +241,14 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 /* my33: Update button beside the name button, only while an update is waiting (look B) */
 .update-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;height:32px;margin-left:6px;padding:0 8px;border:1.5px solid var(--accent);border-radius:10px;color:var(--lite);font-size:calc(12px * var(--ts,1));font-weight:700;text-decoration:none}
 .update-btn.hidden{display:none}
+
+/* my34: Home health heart (look C) and its list */
+.health-btn{flex:none;position:relative;width:34px;height:34px;margin-left:6px;padding:0;border:0;background:transparent;color:#46bb68;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.health-btn.bad{color:#f3736c}
+.health-btn.hidden,.health-num.hidden{display:none}
+.health-num{position:absolute;top:-3px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#f3736c;color:#000;font:800 11px/17px system-ui,sans-serif;text-align:center}
+.hh-panel{position:fixed;left:8px;right:8px;max-width:400px;max-height:60vh;overflow-y:auto;background:#0a0a0b;border:1.5px solid var(--accent,#4da3ff);border-radius:12px;padding:10px 12px 12px;z-index:150}
+.hh-title{font-weight:700;font-size:calc(15px * var(--ts,1));color:#ececee;margin-bottom:6px}
+.hh-line{padding:6px 0;border-top:1px solid #1c1d20;font-size:calc(15px * var(--ts,1));color:#ececee;overflow-wrap:anywhere}
+.hh-when{margin-top:7px;color:#7d8087;font-size:calc(13px * var(--ts,1))}
+.hh-ask{margin-top:9px;min-height:42px;width:100%;border:1.5px solid var(--accent,#4da3ff);border-radius:12px;background:rgba(77,163,255,.12);color:#9cc8ff;font:700 14px system-ui,sans-serif;cursor:pointer}
