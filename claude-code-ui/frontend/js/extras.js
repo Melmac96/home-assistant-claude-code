@@ -11,6 +11,7 @@ import { S } from './state.js';
 import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
+import { speakerButton } from './read.js';   // my43
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -78,7 +79,18 @@ export function decorateStar(content) {
   if (!bubble || !bubble.classList.contains('bubble-assistant')) return;
   const raw = (content._rawMd || '').trim();
   if (!raw) return;
-  let b = bubble.querySelector(':scope > .star-btn');
+  // my43: the star lives at the BOTTOM of the reply (with a speaker); another speaker sits at the top.
+  let foot = bubble.querySelector(':scope > .reply-foot');
+  if (!foot) {
+    foot = mk('div', 'reply-foot');
+    const getRaw = () => content._rawMd || '';
+    const top = speakerButton(getRaw); top.classList.add('read-top');
+    const bottom = speakerButton(getRaw);
+    foot.append(bottom);
+    bubble.append(foot);
+    bubble.prepend(top);
+  }
+  let b = foot.querySelector('.star-btn');
   if (!b) {
     b = mk('button', 'star-btn');
     b.type = 'button';
@@ -90,7 +102,7 @@ export function decorateStar(content) {
       if (starIds().has(id)) send({ type: 'star_remove', id });
       else send({ type: 'star_add', id, text, ts: Date.now() });
     };
-    bubble.append(b);
+    foot.append(b);
   }
   const on = starIds().has(hash(raw));
   b.textContent = on ? '★' : '☆';
