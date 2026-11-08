@@ -277,3 +277,6 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 
 /* my38: text size (pinch or slider) changes the chat only; top bar, typing box and menus stay normal */
 .chat-scroll,.ts-preview{--ts:var(--chat-ts,1);font-size:calc(15px * var(--ts,1))}
+
+/* my39: everything outside the chat is locked to normal size, whatever an older page copy has set */
+body{--ts:1}

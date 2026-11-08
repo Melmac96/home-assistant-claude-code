@@ -25,6 +25,7 @@ export let headerLockTimer = null;
 // feeds back and oscillates the header. So after each toggle we ignore scroll
 // events until the collapse/expand animation settles, then re-baseline.
 export function setHeaderHidden(hidden) {
+  if (window.ccuiPinching) return;   // my39: the chat reflowing under a pinch must not slide the top bar
   if (headerEl.classList.contains('header-hidden') === hidden) return;
   headerEl.classList.toggle('header-hidden', hidden);
   if (headerLockTimer) clearTimeout(headerLockTimer);

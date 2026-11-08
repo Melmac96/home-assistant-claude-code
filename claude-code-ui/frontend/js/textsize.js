@@ -27,10 +27,10 @@
     window.ccuiShowTs = show;
   });
   // my11: two-finger pinch changes the text size (same setting as the slider), remembered per device
-  var pd = 0, p0 = 100, raf = 0;
+  var pd = 0, p0 = 100, raf = 0, pt = 0;
   function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
   document.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 2) { pd = dist(e.touches); p0 = ts; } else pd = 0;
+    if (e.touches.length === 2) { pd = dist(e.touches); p0 = ts; clearTimeout(pt); window.ccuiPinching = true; } else pd = 0;
   }, { passive: true });
   document.addEventListener('touchmove', function (e) {
     if (e.touches.length !== 2 || !pd) return;
@@ -42,5 +42,6 @@
   document.addEventListener('touchend', function () {
     if (!pd) return;
     pd = 0; put(K1, ts); if (window.ccuiShowTs) window.ccuiShowTs();
+    pt = setTimeout(function () { window.ccuiPinching = false; }, 500);   // my39: lets the chat settle first
   }, { passive: true });
 })();
