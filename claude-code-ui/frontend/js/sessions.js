@@ -15,9 +15,38 @@ export function relTime(ms) {
   return new Date(ms).toLocaleDateString();
 }
 
+// my29: the two drop-down sections of the Sessions menu. Each one stays as it
+// was left on this device; a search always shows its results.
+const SECTIONS = { waiting: ['waiting-toggle', 'waiting-list'], chats: ['chats-toggle', 'sessions-list'] };
+const SECTIONS_KEY = 'haai-sessions-open';
+function savedSections() {
+  try { return JSON.parse(localStorage.getItem(SECTIONS_KEY)) || {}; } catch { return {}; }
+}
+function showSection(name, open) {
+  const [btn, body] = SECTIONS[name].map((id) => document.getElementById(id));
+  btn.setAttribute('aria-expanded', String(open));
+  body.classList.toggle('sec-closed', !open);
+}
+function applySections() {
+  const saved = savedSections();
+  showSection('waiting', !!saved.waiting);
+  showSection('chats', S.searchResults ? true : !!saved.chats);
+}
+for (const name of Object.keys(SECTIONS)) {
+  document.getElementById(SECTIONS[name][0]).onclick = () => {
+    const open = document.getElementById(SECTIONS[name][0]).getAttribute('aria-expanded') !== 'true';
+    showSection(name, open);
+    const saved = savedSections();
+    saved[name] = open;
+    try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(saved)); } catch {}
+  };
+}
+
 export function renderSessions() {
   sessionsListEl.innerHTML = '';
   const list = S.searchResults || S.sessions;   // my28
+  document.getElementById('chats-count').textContent = S.searchResults ? `(${list.length} found)` : `(${list.length})`;   // my29
+  applySections();
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'sessions-empty';

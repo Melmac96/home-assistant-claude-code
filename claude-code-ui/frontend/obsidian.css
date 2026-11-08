@@ -223,3 +223,13 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .newchat-opt small{display:block;color:var(--text-muted);font-weight:400;margin-top:2px}
 .newchat-opt.solid{background:var(--accent,#4da3ff);color:#000}
 .newchat-opt.solid small{color:#10233a}
+
+/* my29: Sessions menu = two drop-down sections; the whole menu scrolls, so an open Waiting list can no longer squash the chats to nothing */
+.sessions-panel{overflow-y:auto}
+.sessions-panel>*{flex-shrink:0}
+.sessions-list{overflow:visible}
+.sec-closed{display:none!important}
+.sessions-section{display:flex;align-items:center;gap:8px;width:100%;min-height:46px;padding:8px 14px;background:none;border:0;border-bottom:1px solid var(--border);color:var(--lite);font:inherit;font-size:calc(13px * var(--ts,1));font-weight:600;text-align:left;cursor:pointer}
+.sec-arrow{width:16px;height:16px;flex:none;stroke:var(--accent);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;transition:transform .15s}
+.sessions-section[aria-expanded="true"] .sec-arrow{transform:rotate(90deg)}
+.sec-count{color:var(--text-muted);font-weight:400}

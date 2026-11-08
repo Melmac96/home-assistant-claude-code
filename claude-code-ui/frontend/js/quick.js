@@ -112,8 +112,9 @@ const waitingEl = document.getElementById('waiting-list');
 function drawWaiting(list) {
   if (!waitingEl) return;
   waitingEl.innerHTML = '';
+  document.getElementById('waiting-toggle').classList.toggle('sec-closed', !list.length);   // my29: drop-down heading
+  document.getElementById('waiting-count').textContent = `(${list.length})`;
   if (!list.length) return;
-  waitingEl.append(el('div', 'quick-head', `Waiting for you (${list.length})`));
   for (const w of list) {
     const row = el('div', 'waiting-row');
     const yes = el('button', 'waiting-ok', '✓');
