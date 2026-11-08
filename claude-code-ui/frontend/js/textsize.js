@@ -4,7 +4,7 @@
   function get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function apply(ts, font) {
-    root.style.setProperty('--ts', String(ts / 100));
+    root.style.setProperty('--chat-ts', String(ts / 100));   // my38: only the chat area reads this
     if (font) root.style.setProperty('--ui-font', font + ', system-ui, sans-serif');
     else root.style.removeProperty('--ui-font');
   }

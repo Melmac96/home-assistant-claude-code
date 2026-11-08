@@ -274,3 +274,6 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .composer-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:4px;margin-top:0}
 .composer .keep-btn{margin-left:auto}
 .composer .send-btn{margin-left:4px}
+
+/* my38: text size (pinch or slider) changes the chat only; top bar, typing box and menus stay normal */
+.chat-scroll,.ts-preview{--ts:var(--chat-ts,1);font-size:calc(15px * var(--ts,1))}
