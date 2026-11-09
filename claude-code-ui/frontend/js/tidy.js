@@ -284,7 +284,7 @@ moreBtn.onclick = () => {
     const r = mk('button', 'tidy-row'); r.type = 'button';
     const ic = b.querySelector('svg'); if (ic) { const c = ic.cloneNode(true); c.setAttribute('width', 18); c.setAttribute('height', 18); r.append(c); } else if (b.textContent.trim().length <= 3) r.append(mk('span', null, b.textContent.trim()));
     r.append(mk('span', 'tidy-r1', label));
-    r.onclick = () => { closeAll(); b.click(); };
+    r.onclick = () => { closeAll(); setTimeout(() => b.click(), 0); };   // my59: click after this tap finishes, or the page-wide click closes Quick replies at once
     more.append(r);
   }
   open(more);
