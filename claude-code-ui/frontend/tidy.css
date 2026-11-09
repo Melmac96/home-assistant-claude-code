@@ -114,3 +114,6 @@ html:not(.haai-tablet) .icon-group{gap:8px!important}
 html:not(.haai-tablet) .icon-group .icon-btn{width:40px!important;height:40px!important;border-radius:12px!important}
 html:not(.haai-tablet) .icon-group .icon-btn svg{width:22px!important;height:22px!important}
 html:not(.haai-tablet) #tidy-pin-btn{width:auto!important;min-width:40px}
+
+/* my66: Accounts page across the full screen width on every screen size */
+.accounts-panel{left:10px!important;right:10px!important;width:auto!important;max-width:none!important}
