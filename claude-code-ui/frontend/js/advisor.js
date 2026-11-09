@@ -111,3 +111,5 @@ export function onAdvisorMessage(msg) {
   draw();
 }
 document.getElementById('advisor-toggle')?.addEventListener('change', (e) => send({ type: 'advisor_set', enabled: e.target.checked }));
+
+export const advisorOn = () => adv.enabled;   // my55
