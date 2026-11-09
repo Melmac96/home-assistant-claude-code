@@ -57,6 +57,7 @@ export function showAccounts(msg) {
   setBadge(cur, msg.mode);
   list.innerHTML = ''; freeList.innerHTML = '';
   const saved = (msg.saved || []).slice().sort((x, y) => rank(x.email) - rank(y.email));
+  window.dispatchEvent(new CustomEvent('haai-accounts', { detail: { cur, saved, free } }));   // my54
   for (const a of saved) {
     const row = mk('div', 'acc-row' + (a.active ? ' acc-on' : ''));
     const who = mk('div', 'acc-who acc-email', a.email);

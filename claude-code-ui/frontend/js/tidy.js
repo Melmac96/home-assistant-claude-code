@@ -29,6 +29,7 @@ let lastK = 0;
 const modelName = () => { const o = modelSelect.selectedOptions[0]; return o ? o.textContent.trim() : ''; };
 const effLetter = () => EFF[effortSelect.value] || '';
 const modelLabel = () => `${modelName()}${effLetter() ? ' ' + effLetter() : ''}`.trim();
+window.haaiNextK = () => tokensK() + growth;   // my54: used by the stop-before-sending check (guard.js)
 const tokensK = () => (S.ctxUsage && S.ctxUsage.totalTokens ? Math.round(S.ctxUsage.totalTokens / 1000) : 0);
 const pctOf = (id) => { const e = $(id); const w = e ? parseFloat(e.style.width) : NaN; return Number.isFinite(w) ? Math.round(w) : null; };
 const updateNo = () => { const m = /my(\d+)/.exec(version); return m ? m[1] : ''; };
@@ -247,7 +248,7 @@ function drawBars() {
   }
   const k = tokensK();
   tb.style.display = k ? '' : 'none';
-  const pc = Math.min(100, k / LIM * 100), nx = Math.min(100, (k + growth) / LIM * 100), c = colour(pc);
+  const pc = Math.min(100, k / LIM * 100), nx = Math.min(100, (k + growth) / LIM * 100), c = pc < 50 ? '#46bb68' : pc < 75 ? '#e8b84a' : '#f3736c';   // my54: amber at 50%, red at 75%
   tbi.style.width = pc + '%'; tbi.style.background = c;
   tbg.style.left = pc + '%'; tbg.style.width = Math.max(0, nx - pc) + '%'; tbg.style.color = c; tbg.style.opacity = nx > pc ? 1 : 0;
 }

@@ -77,6 +77,7 @@ export function updateUsage(msg) {
   const w = msg && msg.unifiedWindows;
   if (!w || (!w.five_hour && !w.seven_day)) return;
   windows = w;
+  window.dispatchEvent(new Event('haai-usage'));   // my54
   bars.classList.remove('hidden');
   draw();
 }

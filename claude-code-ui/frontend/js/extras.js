@@ -12,6 +12,7 @@ import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
 import { MODEL_LABELS } from './model.js';   // my54
+import './guard.js';   // my54
 import { speakerButton } from './read.js';   // my43
 import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45
 import { onBriefMessage } from './batch2.js';   // my46
@@ -294,6 +295,6 @@ export function onExtrasMessage(msg) {
       break;
     }
     case 'app_latest': latest = msg.latest || null; drawApp(); break;
-    case 'quota': quota = msg.accounts || {}; drawQuota(); break;
+    case 'quota': quota = msg.accounts || {}; drawQuota(); window.dispatchEvent(new CustomEvent('haai-quota', { detail: quota })); break;
   }
 }

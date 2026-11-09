@@ -90,3 +90,4 @@
 .sc-card button{font:inherit;font-size:16px;font-weight:600;border-radius:12px;padding:14px;min-height:48px;cursor:pointer}
 .sc-stay{background:transparent;color:#e8e8e8;border:1px solid #555}
 .sc-switch{background:#4da3ff;color:#000;border:1px solid #4da3ff}
+.guard-toast{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147482000;width:min(440px,calc(100% - 24px));background:#0b0b0b;border:1px solid #4da3ff;color:#e8e8e8;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.35}
