@@ -47,6 +47,7 @@ import * as autoContinue from './lib/auto-continue.js';
 import { setOvernightRunner } from './lib/batch4.js';   // my48
 import * as notifier from './lib/notify.js';
 import * as deviceAuth from './lib/device-auth.js';
+import { registerWatchRoutes } from './lib/watch.js';   // my50
 
 // ── HTTP ─────────────────────────────────────────────────────────────────────
 const app = express();
@@ -78,6 +79,7 @@ app.post('/pair', express.json({ limit: '1kb' }), (req, res) => {
   res.json({ ok: true });
 });
 
+registerWatchRoutes(app, express);   // my50: after the direct-port login gate
 app.use(express.static(FRONTEND_DIR));
 
 ensureUploadDir();
