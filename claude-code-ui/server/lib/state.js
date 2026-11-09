@@ -6,18 +6,16 @@
  * file — and so a reader can tell shared state from a module's own bookkeeping.
  */
 import { DEFAULT_PERMISSION_MODE } from './config.js';
+import { slotNow } from './chats.js';
 
 export const runtime = {
   /** The SDK session being resumed. Persisted as a pointer in ACTIVE_FILE. */
-  activeSessionId: null,
 
   /** AbortController for the in-flight query — global, not per-connection, so
    *  navigating away mid-response does not cancel the run. */
-  activeQuery: null,
 
   /** Permission mode for the in-flight run, re-read on every canUseTool call so
    *  the user can change how tools are approved mid-prompt. */
-  activePermMode: DEFAULT_PERMISSION_MODE,
 
   /** Plugin/agent slash commands from the SDK init event, cached so a newly
    *  connected client can populate its autocomplete immediately. */
@@ -55,7 +53,6 @@ export const runtime = {
    *   q: the SDK's Query object, for `setModel()` when a queued prompt picks a
    *     different model.
    */
-  activeRun: null,
 
   /**
    * Live background tasks for the in-flight run (task_id → {description, type,
@@ -65,5 +62,10 @@ export const runtime = {
    * same way `pendingDialogs` is, since a background task belongs to the run,
    * not to the tab that happened to be open when it started.
    */
-  backgroundTasks: new Map(),
 };
+
+// my58: the five per-chat values live on the chat's slot (see chats.js).
+for (const [name, key] of [['activeSessionId', 'sessionId'], ['activeQuery', 'query'], ['activePermMode', 'permMode'],
+  ['activeRun', 'run'], ['backgroundTasks', 'bgTasks']]) {
+  Object.defineProperty(runtime, name, { enumerable: true, get: () => slotNow()[key], set: (v) => { slotNow()[key] = v; } });
+}

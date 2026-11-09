@@ -26,7 +26,8 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
-import { freeModelOverride } from './accounts.js';
+import { freeModelOverride, pickChatAccount, syncChatAccount } from './accounts.js';
+import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING } from './chats.js';   // my58
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
@@ -48,6 +49,33 @@ import { batch2Prompt } from './batch2.js';   // my46
 // runPhase below) and instead logs an occasional heartbeat.
 const BACKGROUND_HEARTBEAT_TICKS = Math.max(1, Math.round(300000 / STALL_CHECK_MS)); // ~5 min
 
+/** my58: tell the user when two chats working at the same time change the same file or the same device. */
+function noteTouch(slot, tool, input) {
+  try {
+    const keys = [];
+    if (['Edit', 'Write', 'MultiEdit', 'NotebookEdit'].includes(tool) && input?.file_path) keys.push(String(input.file_path));
+    if (tool === 'Bash' && typeof input?.command === 'string') {
+      for (const m of input.command.matchAll(/"entity_id"\s*:\s*"([a-z_]+\.[a-z0-9_]+)"/g)) keys.push(m[1]);
+    }
+    for (const k of keys) {
+      for (const other of runningChats()) {
+        if (other === slot) continue;
+        if (other.touched.has(k)) {
+          broadcast({ type: 'chat_overlap', what: k, with: other.id, chat: slot.id });
+          log('WARN', `my58: chats ${slot.id} and ${other.id} both change ${k}`);
+        }
+      }
+      slot.touched.set(k, Date.now());
+    }
+  } catch { /* a warning must never stop a run */ }
+}
+
+/** my58: refuse a third chat working at the same time. Returns true when a new run may start. */
+export function canStartRun() {
+  const slot = slotNow();
+  return slot.query != null || runningChats().length < MAX_RUNNING;
+}
+
 export function abortActive() {
   if (runtime.activeQuery) { runtime.activeQuery.abort(); runtime.activeQuery = null; }
   // Clear this eagerly too (not just in the run's own `finally`), so a prompt
@@ -66,7 +94,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // just ended (channel closed), it falls through and is sent as a normal new message.
   if (autoAttempts === 0 && add && runtime.activeRun?.phase === 'turn' && runtime.activeRun.channel.push(text)) {
     runtime.activeRun.pendingAdds = (runtime.activeRun.pendingAdds || 0) + 1;
-    for (const c of connections) if (c !== ws) send(c, { type: 'user', text });
+    for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
     log('INFO', `my26: message added into the running turn (no stop): promptLen=${text.length}`);
     return;
   }
@@ -78,7 +106,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // avoid. (autoAttempts !== 0 is a headless auto-continue resume, which always
   // starts its own run.)
   if (autoAttempts === 0 && runtime.activeRun?.phase === 'background') {
-    for (const c of connections) if (c !== ws) send(c, { type: 'user', text });
+    for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
     runtime.activeRun.channel.push(text);
     log('INFO', `prompt queued into backgrounded run (waiting on ${runtime.backgroundTasks.size} task(s)): promptLen=${text.length}`);
     const fm0 = freeModelOverride(); if (fm0) model = fm0;   // my17
@@ -116,15 +144,22 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
 
   // Show the user's message on other clients (the sender rendered it locally,
   // and the SDK persists it to the session store, so nothing is recorded here).
-  for (const c of connections) if (c !== ws) send(c, { type: 'user', text });
+  for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
 
   // The CLI only sends `session_state_changed` (idle / running / requires_action)
   // when asked — it is the SDK's own "the turn is over" signal, which is what the
   // reply notification keys off rather than a guess from `result`.
+  // my58: this chat's own slot, and which sign-in it runs on (a second chat running at the same time uses the other Pro account).
+  const slot = slotNow();
+  const acct = pickChatAccount(runningChats().filter((x) => x !== slot && x.account).map((x) => x.account));
+  slot.account = acct.email;
+  slot.touched = new Map();
+  slot.finishedUnseen = false;
   const opts = {
     cwd: WORK_DIR, abortController, plugins: PLUGINS, settings: MCP_FREE_SETTINGS,
-    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1' },
+    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(acct.dir ? { CLAUDE_CONFIG_DIR: acct.dir } : {}) },
   };
+  log('INFO', `my58: chat ${slot.id} runs on ${acct.email || 'the main sign-in'}${acct.dir ? ' (own settings folder)' : ''}`);
   const fm = freeModelOverride();   // my17: in Free mode the chosen free model wins over the dropdown
   if (fm) opts.model = fm;
   else if (model) opts.model = model;
@@ -137,7 +172,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
 
   runtime.activePermMode = permissionMode || DEFAULT_PERMISSION_MODE;
 
-  const hooks = hooksFor(runtime.activePermMode);
+  const hooks = hooksFor(runtime.activePermMode, slot);
   if (hooks) opts.hooks = hooks;
 
   if (runtime.activePermMode === 'auto') {
@@ -147,7 +182,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     // 'plan' is SDK-native (read-only, produces a plan) but still routes through
     // canUseTool so the ExitPlanMode approval surfaces as a normal prompt.
     if (runtime.activePermMode === 'plan') opts.permissionMode = 'plan';
-    opts.canUseTool = makeCanUseTool();
+    opts.canUseTool = makeCanUseTool(slot);
   }
 
   // AskUserQuestion is intercepted before it runs (canUseTool, or the PreToolUse
@@ -162,7 +197,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   opts.toolConfig = { askUserQuestion: { previewFormat: 'html' } };
   opts.onUserDialog = (request, { signal }) => {
     log('INFO', `onUserDialog: ${request.dialogKind}`);
-    return askQuestion(request.payload || {}, signal)
+    return inChat(slot, () => askQuestion(request.payload || {}, signal))
       .then((answer) => (answer ? { behavior: 'completed', result: answer } : { behavior: 'cancelled' }));
   };
 
@@ -216,6 +251,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // foreground turn's own `result`.
   const channel = makeInputChannel(text);
   runtime.activeRun = { channel, q: null, phase: 'turn', model, effort, permissionMode: runtime.activePermMode };
+  chatHooks.changed();   // my58
 
   // Background tasks spawned by this run (subagents, backgrounded shell
   // commands). `background_tasks_changed` is the authoritative membership
@@ -360,6 +396,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           } else if (block.type === 'tool_use') {
             vlog(`tool_use: ${block.name}`);
             liveToolNames.set(block.id, block.name);
+            noteTouch(slot, block.name, block.input);   // my58
             broadcast({ type: 'tool_use', id: block.id, name: block.name, input: block.input });
           }
         }
@@ -502,6 +539,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     }
   } finally {
     clearInterval(watchdog);
+    syncChatAccount(acct.dir);   // my58
     channel.close();   // idempotent — tidy up on an error/abort path too
     if (runtime.activeQuery === abortController) runtime.activeQuery = null;
     if (runtime.activeRun && runtime.activeRun.q === q) runtime.activeRun = null;
@@ -518,6 +556,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       notify('reply', { title: 'Claude finished', message: 'Your reply is ready.' });
     }
 
+    slot.finishedUnseen = !abortController.signal.aborted && !failed;   // my58
+    chatHooks.changed();
     // The new or updated session (and its title) should appear in the list.
     broadcast({ type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
 

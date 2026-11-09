@@ -7,7 +7,7 @@
  * never sent to the browser and never logged; the browser only ever sees the
  * email and display name. Before any switch the live sign-in is backed up.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from 'fs';
 import path from 'path';
 import { spawnSync, execFile } from 'child_process';
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
@@ -162,4 +162,55 @@ export function useProvider(id) {
     log('INFO', `free provider set to ${id}`);
     return { ok: true, providerSet: true, provider: id };
   } catch (e) { return { ok: false, error: 'The provider change did not work. Nothing was changed.' }; }
+}
+
+// ── my58: one account per running chat ──────────────────────────────────────
+// The first chat uses the shared main sign-in. A second chat that runs at the same time gets its OWN
+// settings folder (/data/chat-config/<account>) signed in as the other saved account. Everything else in
+// the main settings folder (chat history, notes, skills, plugins) is linked, so both chats see the same files.
+const CHAT_CFG = path.join(DATA_DIR, 'chat-config');
+const NOT_LINKED = new Set(['.credentials.json', '.claude.json', 'sessions', 'session-env', 'shell-snapshots', 'backups', 'cache', '.last-cleanup']);
+
+/** Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in. */
+export function pickChatAccount(otherAccounts) {
+  const cur = currentIdentity();
+  if (!cur || modeState().free) return { email: cur ? cur.email : '', dir: null };
+  const saved = listAccounts().saved;
+  if (saved.length < 2 || !otherAccounts.length) return { email: cur.email, dir: null };
+  const used = new Set(otherAccounts);
+  const free = saved.find((a) => !used.has(a.email));
+  if (!free) return { email: cur.email, dir: null };   // every saved account is busy: share
+  if (free.email === cur.email) return { email: cur.email, dir: null };
+  try { return { email: free.email, dir: prepareChatDir(free.id) }; }
+  catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
+}
+
+function prepareChatDir(id) {
+  const a = readJson(path.join(DIR, id + '.json'));
+  if (!a || !a.credentials || !a.oauthAccount) throw new Error('account not saved');
+  const dir = path.join(CHAT_CFG, id);
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writePrivate(path.join(dir, '.credentials.json'), a.credentials);
+  const ident = readJson(IDENT()) || {};
+  ident.oauthAccount = a.oauthAccount;
+  writePrivate(path.join(dir, '.claude.json'), JSON.stringify(ident));
+  for (const name of readdirSync(CLAUDE_CONFIG_DIR)) {
+    if (NOT_LINKED.has(name)) continue;
+    const to = path.join(dir, name);
+    try { lstatSync(to); continue; } catch { /* not there yet */ }
+    try { symlinkSync(path.join(CLAUDE_CONFIG_DIR, name), to); } catch { /* best effort */ }
+  }
+  return dir;
+}
+
+/** After a chat on a separate sign-in ends: keep the refreshed token in the saved copy so it never goes stale. */
+export function syncChatAccount(dir) {
+  if (!dir) return;
+  try {
+    const live = readFileSync(path.join(dir, '.credentials.json'), 'utf8');
+    const id = path.basename(dir);
+    const f = path.join(DIR, id + '.json');
+    const a = readJson(f);
+    if (a && a.credentials !== live) { a.credentials = live; a.savedAt = new Date().toISOString(); writePrivate(f, JSON.stringify(a)); }
+  } catch (e) { log('WARN', `my58: could not save the refreshed sign-in: ${e?.message || e}`); }
 }

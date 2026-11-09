@@ -4,6 +4,7 @@
  */
 import { noteAdded } from './batch4.js';   // my48
 import { S } from './state.js';
+import { askNewChat } from './multichat.js';   // my58
 import { contextLine } from './embed.js';
 import { attachments, clearAttachments, fileToDataURL } from './attachments.js';
 import { ADD_ICON, SEND_ICON, STOP_ICON, UI_COMMANDS, clearScreen, hideCmdMenu, showHelp, showUsage } from './commands.js';
@@ -116,11 +117,13 @@ if (repeatBtn) repeatBtn.onclick = () => {
   inputForm.dispatchEvent(new Event('submit'));
 };
 
-export function doNewSession() {
-  clearScreen();
-  S.isRunning = false;
-  updateSendBtn();
-  if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'new_session', save: true }));   // my28
+export function doNewSession(mode) {
+  if (mode !== 'alongside') {   // my58: alongside keeps this chat on screen until the server opens the new one
+    clearScreen();
+    S.isRunning = false;
+    updateSendBtn();
+  }
+  if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'new_session', save: true, mode }));   // my28
 }
 
 /**
@@ -129,13 +132,10 @@ export function doNewSession() {
  * cannot be reached around.
  */
 export async function requestNewSession() {
-  if (S.isRunning) {
-    const ok = await confirmInterrupt({
-      body: 'Starting a new chat will stop what it is doing now. This conversation is '
-          + 'saved either way — you can come back to it from Sessions.',
-      confirm: 'Stop and start a new chat',
-    });
-    if (!ok) return;
+  if (S.isRunning) {   // my58: ask each time (alongside / stop)
+    const mode = await askNewChat();
+    if (mode) doNewSession(mode);
+    return;
   }
   doNewSession();
 }

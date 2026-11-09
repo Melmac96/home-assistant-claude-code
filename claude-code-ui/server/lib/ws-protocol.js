@@ -18,7 +18,9 @@ import * as handover from './handover.js';   // my28
 import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
-import { runQuery, abortActive } from './run-query.js';
+import { runQuery, abortActive, canStartRun } from './run-query.js';
+import { chats, view, makeSlot, inChat, anyRunning, runningChats, MAX_RUNNING } from './chats.js';   // my58
+import { chatsMessage, broadcastChats } from './chatlist.js';   // my58
 import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel, providerStats, useProvider } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
@@ -44,6 +46,11 @@ startQuiet();   // my49
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
+  ws.chat = chats.has(view.last) ? view.last : 'c1';   // my58: a new browser starts on the chat last looked at
+  inChat(chats.get(ws.chat), () => greetFor(ws));
+}
+
+function greetFor(ws) {
   send(ws, { type: 'connected' });
   send(ws, {
     type: 'config',
@@ -51,6 +58,7 @@ function greet(ws) {
     autoContinue: autoContinue.autoContinue.enabled,
     autoContinueSupported: isSubscriptionAuth(),
   });
+  send(ws, { ...chatsMessage(), viewing: ws.chat });   // my58
   sendNotifyState(ws);
   send(ws, { type: 'auth_status', authenticated: isAuthenticated() && !runtime.credentialsExpired });
   if (runtime.credentialsExpired) send(ws, { type: 'auth_expired', subscription: isSubscriptionAuth() });
@@ -126,12 +134,12 @@ function greet(ws) {
   // the socket that happened to be open — so it is still waiting, and this is
   // what shows it rather than leaving the turn silently paused.
   for (const [id, d] of pendingDialogs) {
-    send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload });
+    send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload, chat: d.chat });
   }
 
   // Likewise a permission prompt: it belongs to the run, not to whichever tab
   // was open when it was asked (see permissions.js's pendingPermissions).
-  for (const [, entry] of pendingPermissions) send(ws, entry.req);
+  for (const [, entry] of pendingPermissions) send(ws, { ...entry.req, chat: entry.chat || entry.req.chat });
 }
 
 function sendNotifyState(ws) {
@@ -172,7 +180,7 @@ const handlers = {
   },
 
   account_switch(ws, msg) {
-    if (runtime.activeQuery) {
+    if (anyRunning()) {
       send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
       return;
     }
@@ -202,7 +210,7 @@ const handlers = {
 
   // my16: Free / Paid mode from the Accounts menu (same busy rule as an account switch).
   mode_switch(ws, msg) {
-    if (runtime.activeQuery) {
+    if (anyRunning()) {
       send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
       return;
     }
@@ -226,6 +234,7 @@ const handlers = {
       msg.text = describeAttachments(msg.text, saveAttachments(msg.attachments));
     }
     delete msg.attachments;   // do not carry the base64 payload any further
+    if (!canStartRun()) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `${MAX_RUNNING} chats are already working. Wait for one to finish, or stop one, then send this again.` }); return; }
     runQuery(ws, msg);
   },
 
@@ -233,12 +242,39 @@ const handlers = {
     abortActive();
   },
 
-  new_session(_ws, msg) {
+  new_session(ws, msg) {
+    // my58 (user 2026-11-09, option B): if this chat is working, ask each time whether to start another alongside or stop it.
+    if (runtime.activeQuery && msg.mode !== 'stop' && msg.mode !== 'alongside') { send(ws, { type: 'new_chat_ask' }); return; }
+    if (runtime.activeQuery && msg.mode === 'alongside') {
+      if (runningChats().length >= MAX_RUNNING) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `${MAX_RUNNING} chats are already working, so I cannot start another alongside. Stop one or wait for one to finish.` }); return; }
+      const slot = makeSlot();
+      ws.chat = slot.id; view.last = slot.id;
+      send(ws, { type: 'chat_opened', id: slot.id });
+      send(ws, { type: 'cleared', chat: slot.id });
+      send(ws, { type: 'history', chat: slot.id, items: [], running: false, background: false });
+      broadcastChats();
+      return;
+    }
     const old = runtime.activeSessionId;
     if (getAdvisor().advised) { broadcast({ type: 'prefs', ...setPrefs({ model: 'latest-sonnet', effort: 'medium' }) }); broadcast({ type: 'advisor', ...setAdvisor({ advised: false }) }); }   // my42: a new chat starts on Sonnet/Medium
     abortActive();
     startFresh();
     if (msg.save) handover.saveInBackground(old);   // my28: the old chat's notes, behind the scenes
+    broadcastChats();
+  },
+
+  // my58: look at another chat
+  chat_view(ws, msg) {
+    const slot = chats.get(String(msg.id || ''));
+    if (!slot) return;
+    ws.chat = slot.id; view.last = slot.id; slot.finishedUnseen = false;
+    inChat(slot, () => {
+      send(ws, { type: 'history', chat: slot.id, items: parseSession(slot.sessionId), running: !!slot.query, background: slot.bgTasks.size > 0 });
+      send(ws, { type: 'session', chat: slot.id, id: slot.sessionId });
+      for (const [id, d] of pendingDialogs) if (d.chat === slot.id) send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload, chat: d.chat });
+      for (const [, e] of pendingPermissions) if (e.chat === slot.id) send(ws, { ...e.req, chat: slot.id });
+    });
+    broadcastChats();
   },
 
   // my28: quick jobs and replies, Waiting for you, search, Continue this job
@@ -371,7 +407,8 @@ export function attach(wss) {
       const handler = handlers[msg.type];
       if (!handler) return;
       try {
-        handler(ws, msg);
+        const slot = chats.get(ws.chat);
+        if (slot) inChat(slot, () => handler(ws, msg)); else handler(ws, msg);   // my58: run for the chat this browser is looking at
       } catch (e) {
         log('ERROR', `handling ${msg.type} failed: ${e?.message || e}`);
       }

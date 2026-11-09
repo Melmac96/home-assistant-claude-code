@@ -20,6 +20,7 @@
 import { randomUUID } from 'crypto';
 import { broadcast } from './broadcast.js';
 import { notify, clearAttention } from './notify.js';
+import { slotNow, hooks as chatHooks } from './chats.js';   // my58
 
 export const pendingDialogs = new Map();   // id → { payload, resolve }
 
@@ -53,8 +54,9 @@ export function formatQuestionDenial(toolInput, result) {
 export function askQuestion(toolInput, signal) {
   return new Promise((resolve) => {
     const id = randomUUID();
-    pendingDialogs.set(id, { payload: toolInput, resolve });
-    broadcast({ type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: toolInput });
+    pendingDialogs.set(id, { payload: toolInput, resolve, chat: slotNow().id });
+    chatHooks.changed();   // my58
+    broadcast({ type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: toolInput, chat: slotNow().id });
     notify('question', {
       title: 'Claude has a question',
       message: toolInput?.questions?.[0]?.question || toolInput?.questions?.[0]?.header || 'Waiting for your answer',
@@ -65,6 +67,7 @@ export function askQuestion(toolInput, signal) {
         // still-waiting after Stop had already ended the turn.
         broadcast({ type: 'user_dialog_cancelled', id });
         if (!pendingDialogs.size) clearAttention();
+        chatHooks.changed();   // my58
         resolve(null);
       }
     }, { once: true });
@@ -78,6 +81,7 @@ export function answerDialog(id, result) {
   pendingDialogs.delete(id);
   broadcast({ type: 'user_dialog_cancelled', id });   // close it on every other tab
   if (!pendingDialogs.size) clearAttention();
+  chatHooks.changed();   // my58
   entry.resolve(result || null);
   return true;
 }

@@ -17,6 +17,7 @@ import { runtime } from './state.js';
 import { broadcast } from './broadcast.js';
 import { askQuestion, formatQuestionDenial, askQuestionHook, pendingDialogs } from './dialogs.js';
 import { notify, clearAttention } from './notify.js';
+import { inChat, slotNow, hooks as chatHooks } from './chats.js';   // my58
 
 /**
  * Render the SDK's suggested permission rules into a short human label for the
@@ -81,10 +82,10 @@ export const ADDON_CONFIGS_HOOKS = ADDON_CONFIGS_HOOK
  * (checking `tool_name !== 'AskUserQuestion'` and returning `{continue:true}`
  * unchanged), one more control-protocol message per call for nothing.
  */
-export function hooksFor(mode) {
+export function hooksFor(mode, slot) {
   const pre = [];
   if (ADDON_CONFIGS_HOOK) pre.push({ hooks: [ADDON_CONFIGS_HOOK] });
-  if (mode === 'auto') pre.push({ matcher: 'AskUserQuestion', hooks: [askQuestionHook] });
+  if (mode === 'auto') pre.push({ matcher: 'AskUserQuestion', hooks: [slot ? (...a) => inChat(slot, () => askQuestionHook(...a)) : askQuestionHook] });   // my58
   return pre.length ? { PreToolUse: pre } : undefined;
 }
 
@@ -110,6 +111,7 @@ export function resolvePermission(id, decision) {
   // greet()), so answering it on one must dismiss it on the others too.
   broadcast({ type: 'permission_resolved', id });
   clearIfSettled();
+  chatHooks.changed();   // my58
   return true;
 }
 
@@ -142,8 +144,9 @@ export function resolvePromptsAllowedBy(mode) {
  * mode it was built with, which is what makes switching modes mid-prompt take
  * effect immediately.
  */
-export function makeCanUseTool() {
-  return (toolName, input, options) => {
+export function makeCanUseTool(slot) {
+  return (toolName, input, options) => (slot ? inChat(slot, () => canUse(toolName, input, options)) : canUse(toolName, input, options));
+  function canUse(toolName, input, options) {
     // A question is Claude asking the human something, not an action needing
     // approval — it never reaches the permission modes below.
     if (toolName === 'AskUserQuestion') {
@@ -169,6 +172,7 @@ export function makeCanUseTool() {
       const suggestions = Array.isArray(options.suggestions) ? options.suggestions : [];
       const req = {
         type: 'permission_request',
+        chat: slotNow().id,   // my58
         id,
         toolName,
         input,
@@ -203,14 +207,15 @@ export function makeCanUseTool() {
       // `req` is kept too (not just toolName/resolve) so a tab connecting
       // after the prompt was raised — not just one that was open for it — can
       // be shown the same card on replay (see ws-protocol.js's greet()).
-      pendingPermissions.set(id, { toolName, req, resolve: finish });
+      pendingPermissions.set(id, { toolName, req, resolve: finish, chat: req.chat });
+      chatHooks.changed();   // my58
       // The only things that end the wait: an answer, or the call's own abort
       // signal (Stop, a new prompt, a session switch, or — for a backgrounded
       // run — the whole run finally ending). A disconnecting tab does not.
       options.signal.addEventListener('abort', () => {
-        if (pendingPermissions.delete(id)) { broadcast({ type: 'permission_resolved', id }); clearIfSettled(); }
+        if (pendingPermissions.delete(id)) { broadcast({ type: 'permission_resolved', id }); clearIfSettled(); chatHooks.changed(); }
         resolve({ behavior: 'deny', message: 'Aborted' });
       }, { once: true });
     });
-  };
+  }
 }

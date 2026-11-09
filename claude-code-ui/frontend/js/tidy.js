@@ -317,7 +317,10 @@ function drawChips() {
   chips.textContent = '';
   const cards = [...messagesEl.querySelectorAll('.answer-card:not(.locked)')];
   const groups = new Set(cards.map((c) => c.closest('.bubble, .bubble-assistant, div')));
-  const single = cards.length >= 2 && cards.every((c) => c.parentElement === cards[0].parentElement);
+  // my58: Q1/Q2/Q3 blocks sit in the same bubble too, so count the A cards: more than one A
+  // means several questions, and a chip would send after the first answer. Use the cards then.
+  const single = cards.length >= 2 && cards.every((c) => c.parentElement === cards[0].parentElement)
+    && cards.filter((c) => c._letter === 'A').length === 1;
   void groups;
   if (!single) { chips.classList.add('hidden'); return; }
   for (const c of cards) {

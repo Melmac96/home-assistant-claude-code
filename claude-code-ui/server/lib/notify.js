@@ -10,6 +10,7 @@
  * Settings are server-owned and persisted, like auto-continue, because the
  * notification matters most when no browser is open.
  */
+import { chats, slotNow } from './chats.js';   // my58
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { NOTIFY_FILE, SUPERVISOR_URL } from './config.js';
 import { log, vlog } from './log.js';
@@ -98,6 +99,7 @@ const anyVisible = () => [...connections].some((c) => c.visible === true && c.re
  * failure is logged, never thrown into the run.
  */
 export async function notify(kind, { title, message }) {
+  try { if (chats.size > 1) title = `Chat ${slotNow().n}: ${title}`; } catch { /* keep the plain title */ }   // my58: say which chat
   const now = Date.now();
   if (!process.env.SUPERVISOR_TOKEN) return false;
   if (!shouldPush({ kind, settings: notifySettings, anyVisible: anyVisible(), lastAt: lastSent.get(kind), now })) return false;
