@@ -1,5 +1,5 @@
 /* my51: the tidy screen (mock-up confirmed 2026-11-09). Loaded after obsidian.css. */
-.title-row,.brand-logo,.brand-name,.account-label,.status-dot,#health-btn,#update-btn,#stars-btn,#find-btn,#sessions-btn,#usage-bars,#ctx-tokens{display:none!important}
+.title-row,.brand-logo,.brand-name,.account-label,.status-dot,#health-btn,#update-btn,#usage-bars,#ctx-tokens{display:none!important}
 .header{padding:2px 9px!important;max-height:none!important;border-bottom:1px solid #1c1d20}
 .header-left{gap:7px}
 .tidy-star{color:#7d8087;font-size:20px;line-height:1;width:20px;text-align:center}
@@ -8,7 +8,10 @@
 .icon-group{gap:5px!important}
 .icon-group .icon-btn{width:30px!important;height:30px!important;border-radius:10px!important}
 .icon-group .icon-btn svg{width:16px!important;height:16px!important}
-#settings-btn{order:1}#accounts-btn{order:2}#tidy-menu-btn{order:3}#new-session-btn{order:4}
+/* my56: History, Search and Favourites are back on the bar (user asked 2026-11-09) */
+#sessions-btn{order:1}#find-btn{order:2}#stars-btn{order:3}#settings-btn{order:4}#accounts-btn{order:5}#tidy-menu-btn{order:6}#new-session-btn{order:7}
+.icon-group{gap:3px!important}
+.icon-group .icon-btn{width:27px!important;height:27px!important}
 /* status bar */
 #tidy-sbar{padding:3px 9px;border-bottom:1px solid #1c1d20;transition:opacity .25s}
 .tidy-stb{width:100%;min-width:0;display:flex;align-items:center;gap:8px;border:1.5px solid #26282d;border-radius:8px;padding:0 8px;height:22px;background:#0a0a0b;text-align:left;color:inherit;font:inherit;cursor:pointer}
