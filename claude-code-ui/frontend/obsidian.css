@@ -396,3 +396,13 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 
 /* my48 batch 4 */
 .day-bar{margin:4px 0 8px}.reply-chip.on{background:rgba(77,163,255,.18);border-color:#4da3ff;color:#4da3ff}.h4-queue .grey{color:#7d8087}.h4-night .h2-row{align-items:center;justify-content:space-between;gap:8px}.h4-queue.hidden,.h4-night.hidden{display:none}
+
+/* my49 batch 5 */
+.h5-row{display:flex;flex-wrap:wrap;gap:6px;padding:4px 10px}.h5-row:empty{display:none}
+.h5-home{color:#46bb68;border-color:#46bb68}.h5-home.bad{color:#f3736c;border-color:#f3736c}.h5-quiet{color:#9cc8ff}
+.h5-held{margin:0 10px 6px}.h5-held.hidden{display:none}.h5-exit{display:none}
+.tv-view{background:#000}
+.tv-view .header,.tv-view #input-form,.tv-view .h5-row,.tv-view .h5-held,.tv-view .sum-pin,.tv-view .h2-step,.tv-view .h2-brief,.tv-view .h4-queue,.tv-view .h4-night,.tv-view .prompt-nav,.tv-view .reply-chips,.tv-view .h2-card{display:none!important}
+.tv-view #messages>*:not(.tv-last){display:none}
+.tv-view .tv-last,.tv-view .tv-last .bubble-content{font-size:34px;line-height:1.4;color:#ececee;background:#000;border:0}
+.tv-view .h5-exit{display:block;position:fixed;right:12px;bottom:12px;opacity:.6;z-index:99}

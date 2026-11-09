@@ -16,6 +16,7 @@ import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45
 import { onBriefMessage } from './batch2.js';   // my46
 import { onScreenShot } from './batch3.js';   // my47
 import { onOvernight } from './batch4.js';   // my48
+import { onQuiet } from './batch5.js';   // my49
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -259,6 +260,7 @@ export function onExtrasMessage(msg) {
     case 'brief': onBriefMessage(msg); break;   // my46
     case 'screen_shot': onScreenShot(msg); break;   // my47
     case 'overnight': onOvernight(msg); break;   // my48
+    case 'quiet': onQuiet(msg); break;   // my49
     case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {

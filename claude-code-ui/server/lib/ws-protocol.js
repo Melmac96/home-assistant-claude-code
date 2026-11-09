@@ -31,6 +31,7 @@ import { getPrefs, setPrefs } from './prefs.js';   // my41
 import { getAdvisor, setAdvisor } from './advisor.js';   // my42
 import { listReminders, removeReminder, startReminders } from './batch1.js';   // my45
 import { getBrief, startBrief } from './batch2.js';   // my46
+import { startQuiet, quietState, clearHeld } from './batch5.js';   // my49
 import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, startOvernight } from './batch4.js';   // my48
 import { takeScreenshot } from './screen.js';   // my47
 
@@ -39,6 +40,7 @@ startHomeHealthCheck();
 startReminders();   // my45
 startBrief();   // my46
 startOvernight();   // my48
+startQuiet();   // my49
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
@@ -85,6 +87,7 @@ function greet(ws) {
   send(ws, { type: 'reminders', list: listReminders() });   // my45
   send(ws, { type: 'brief', brief: getBrief() });   // my46
   send(ws, { type: 'overnight', ...listOvernight() });   // my48
+  send(ws, { type: 'quiet', ...quietState() });   // my49
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
   if (runtime.lastCtx && runtime.lastCtx.sid && runtime.lastCtx.sid === runtime.activeSessionId) send(ws, runtime.lastCtx);   // my40
   if (runtime.pendingContinue) { send(ws, { type: 'handover_ready', text: runtime.pendingContinue }); runtime.pendingContinue = null; }
@@ -248,6 +251,7 @@ const handlers = {
   keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
   advisor_set(_ws, msg) { broadcast({ type: 'advisor', ...setAdvisor({ enabled: typeof msg.enabled === 'boolean' ? msg.enabled : undefined, advised: typeof msg.advised === 'boolean' ? msg.advised : undefined, declineKind: msg.declineKind, clearDeclined: msg.clearDeclined === true }) }); },   // my42
   overnight_add(_ws, msg) { addOvernight(msg.text, msg.permissionMode); },   // my48
+  quiet_clear(_ws) { clearHeld(); },   // my49
   overnight_clear(_ws) { clearOvernightDone(); },   // my48
   overnight_remove(_ws, msg) { removeOvernight(String(msg.id || '')); },   // my48
   async screen_shot(ws, msg) { send(ws, { type: 'screen_shot', device: String(msg.device || ''), ...(await takeScreenshot(String(msg.device || ''))) }); },   // my47

@@ -3,6 +3,7 @@
  * number = needs a look, red with ! = the check has stopped or haAi has lost touch.
  */
 import { sendText } from './quick.js';
+import { homeChip } from './batch5.js';   // my49
 
 const SILENCE_MS = 3 * 60 * 1000;
 const btn = document.getElementById('health-btn');
@@ -61,6 +62,7 @@ function draw() {
   num.textContent = lost || data.status === 'stale' ? '!' : data.status === 'bad' ? String(data.count) : '';
   num.classList.toggle('hidden', !bad);
   btn.setAttribute('aria-label', bad ? 'Home health: needs a look' : 'Home health: all fine');
+  homeChip(lost ? '! No contact' : data.status === 'stale' ? '! Check stopped' : data.status === 'bad' ? `● ${data.count} need${data.count === 1 ? 's' : ''} a look` : '✔ Home fine', bad);   // my49
   if (panel) fillPanel();
 }
 

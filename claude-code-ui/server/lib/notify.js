@@ -14,6 +14,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { NOTIFY_FILE, SUPERVISOR_URL } from './config.js';
 import { log, vlog } from './log.js';
 import { connections } from './broadcast.js';
+import { isQuiet, holdPush } from './batch5.js';   // my49
 
 export const notifySettings = { service: '', onReply: true, onAttention: true };
 
@@ -101,6 +102,7 @@ export async function notify(kind, { title, message }) {
   if (!process.env.SUPERVISOR_TOKEN) return false;
   if (!shouldPush({ kind, settings: notifySettings, anyVisible: anyVisible(), lastAt: lastSent.get(kind), now })) return false;
   lastSent.set(kind, now);
+  if (isQuiet()) { holdPush(kind, title, message); return false; }   // my49: Quiet while you sleep
   try {
     const url = await getPanelUrl();
     const data = { tag: TAG, group: TAG };
