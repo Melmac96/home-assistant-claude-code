@@ -13,6 +13,7 @@ import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
 import { MODEL_LABELS } from './model.js';   // my54
 import './guard.js';   // my54
+import './prevchat.js';   // my56
 import './autoswitch.js';   // my55 (after guard.js so a blocked message never switches)
 import { speakerButton } from './read.js';   // my43
 import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45

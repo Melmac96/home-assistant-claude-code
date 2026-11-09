@@ -9,9 +9,9 @@
 .icon-group .icon-btn{width:30px!important;height:30px!important;border-radius:10px!important}
 .icon-group .icon-btn svg{width:16px!important;height:16px!important}
 /* my56: History, Search and Favourites are back on the bar (user asked 2026-11-09) */
-#sessions-btn{order:1}#find-btn{order:2}#stars-btn{order:3}#settings-btn{order:4}#accounts-btn{order:5}#tidy-menu-btn{order:6}#new-session-btn{order:7}
+#prev-chat-btn{order:0}#prev-chat-btn.hidden{display:none!important}#sessions-btn{order:1}#find-btn{order:2}#stars-btn{order:3}#settings-btn{order:4}#accounts-btn{order:5}#tidy-menu-btn{order:6}#new-session-btn{order:7}
 .icon-group{gap:3px!important}
-.icon-group .icon-btn{width:27px!important;height:27px!important}
+.icon-group .icon-btn{width:26px!important;height:27px!important}
 /* status bar */
 #tidy-sbar{padding:3px 9px;border-bottom:1px solid #1c1d20;transition:opacity .25s}
 .tidy-stb{width:100%;min-width:0;display:flex;align-items:center;gap:8px;border:1.5px solid #26282d;border-radius:8px;padding:0 8px;height:22px;background:#0a0a0b;text-align:left;color:inherit;font:inherit;cursor:pointer}
