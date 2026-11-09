@@ -33,13 +33,35 @@ const tokensK = () => (S.ctxUsage && S.ctxUsage.totalTokens ? Math.round(S.ctxUs
 const pctOf = (id) => { const e = $(id); const w = e ? parseFloat(e.style.width) : NaN; return Number.isFinite(w) ? Math.round(w) : null; };
 const updateNo = () => { const m = /my(\d+)/.exec(version); return m ? m[1] : ''; };
 
+// ── our own tiny icons (my53, user chose look A: grey shape, blue button outline) ──
+const cogPath = () => {
+  const p = [];
+  for (let i = 0; i < 8; i++) for (const [o, r] of [[-.28, 7.4], [-.17, 10], [.17, 10], [.28, 7.4]]) { const a = i * Math.PI / 4 + o; p.push((12 + r * Math.cos(a)).toFixed(2) + ' ' + (12 + r * Math.sin(a)).toFixed(2)); }
+  return `<path d="M${p.join('L')}Z"/><circle cx="12" cy="12" r="3"/>`;
+};
+const SHAPES = {
+  settings: cogPath(),
+  accounts: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.6-7 8-7s8 2.5 8 7"/>',
+  menu: '<path d="M4 6.5h16M4 12h16M4 17.5h16"/>',
+  chat: '<path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.6-4.6A8.5 8.5 0 1 1 21 11.5Z"/>',
+  pin: '<path d="M9 3.5h6l-1 6 3.5 3.5v1.5h-11V13L10 9.5z"/><path d="M12 14.5V21"/>',
+  attach: '<path d="M19 11l-7.6 7.6a4.6 4.6 0 0 1-6.5-6.5l8.4-8.4a3 3 0 0 1 4.3 4.3l-8 8"/>',
+  more: '<path d="M5 12h.01M12 12h.01M19 12h.01"/>',
+  star: '<path d="M12 3l2.7 5.9 6.3.7-4.7 4.3 1.3 6.3L12 17l-5.6 3.2 1.3-6.3L3 9.6l6.3-.7z"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/>',
+  history: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.5l3.5 2"/>',
+};
+const icon = (k, n) => `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SHAPES[k]}</svg>`;
+for (const [id, k, n] of [['settings-btn', 'settings', 16], ['accounts-btn', 'accounts', 16], ['new-session-btn', 'chat', 16], ['stars-btn', 'star', 16],
+  ['find-btn', 'search', 16], ['sessions-btn', 'history', 16], ['attach-btn', 'attach', 18]]) { const b = $(id); if (b) b.innerHTML = icon(k, n); }
+
 // ── top bar ──────────────────────────────────────────────────────────────────
 const header = document.querySelector('.header');
 const star = mk('span', 'tidy-star', '✳');
 statusDot.after(star);
 const group = document.querySelector('.icon-group');
 const menuBtn = mk('button', 'icon-btn'); menuBtn.type = 'button'; menuBtn.id = 'tidy-menu-btn'; menuBtn.title = 'Menu'; menuBtn.setAttribute('aria-label', 'Menu');
-menuBtn.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+menuBtn.innerHTML = icon('menu', 16);
 $('new-session-btn').before(menuBtn);
 
 // ── status bar ───────────────────────────────────────────────────────────────
@@ -191,7 +213,7 @@ window.addEventListener('haai-version', (e) => { version = String(e.detail || ''
 
 // ── pinned summaries: a pin and a number on the top bar, opens a drop-down ────
 const pinBtn = mk('button', 'icon-btn hidden'); pinBtn.type = 'button'; pinBtn.id = 'tidy-pin-btn'; pinBtn.title = 'Pinned'; pinBtn.setAttribute('aria-label', 'Pinned');
-pinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5h6l-1 6 3.5 3.5v1.5h-11V13L10 9.5z"/><path d="M12 14.5V21"/></svg>';
+pinBtn.innerHTML = icon('pin', 13);
 const pinNum = mk('span');
 pinBtn.append(pinNum);
 group.prepend(pinBtn);
@@ -238,7 +260,7 @@ promptInput.placeholder = 'Ask haAi…';
 keepBtn.textContent = '+';
 keepBtn.setAttribute('aria-label', 'Add this bit to my message');
 const moreBtn = mk('button', 'attach-btn tidy-morebtn'); moreBtn.type = 'button'; moreBtn.title = 'More'; moreBtn.setAttribute('aria-label', 'More');
-moreBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="3" cy="9" r="1.8" fill="#9cc8ff"/><circle cx="9" cy="9" r="1.8" fill="#9cc8ff"/><circle cx="15" cy="9" r="1.8" fill="#9cc8ff"/></svg>';
+moreBtn.innerHTML = icon('more', 18);
 $('attach-btn').after(moreBtn);
 const tk = mk('span', 'tidy-tk');
 moreBtn.after(tk);

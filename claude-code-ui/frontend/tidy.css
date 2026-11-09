@@ -74,3 +74,10 @@
 #job-store-btn.hidden,#tidy-pin-btn.hidden{display:none!important}
 .adv-slim{flex-wrap:nowrap}
 .adv-x{flex:none;width:40px;min-height:40px;border:1.5px solid #4a4d55;background:transparent;color:#d0d3d9;border-radius:9px;font:700 14px system-ui;padding:0;cursor:pointer}
+/* my53: grey shapes, blue button outline (user chose look A) */
+.icon-group .icon-btn{border:1.5px solid #4da3ff!important;color:#9a9da4!important}
+.icon-group .icon-btn.active,.icon-group .icon-btn.sel{color:#4da3ff!important;background:rgba(77,163,255,.14)!important}
+.icon-group .icon-btn svg{width:16px!important;height:16px!important}
+.icon-group .icon-btn em{font-style:normal}
+.composer-actions .attach-btn{border:1.5px solid #4da3ff!important;color:#9a9da4!important;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.composer-actions .tidy-morebtn{color:#9a9da4}
