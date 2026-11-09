@@ -39,6 +39,7 @@ import * as autoContinue from './auto-continue.js';
 import { noteUsage } from './extras.js';   // my40
 import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
+import { batch2Prompt } from './batch2.js';   // my46
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
 // before the log says so, and how often it checks — only while a turn is
@@ -131,7 +132,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // model default applies.
   if (effort && EFFORT_LEVELS.has(effort)) opts.effort = effort;
 
-  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
+  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt(), batch2Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
   if (advice) opts.systemPrompt = { type: 'preset', preset: 'claude_code', append: advice };
 
   runtime.activePermMode = permissionMode || DEFAULT_PERMISSION_MODE;

@@ -9,6 +9,7 @@ import { enhanceQuestions } from './answers.js';   // my28
 import { decorateStar } from './extras.js';   // my40
 import { takeAdvice, adviceFound } from './advisor.js';   // my42
 import { prepareReply, pinFound } from './batch1.js';   // my45
+import { prepareCards, buildCards, stepFound } from './batch2.js';   // my46
 import { S } from './state.js';
 import { messagesEl } from './dom.js';
 
@@ -155,6 +156,7 @@ export function fixAnchorTargets(root) {
 export function renderMarkdown(el, raw) {
   const adv = takeAdvice(raw); raw = adv.text;   // my42: hide the advisor line
   const b1 = prepareReply(raw); raw = b1.text;   // my45: hard-word notes, pinned summary line
+  const b2 = prepareCards(raw); raw = b2.text;   // my46: cards
   // my32: a line of the 8 blue diamonds becomes a row across the whole width, with the next text on its own line.
   el.innerHTML = marked.parse(raw.replace(/^(?:🔹){8}[ \t]*$/gm, '<div class="diamond-row"></div>\n'));
   linkifyEntities(el);
@@ -164,6 +166,7 @@ export function renderMarkdown(el, raw) {
   decorateStar(el);   // my40
   if (adv.fields) adviceFound(el, adv.fields, adv.key);   // my42
   if (b1.pin) pinFound(el, b1.pin);   // my45
+  buildCards(el); if (b2.step) stepFound(el, b2.step);   // my46
 }
 
 // Copy text to the clipboard, with a fallback for non-secure contexts (the HA

@@ -369,3 +369,20 @@ body{--ts:1}
 body.night{--text:#9a9ca2;--text-muted:#6d6f75;--accent:#2e6aa8;--lite:#6d93b8}
 body.night .bubble-content,body.night .bubble-content p{color:#9a9ca2}
 body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)}
+
+/* ── my46: batch 2 cards (test page batch2-looks.html, look A) ── */
+.h2-card{display:block;border:1px solid #26282d;border-radius:12px;padding:9px 11px;margin:8px 0;background:#101113;color:#ececee;font:14px/1.4 system-ui,sans-serif}
+.h2-card.good{border-color:#46bb68}.h2-card.bad{border-color:#f3736c}.h2-card.info{border-color:#4da3ff}
+.h2-title{font-weight:700;margin-bottom:2px}.h2-title.green,.green{color:#46bb68}.h2-title.red,.red{color:#f3736c}
+.h2-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.h2-btn{display:inline-block;border:2px solid #4da3ff;background:rgba(77,163,255,.12);color:#4da3ff;border-radius:10px;padding:6px 13px;font:700 14px system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.h2-btn.g{border-color:#46bb68;color:#46bb68;background:rgba(70,187,104,.12)}
+.h2-btn.r{border-color:#f3736c;color:#f3736c;background:rgba(243,115,108,.12)}
+.h2-btn:disabled{opacity:.5}.h2-btn.chosen{opacity:1;box-shadow:0 0 0 2px currentColor}
+.h2-details{margin-top:6px;color:#7d8087;font-size:13px}
+.h2-img{display:block;width:100%;max-height:220px;object-fit:contain;border-radius:8px;background:#1c1d20}
+.h2-step{flex:none;margin:0 0 6px;padding:8px 12px;border:1px solid #26282d;border-radius:12px;background:#0a0a0b;color:#ececee;font:14px system-ui,sans-serif}
+.h2-step.hidden,.h2-brief.hidden{display:none}
+.h2-bars{display:flex;gap:6px;margin-bottom:6px}.h2-bars i{flex:1;height:8px;border-radius:5px;background:#1c1d20}.h2-bars i.d{background:#46bb68}.h2-bars i.n{background:#4da3ff}
+.h2-next{color:#7d8087;font-size:13px}
+.night .h2-card,.night .h2-step{filter:brightness(.8)}

@@ -8,6 +8,7 @@ import { S } from './state.js';
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { requestNewSession } from './composer.js';
+import { stripCards } from './batch2.js';   // my46
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -28,7 +29,7 @@ export function prepareReply(raw) {
   return { text, pin: m ? m[1].split('|').map((s) => s.trim()) : null };
 }
 // For places that show or read the raw text (stars, read aloud): the plain words only.
-export const stripMarks = (t) => String(t || '').replace(PIN, '').replace(PARTIAL, '').replace(HARD, '$1');
+export const stripMarks = (t) => stripCards(String(t || '')).replace(PIN, '').replace(PARTIAL, '').replace(HARD, '$1');
 
 // ── 2. Tap a hard word: small note above the word ────────────────────────────
 let pop = null;

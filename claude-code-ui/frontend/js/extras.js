@@ -13,6 +13,7 @@ import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
 import { speakerButton } from './read.js';   // my43
 import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45
+import { onBriefMessage } from './batch2.js';   // my46
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -253,6 +254,7 @@ export function onExtrasMessage(msg) {
   switch (msg.type) {
     case 'advisor': onAdvisorMessage(msg); break;   // my42
     case 'reminders': onBatch1Message(msg); break;   // my45
+    case 'brief': onBriefMessage(msg); break;   // my46
     case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {
