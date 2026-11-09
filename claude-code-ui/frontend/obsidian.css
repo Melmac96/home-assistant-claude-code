@@ -386,3 +386,10 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .h2-bars{display:flex;gap:6px;margin-bottom:6px}.h2-bars i{flex:1;height:8px;border-radius:5px;background:#1c1d20}.h2-bars i.d{background:#46bb68}.h2-bars i.n{background:#4da3ff}
 .h2-next{color:#7d8087;font-size:13px}
 .night .h2-card,.night .h2-step{filter:brightness(.8)}
+
+/* ── my47: batch 3 ── */
+.h3-btn{font-size:17px;line-height:1}.h3-btn.hidden{display:none}.h3-btn.on{background:var(--accent,#4da3ff)!important}
+.h3-conv{width:100%;margin:0 0 6px;padding:9px 12px;border:2px solid #4da3ff;border-radius:12px;background:#0a0a0b;color:#ececee;font:14px system-ui,sans-serif}
+.h3-conv.hidden,.h3-screens.hidden{display:none}.h3-conv-state{font-weight:700;color:#4da3ff}.h3-conv-heard{color:#7d8087;margin:2px 0 6px;min-height:1.2em}
+.h3-photo{position:fixed;inset:0;z-index:10000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px}
+.h3-canvas{max-width:100%;max-height:70vh;touch-action:none;border-radius:8px}.h3-hint{color:#9cc8ff;font:14px system-ui,sans-serif}

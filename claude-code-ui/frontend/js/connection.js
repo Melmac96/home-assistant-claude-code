@@ -386,7 +386,7 @@ export function handleServerMessage(msg) {
       onKeepMessage(msg);
       break;
 
-    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders':   // my40, my45
+    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders': case 'brief': case 'screen_shot':   // my40, my45, my46 (brief was missing), my47
       onExtrasMessage(msg);
       break;
 

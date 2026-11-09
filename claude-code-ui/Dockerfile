@@ -8,6 +8,7 @@ ARG BUILD_ARCH
 # glibc binaries, can run when the optional `enable_esphome` capability is used.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        adb \
         bash \
         ca-certificates \
         curl \

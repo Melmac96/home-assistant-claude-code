@@ -31,6 +31,7 @@ import { getPrefs, setPrefs } from './prefs.js';   // my41
 import { getAdvisor, setAdvisor } from './advisor.js';   // my42
 import { listReminders, removeReminder, startReminders } from './batch1.js';   // my45
 import { getBrief, startBrief } from './batch2.js';   // my46
+import { takeScreenshot } from './screen.js';   // my47
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -243,6 +244,7 @@ const handlers = {
   },
   keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
   advisor_set(_ws, msg) { broadcast({ type: 'advisor', ...setAdvisor({ enabled: typeof msg.enabled === 'boolean' ? msg.enabled : undefined, advised: typeof msg.advised === 'boolean' ? msg.advised : undefined, declineKind: msg.declineKind, clearDeclined: msg.clearDeclined === true }) }); },   // my42
+  async screen_shot(ws, msg) { send(ws, { type: 'screen_shot', device: String(msg.device || ''), ...(await takeScreenshot(String(msg.device || ''))) }); },   // my47
   reminder_remove(_ws, msg) { broadcast({ type: 'reminders', list: removeReminder(String(msg.id || '')) }); },   // my45
   prefs_set(_ws, msg) { broadcast({ type: 'prefs', ...setPrefs(msg) }); },   // my41
   star_add(_ws, msg) { broadcast({ type: 'stars', list: extras.addStar(msg, runtime.activeSessionId) }); },   // my40

@@ -52,7 +52,7 @@ export function splitReply(raw) {
 let speakDone = null;
 window.haaiSpeakDone = (ok) => { const f = speakDone; speakDone = null; if (f) f(ok !== false); };
 function canSpeak() { return !!native() || ('speechSynthesis' in window); }
-function speakOne(text) {
+export function speakOne(text) {
   return new Promise((resolve) => {
     const n = native();
     if (n) { speakDone = resolve; try { n.speak(text); } catch { speakDone = null; resolve(false); } return; }
