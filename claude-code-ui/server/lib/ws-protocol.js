@@ -36,6 +36,7 @@ import { getBrief, startBrief } from './batch2.js';   // my46
 import { startQuiet, quietState, clearHeld } from './batch5.js';   // my49
 import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, startOvernight } from './batch4.js';   // my48
 import { takeScreenshot } from './screen.js';   // my47
+import { ideasList, ideasOp } from './ideas.js';   // my59
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -295,6 +296,8 @@ const handlers = {
   prefs_set(_ws, msg) { broadcast({ type: 'prefs', ...setPrefs(msg) }); },   // my41
   star_add(_ws, msg) { broadcast({ type: 'stars', list: extras.addStar(msg, runtime.activeSessionId) }); },   // my40
   star_remove(_ws, msg) { broadcast({ type: 'stars', list: extras.removeStar(msg.id) }); },
+  ideas_get(ws) { send(ws, { type: 'ideas', ...ideasList() }); },   // my59
+  ideas_op(_ws, msg) { broadcast({ type: 'ideas', ...ideasOp(msg) }); },
   async refresh_screens(ws) { send(ws, { type: 'refresh_result', ...(await extras.refreshScreens()) }); },
   async quota_get(ws, msg) { send(ws, { type: 'quota', ...(await extras.getQuota(!!msg.force)) }); },
   app_latest_get(ws) { send(ws, { type: 'app_latest', latest: extras.appLatest() }); },

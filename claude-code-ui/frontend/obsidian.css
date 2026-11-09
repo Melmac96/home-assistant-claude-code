@@ -406,3 +406,22 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .tv-view #messages>*:not(.tv-last){display:none}
 .tv-view .tv-last,.tv-view .tv-last .bubble-content{font-size:34px;line-height:1.4;color:#ececee;background:#000;border:0}
 .tv-view .h5-exit{display:block;position:fixed;right:12px;bottom:12px;opacity:.6;z-index:99}
+
+/* my59: haAi ideas list */
+.haai-ideas{position:fixed;inset:0;z-index:9000;background:#000;overflow-y:auto;padding:14px 14px 90px}
+.haai-ideas.hidden{display:none}
+.haai-ideas-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.haai-ideas-title{color:#9cc8ff;font-size:calc(20px * var(--ts,1))}
+.haai-ideas-sub{color:#9cc8ff;font-size:calc(16px * var(--ts,1));margin:8px 0}
+.haai-ideas-btn{background:transparent;border:2px solid #4da3ff;border-radius:12px;color:#e8e8e8;padding:11px 16px;font:inherit;font-size:calc(15px * var(--ts,1));cursor:pointer;margin:0 6px 6px 0}
+.haai-ideas-btn.on{border-color:#46bb68;color:#46bb68}
+.haai-ideas-btn.bad{border-color:#f3736c;color:#f3736c}
+.haai-ideas-btn.wide{display:block;width:100%;margin:0 0 10px}
+.haai-ideas-input{display:block;width:100%;box-sizing:border-box;background:#0d0e10;border:2px solid #4da3ff;border-radius:10px;color:#e8e8e8;padding:11px;margin:0 0 8px;font:inherit;font-size:calc(15px * var(--ts,1))}
+.haai-ideas-row{display:flex;flex-wrap:wrap;margin-top:6px}
+.haai-ideas-card{border:2px solid #4da3ff;border-radius:12px;padding:12px;margin-bottom:10px;background:#0d0e10}
+.haai-ideas-card.done{border-color:#46bb68}
+.haai-ideas-card.done .haai-ideas-t{color:#46bb68}
+.haai-ideas-t{color:#e8e8e8;font-size:calc(15px * var(--ts,1));cursor:pointer}
+.haai-ideas-body{color:#9a9a9a;font-size:calc(13px * var(--ts,1));white-space:pre-wrap;margin-top:8px;max-height:45vh;overflow-y:auto}
+.haai-ideas-note{color:#f3736c;font-size:calc(13px * var(--ts,1));margin:0 0 10px}
