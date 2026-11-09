@@ -107,3 +107,10 @@
 .haai-tablet .tidy-sheet:not(.tidy-more){top:61.4px}
 .haai-tablet .tidy-sheet.tidy-menu{top:45.4px}
 .haai-tablet :is(.settings-panel,.sessions-panel,.accounts-panel){top:65.4px}
+
+/* my64: PHONE top bar only (user 2026-11-09, Look A with his own pick): Chats, Menu, Accounts, Settings, bigger; the rest live in the Menu. */
+html:not(.haai-tablet) #prev-chat-btn,html:not(.haai-tablet) #sessions-btn,html:not(.haai-tablet) #find-btn,html:not(.haai-tablet) #stars-btn,html:not(.haai-tablet) #new-session-btn{display:none!important}
+html:not(.haai-tablet) .icon-group{gap:8px!important}
+html:not(.haai-tablet) .icon-group .icon-btn{width:40px!important;height:40px!important;border-radius:12px!important}
+html:not(.haai-tablet) .icon-group .icon-btn svg{width:22px!important;height:22px!important}
+html:not(.haai-tablet) #tidy-pin-btn{width:auto!important;min-width:40px}
