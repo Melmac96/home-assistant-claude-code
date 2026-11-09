@@ -8,7 +8,7 @@ import { onKeepMessage } from './keep.js';   // my35
 import { onExtrasMessage } from './extras.js';   // my40
 import { onSearchResults } from './sessions.js';   // my28
 import { S } from './state.js';
-import { updateUsage } from './usage.js';
+import { updateUsage, noteReply } from './usage.js';   // my45
 import { showAccounts, showAccountResult, showStats } from './accounts.js';
 import { showPairCode, showDevices } from './devices.js';
 import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } from './banners.js';
@@ -265,6 +265,7 @@ export function handleServerMessage(msg) {
       break;
 
     case 'result':
+      noteReply();   // my45: counts replies for the allowance forecast
       hideThinking();
       S.lastAssistantBubble = null;
       appendResultLine(msg);
@@ -385,7 +386,7 @@ export function handleServerMessage(msg) {
       onKeepMessage(msg);
       break;
 
-    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota':   // my40
+    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders':   // my40, my45
       onExtrasMessage(msg);
       break;
 

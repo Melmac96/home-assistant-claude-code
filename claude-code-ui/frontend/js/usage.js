@@ -4,6 +4,7 @@
  * 'rate_limit' messages, which carry both windows (utilization is a fraction,
  * 0.33 = 33%) and when each resets.
  */
+import { S } from './state.js';
 const bars = document.getElementById('usage-bars');
 const panel = document.getElementById('usage-panel');
 const fills = { five_hour: document.getElementById('ub-5h'), seven_day: document.getElementById('ub-7d') };
@@ -28,9 +29,36 @@ function resetText(epoch) {
   return `Resets ${when} at ${hm(d)} (UK time), in ${left}`;
 }
 
+// my45 (user look B): allowance forecast card at the top of the panel. Replies are counted on this device (every reply is
+// sent to every open page); pace = percent used in the current 5-hour window / replies counted in it.
+const LOG = 'reply-log';
+export function noteReply() {
+  let l = []; try { l = JSON.parse(localStorage.getItem(LOG) || '[]'); } catch { /* start again */ }
+  l.push(Date.now());
+  localStorage.setItem(LOG, JSON.stringify(l.slice(-500)));
+  draw();
+}
+function forecast() {
+  const w = windows && windows.five_hour;
+  if (!w) return '';
+  const expired = w.resetsAt && w.resetsAt * 1000 <= Date.now();
+  const used = expired ? 0 : pctOf(w.utilization), left = 100 - used;
+  let l = []; try { l = JSON.parse(localStorage.getItem(LOG) || '[]'); } catch { /* none */ }
+  const since = w.resetsAt ? w.resetsAt * 1000 - 5 * 3600000 : 0;
+  const n = l.filter((t) => t >= since).length;
+  let replies = null;
+  if (!expired && n >= 3 && used >= 5) { const r = Math.floor(left / (used / n)); replies = r > 20 ? Math.round(r / 5) * 5 : r; }
+  const [word, colourCls] = left >= 30 ? ['Plenty left', 'fc-ok'] : left >= 10 ? ['Getting low', 'fc-mid'] : ['Running low', 'fc-low'];
+  const tokens = S.ctxUsage ? S.ctxUsage.totalTokens : 0;
+  const tip = tokens >= 100000 ? 'This long chat is using a lot. A new chat is cheaper.' : '';
+  return `<div class="fc-card"><b>Allowance</b><div class="fc-bar"><i class="${colourCls}" style="width:${left}%"></i></div>` +
+    `<span class="${colourCls}">${word}</span> · ${replies != null ? `about ${replies} more replies at this pace` : `${left}% of the 5 hours left`}` +
+    (tip ? `<div class="fc-tip">${tip}</div>` : '') + '</div>';
+}
+
 function draw() {
   if (!windows) return;
-  let html = '';
+  let html = forecast();
   for (const key of ['five_hour', 'seven_day']) {
     const w = windows[key];
     if (!w) continue;

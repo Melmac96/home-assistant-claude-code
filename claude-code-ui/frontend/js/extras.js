@@ -12,6 +12,7 @@ import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
 import { speakerButton } from './read.js';   // my43
+import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -83,11 +84,12 @@ export function decorateStar(content) {
   let foot = bubble.querySelector(':scope > .reply-foot');
   if (!foot) {
     foot = mk('div', 'reply-foot');
-    const getRaw = () => content._rawMd || '';
+    const getRaw = () => stripMarks(content._rawMd || '');
     const top = speakerButton(getRaw); top.classList.add('read-top');
     const bottom = speakerButton(getRaw);
     foot.append(bottom);
     bubble.append(foot);
+    replyChips(bubble, content);   // my45
     bubble.prepend(top);
   }
   let b = foot.querySelector('.star-btn');
@@ -120,11 +122,11 @@ function drawStarList() {
   for (const s of stars) {
     const row = mk('div', 'star-row');
     const head = mk('div', 'star-when', 'Starred ' + whenText(s.starredAt || s.ts));
-    const plain = s.text.replace(/🔹/g, '').replace(/[*_#`>⟦⟧]/g, '').replace(/\s+/g, ' ').trim();
+    const plain = stripMarks(s.text).replace(/🔹/g, '').replace(/[*_#`>⟦⟧]/g, '').replace(/\s+/g, ' ').trim();
     const snip = mk('div', 'star-snip', plain.length > 180 ? plain.slice(0, 180) + '…' : plain);
     const full = mk('div', 'star-full bubble-content hidden');
     snip.onclick = () => {
-      if (!full.dataset.done) { full.innerHTML = window.marked ? window.marked.parse(s.text) : ''; if (!full.innerHTML) full.textContent = s.text; full.dataset.done = '1'; }
+      if (!full.dataset.done) { full.innerHTML = window.marked ? window.marked.parse(stripMarks(s.text)) : ''; if (!full.innerHTML) full.textContent = stripMarks(s.text); full.dataset.done = '1'; }
       full.classList.toggle('hidden');
       snip.classList.toggle('hidden');
     };
@@ -250,6 +252,7 @@ document.getElementById('accounts-btn')?.addEventListener('click', () => send({ 
 export function onExtrasMessage(msg) {
   switch (msg.type) {
     case 'advisor': onAdvisorMessage(msg); break;   // my42
+    case 'reminders': onBatch1Message(msg); break;   // my45
     case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {
