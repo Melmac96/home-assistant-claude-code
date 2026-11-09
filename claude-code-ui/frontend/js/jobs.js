@@ -16,6 +16,10 @@ const row = mk('div', 'jobs-row hidden');
 const sheet = mk('div', 'jobs-sheet hidden');
 const anchor = document.querySelector('.header');
 if (anchor) { anchor.after(row); row.after(sheet); }
+// my52: Storage is a plain number on the top bar
+const storeBtn = mk('button', 'icon-btn hidden'); storeBtn.type = 'button'; storeBtn.id = 'job-store-btn'; storeBtn.title = 'Finished jobs'; storeBtn.setAttribute('aria-label', 'Finished jobs');
+document.querySelector('.icon-group')?.prepend(storeBtn);
+storeBtn.onclick = () => { showStorage = !showStorage; openN = null; draw(); };
 
 let live = new Map();   // id -> {n, text, model, lastTool, summary}
 let nextN = 1;
@@ -43,7 +47,10 @@ function draw() {
   const wide = window.matchMedia('(min-width: 700px)').matches;
   row.textContent = '';
   const any = live.size || store.length;
-  row.classList.toggle('hidden', !any);
+  row.classList.toggle('hidden', !live.size);
+  storeBtn.textContent = store.length || '';
+  storeBtn.classList.toggle('hidden', !store.length);
+  storeBtn.classList.toggle('sel', showStorage);
   if (!any) { sheet.classList.add('hidden'); return; }
   if (wide) {
     for (const j of live.values()) {
@@ -55,11 +62,6 @@ function draw() {
     const b = mk('button', 'job-pill', live.size === 1 ? '1 job running' : live.size + ' jobs running'); b.type = 'button';
     b.onclick = () => { openN = openN ? null : [...live.values()][0].n; showStorage = false; draw(); };
     row.appendChild(b);
-  }
-  if (store.length) {
-    const s = mk('button', 'job-pill' + (showStorage ? ' sel' : ''), 'Storage (' + store.length + ')'); s.type = 'button';
-    s.onclick = () => { showStorage = !showStorage; openN = null; draw(); };
-    row.appendChild(s);
   }
   sheet.textContent = '';
   const open = [...live.values()].find((j) => j.n === openN);

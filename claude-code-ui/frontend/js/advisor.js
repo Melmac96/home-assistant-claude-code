@@ -87,18 +87,21 @@ function draw(note) {
     no.onclick = (e) => { e.preventDefault(); const c = card; markHandled(c.key); card = null; send({ type: 'advisor_set', declineKind: c.kind }); draw(); };
     row.append(yes, no); strip.append(row);
     strip.classList.remove('hidden');
-  } else if (adv.advised) {
+  } else if (adv.advised && !localStorage.getItem('adv-slim-gone')) {
     const row = mk('div', 'adv-row adv-slim');
     row.append(mk('span', 'adv-reason', 'Using a different model for this job.'));
     const b = mk('button', 'adv-no', 'Back to Sonnet now'); b.type = 'button';
     b.onclick = (e) => { e.preventDefault(); goBack(false); };
-    row.append(b); strip.append(row);
+    const x = mk('button', 'adv-x', '✕'); x.type = 'button'; x.title = 'Hide this'; x.setAttribute('aria-label', 'Hide this');   // my52
+    x.onclick = (e) => { e.preventDefault(); localStorage.setItem('adv-slim-gone', '1'); draw(); };
+    row.append(b, x); strip.append(row);
     strip.classList.remove('hidden');
   } else strip.classList.add('hidden');
 }
 
 export function onAdvisorMessage(msg) {
   adv = { enabled: msg.enabled !== false, advised: !!msg.advised };
+  if (!adv.advised) localStorage.removeItem('adv-slim-gone');   // my52: the next switch shows the strip again
   if (!adv.enabled) card = null;
   const t = document.getElementById('advisor-toggle');
   if (t) { t.checked = adv.enabled; }

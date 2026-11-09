@@ -43,7 +43,7 @@ quiet.onclick = () => { if (q.held.length) list.classList.toggle('hidden'); };
 bar.append(quiet);
 
 // ── 34. TV reading view ──────────────────────────────────────────────────────
-const tvBtn = mk('button', 'reply-chip', '📺 TV view'); tvBtn.type = 'button';
+const tvBtn = mk('button', 'reply-chip', '📺 TV view'); tvBtn.type = 'button'; tvBtn.id = 'tv-view-btn';   // my52: opened from the ☰ menu
 const tvExit = mk('button', 'h2-btn h5-exit', 'Leave TV view'); tvExit.type = 'button';
 document.body.append(tvExit);
 function markLast() {

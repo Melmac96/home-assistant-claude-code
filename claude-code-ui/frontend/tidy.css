@@ -64,3 +64,13 @@
 .tidy-chips em{font:700 11px system-ui;color:#7d8087;font-style:normal;margin-right:2px}
 .tidy-chips .reply-chip{height:24px;padding:0 9px;font-size:11px;line-height:1}
 .tidy-chips .way-chip{border-color:#4da3ff;background:rgba(77,163,255,.14);border-radius:8px;color:#ececee}
+/* my52: top bar number and pin; the old strips are gone from under it */
+.sum-pin,.h5-home,#tv-view-btn{display:none!important}
+.h5-quiet.hidden,.h5-row:not(:has(.h5-quiet:not(.hidden))){display:none}
+#job-store-btn{order:-2;font:700 13px system-ui;color:#9cc8ff;padding:0}
+#job-store-btn.sel{border-color:#4da3ff;background:rgba(77,163,255,.14)}
+#tidy-pin-btn{order:-1;width:auto!important;min-width:30px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;gap:2px;font:700 12px system-ui;color:#9cc8ff}
+#tidy-pin-btn svg{width:13px!important;height:13px!important}
+#job-store-btn.hidden,#tidy-pin-btn.hidden{display:none!important}
+.adv-slim{flex-wrap:nowrap}
+.adv-x{flex:none;width:40px;min-height:40px;border:1.5px solid #4a4d55;background:transparent;color:#d0d3d9;border-radius:9px;font:700 14px system-ui;padding:0;cursor:pointer}

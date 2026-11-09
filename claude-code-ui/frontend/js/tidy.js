@@ -175,6 +175,7 @@ function fillMenu() {
   go('★ Favourites', 'stars-btn');
   go('⌕ Search', 'find-btn');
   go('◷ History', 'sessions-btn');
+  go('📺 TV view', 'tv-view-btn');
   const big = mk('button', 'tidy-row'); big.type = 'button'; big.textContent = 'Aa Bigger text';
   big.onclick = () => {
     const r = $('ts-range'); if (!r) return;
@@ -187,6 +188,29 @@ function fillMenu() {
 }
 menuBtn.onclick = () => { fillMenu(); open(menu); };
 window.addEventListener('haai-version', (e) => { version = String(e.detail || ''); setWm(); });
+
+// ── pinned summaries: a pin and a number on the top bar, opens a drop-down ────
+const pinBtn = mk('button', 'icon-btn hidden'); pinBtn.type = 'button'; pinBtn.id = 'tidy-pin-btn'; pinBtn.title = 'Pinned'; pinBtn.setAttribute('aria-label', 'Pinned');
+pinBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5h6l-1 6 3.5 3.5v1.5h-11V13L10 9.5z"/><path d="M12 14.5V21"/></svg>';
+const pinNum = mk('span');
+pinBtn.append(pinNum);
+group.prepend(pinBtn);
+function drawPins() {
+  const n = (window.haaiPins || []).length;
+  pinNum.textContent = n || '';
+  pinBtn.classList.toggle('hidden', !n);
+}
+pinBtn.onclick = () => {
+  sheet.textContent = '';
+  sheet.append(mk('h4', null, 'Pinned'));
+  for (const p of (window.haaiPins || []).slice().reverse()) {
+    const r = row(p[0] || 'This chat', p[1] ? 'Done: ' + p[1] : null, 'b');
+    if (p[2]) r.firstChild.append(mk('span', 'tidy-sm', 'Next: ' + p[2]));
+    sheet.append(r);
+  }
+  open(sheet);
+};
+window.addEventListener('haai-pins', drawPins);
 
 // ── side bars and chat bar ───────────────────────────────────────────────────
 const e5 = mk('div', 'tidy-eb'); e5.id = 'tidy-e5'; e5.append(mk('i'));
@@ -301,4 +325,4 @@ new MutationObserver(() => {
   clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 250);
 }).observe(messagesEl, { childList: true, subtree: true });
 
-setWm(); drawBars(); drawTk(); drawNum(); cycle(true);
+setWm(); drawBars(); drawTk(); drawNum(); drawPins(); cycle(true);

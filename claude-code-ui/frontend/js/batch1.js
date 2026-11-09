@@ -106,6 +106,8 @@ function scanPins() {
     const all = [...messagesEl.querySelectorAll('.bubble-assistant .bubble-content[data-pin]')];
     sumData = all.length ? JSON.parse(all[all.length - 1].dataset.pin) : null;
     drawSum();
+    window.haaiPins = all.map((e) => JSON.parse(e.dataset.pin));   // my52: the pin button on the top bar lists these
+    window.dispatchEvent(new Event('haai-pins'));
   }, 150);
 }
 new MutationObserver((m) => { if (m.some((x) => x.removedNodes.length)) scanPins(); }).observe(messagesEl, { childList: true });
