@@ -172,6 +172,7 @@ export function onQuickMessage(msg) {
       const btn = document.getElementById('update-btn');
       if (msg.url) btn.href = msg.url;
       btn.classList.toggle('hidden', !msg.available);
+      if (msg.version) window.dispatchEvent(new CustomEvent('haai-version', { detail: msg.version }));   // my51
       break;
     }
     case 'handover_status': appendInfoLine(msg.text); break;

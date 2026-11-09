@@ -64,6 +64,7 @@ function draw() {
   btn.setAttribute('aria-label', bad ? 'Home health: needs a look' : 'Home health: all fine');
   homeChip(lost ? '! No contact' : data.status === 'stale' ? '! Check stopped' : data.status === 'bad' ? `● ${data.count} need${data.count === 1 ? 's' : ''} a look` : '✔ Home fine', bad);   // my49
   if (panel) fillPanel();
+  window.dispatchEvent(new CustomEvent('haai-health', { detail: { data, lost } }));   // my51: status bar
 }
 
 btn.addEventListener('click', () => {

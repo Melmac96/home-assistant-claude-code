@@ -62,27 +62,24 @@ const CHIPS = [
 export function replyChips(bubble, content) {
   if (bubble.querySelector(':scope > .reply-chips')) return;
   if (content.querySelector('.answer-card')) return;   // a question is not something to simplify
-  const row = mk('div', 'reply-chips');
-  for (const [label, text] of CHIPS) {
+  // my51 (tidy screen): two small lines, "Explain it:" pills, then "Another way:" blue buttons
+  const wrap = mk('div', 'reply-chips tidy-chips');
+  const r1 = mk('div', 'tc-row'); r1.append(mk('em', null, 'Explain it:'));
+  for (const [label, text] of [['Plainer', CHIPS[0][1]], CHIPS[1], CHIPS[2], CHIPS[3]]) {
     const b = mk('button', 'reply-chip', label);
     b.type = 'button';
     b.onclick = (e) => { e.stopPropagation(); sendText(text); };
-    row.append(b);
+    r1.append(b);
   }
-  // my48 (28, look B): "Another way?" opens three buttons that change the approach, not just the words
-  const more = mk('button', 'reply-chip', '🔁 Another way?'); more.type = 'button';
-  const ways = mk('div', 'h2-card plain hidden');
-  ways.append(mk('div', 'h2-title', 'Another way?'));
-  const wr = mk('div', 'h2-row');
-  for (const [label, text] of [['Simpler', 'Please do this a different, simpler way, and tell me what changes.'], ['Safer', 'Please do this a different, safer way (back up first), and tell me what changes.'], ['Faster', 'Please do this a different, faster way, and tell me what changes.']]) {
-    const b = mk('button', 'h2-btn', label); b.type = 'button';
-    b.onclick = (e) => { e.stopPropagation(); ways.classList.add('hidden'); sendText(text); };
-    wr.append(b);
+  const r2 = mk('div', 'tc-row tc-way'); r2.append(mk('em', null, 'Another way:'));
+  for (const [label, text] of [['\u{1F6E1} Safer', 'Please do this a different, safer way (back up first), and tell me what changes.'], ['\u26A1 Faster', 'Please do this a different, faster way, and tell me what changes.'], ['\u{1F4B7} Cheaper', 'Please do this a different, cheaper way (fewer steps, smaller chat), and tell me what changes.']]) {
+    const b = mk('button', 'reply-chip way-chip', label);
+    b.type = 'button';
+    b.onclick = (e) => { e.stopPropagation(); sendText(text); };
+    r2.append(b);
   }
-  ways.append(wr);
-  more.onclick = (e) => { e.stopPropagation(); ways.classList.toggle('hidden'); };
-  row.append(more);
-  bubble.append(row, ways);
+  wrap.append(r1, r2);
+  bubble.append(wrap);
 }
 
 // ── 7. Pinned summary: a one-line strip at the top that opens out ────────────

@@ -7,7 +7,7 @@ import { log } from './log.js';
 import { broadcast } from './broadcast.js';
 
 const CHECK_MS = 2 * 60 * 1000;
-let state = { available: false, url: null };
+let state = { available: false, url: null, version: null };
 
 export const getSelfUpdate = () => state;
 
@@ -22,8 +22,9 @@ export async function checkSelfUpdate() {
     const next = {
       available: !!info.update_available && !!info.slug,
       url: info.slug ? `http://192.168.1.168/config/app/${info.slug}/info` : null,
+      version: info.version || null,   // my51: the live update number for the menu
     };
-    if (next.available === state.available && next.url === state.url) return;
+    if (next.available === state.available && next.url === state.url && next.version === state.version) return;
     state = next;
     broadcast({ type: 'self_update', ...state });
   } catch (e) {

@@ -48,6 +48,7 @@ import './js/banners.js';
 import './js/scroll.js';
 import './js/promptnav.js';
 
+
 // Before anything renders: everything below is laid out inside the frame this
 // sizes, and getting it wrong puts the composer below the fold on a phone.
 watchViewport();
@@ -55,5 +56,8 @@ watchViewport();
 // Restore any draft the user was typing before navigating away.
 const draft = localStorage.getItem('draft');
 if (draft) { promptInput.value = draft; resizeTextarea(); updateSendBtn(); }
+
+// my51: the tidy screen rearranges the others, so it loads last, and if it ever fails the plain app still runs.
+import('./js/tidy.js').catch((e) => console.error('tidy screen failed', e));
 
 connect();
