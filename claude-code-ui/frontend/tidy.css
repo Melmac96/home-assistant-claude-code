@@ -12,7 +12,7 @@
 /* status bar */
 #tidy-sbar{padding:3px 9px;border-bottom:1px solid #1c1d20;transition:opacity .25s}
 .tidy-stb{width:100%;min-width:0;display:flex;align-items:center;gap:8px;border:1.5px solid #26282d;border-radius:8px;padding:0 8px;height:22px;background:#0a0a0b;text-align:left;color:inherit;font:inherit;cursor:pointer}
-.tidy-num{flex:none;min-width:16px;height:16px;border-radius:8px;background:#f3736c;color:#000;font:800 10.5px/16px system-ui;text-align:center;padding:0 6px}
+.tidy-num{flex:none;box-sizing:border-box;min-width:17px;height:17px;border-radius:9px;background:#f3736c;color:#000;font:800 10.5px/1 system-ui;display:inline-flex;align-items:center;justify-content:center;text-align:center;padding:0 5px}   /* my54: number centred in the circle */
 .tidy-num.ok{background:#46bb68}
 .tidy-num.hidden{display:none}
 .tidy-col{flex:1;min-width:0}
@@ -81,3 +81,12 @@
 .icon-group .icon-btn em{font-style:normal}
 .composer-actions .attach-btn{border:1.5px solid #4da3ff!important;color:#9a9da4!important;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center}
 .composer-actions .tidy-morebtn{color:#9a9da4}
+
+/* my54: start-up model check, centre of the screen, cannot be dismissed except by its two buttons */
+.start-check{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:20px}
+.sc-card{width:min(420px,100%);background:#0b0b0b;border:1px solid #4da3ff;border-radius:16px;padding:22px 20px;display:flex;flex-direction:column;gap:14px;font-family:inherit;color:#e8e8e8}
+.sc-title{font-size:19px;font-weight:700;color:#9cc8ff;line-height:1.3}
+.sc-q{font-size:16px;line-height:1.4}
+.sc-card button{font:inherit;font-size:16px;font-weight:600;border-radius:12px;padding:14px;min-height:48px;cursor:pointer}
+.sc-stay{background:transparent;color:#e8e8e8;border:1px solid #555}
+.sc-switch{background:#4da3ff;color:#000;border:1px solid #4da3ff}

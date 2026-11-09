@@ -11,6 +11,7 @@ import { S } from './state.js';
 import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
+import { MODEL_LABELS } from './model.js';   // my54
 import { speakerButton } from './read.js';   // my43
 import { stripMarks, replyChips, onBatch1Message } from './batch1.js';   // my45
 import { onBriefMessage } from './batch2.js';   // my46
@@ -189,6 +190,30 @@ function applyPrefs() {
   localStorage.setItem('effort', prefs.effort);
 }
 window.addEventListener('haai-models', applyPrefs);
+
+// my54: on a real start of haAi (not just coming back to the front) a centre pop-up checks the model and effort.
+// sessionStorage survives the page reloading when the app comes back, but not the app being closed and reopened.
+function startCheck() {
+  if (!prefs || sessionStorage.getItem('haai-start-checked')) return;
+  sessionStorage.setItem('haai-start-checked', '1');
+  const sonnetId = latestSonnet();
+  if ((prefs.model === 'latest-sonnet' || prefs.model === sonnetId) && prefs.effort === 'medium') return;
+  const label = (id) => { const o = [...modelSelect.options].find((x) => x.value === id); return (o && o.textContent) || MODEL_LABELS[id] || id; };
+  const now = prefs.model === 'latest-sonnet' ? label(sonnetId) : label(prefs.model);
+  const eff = String(prefs.effort || 'medium'); const effName = eff[0].toUpperCase() + eff.slice(1);
+  const ov = document.createElement('div'); ov.className = 'start-check';
+  ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
+  const card = document.createElement('div'); card.className = 'sc-card';
+  const t = document.createElement('div'); t.className = 'sc-title'; t.textContent = `You are currently set to ${now} on ${effName} effort`;
+  const q = document.createElement('div'); q.className = 'sc-q'; q.textContent = `Do you want to stay on this setting or switch to your normal Sonnet model (${label(sonnetId)}) on Medium effort?`;
+  const stay = document.createElement('button'); stay.type = 'button'; stay.className = 'sc-stay'; stay.textContent = 'Stay on this setting';
+  const sw = document.createElement('button'); sw.type = 'button'; sw.className = 'sc-switch'; sw.textContent = `Switch to ${label(sonnetId)} · Medium`;
+  stay.onclick = () => ov.remove();
+  sw.onclick = () => { send({ type: 'prefs_set', model: 'latest-sonnet', effort: 'medium' }); send({ type: 'advisor_set', advised: false }); ov.remove(); };
+  card.append(t, q, stay, sw); ov.append(card);
+  ov.addEventListener('click', (e) => e.stopPropagation());
+  document.body.append(ov);
+}
 const savePrefs = () => {
   const m = modelSelect.value === latestSonnet() ? 'latest-sonnet' : modelSelect.value;
   send({ type: 'prefs_set', model: m, effort: effortSelect.value || 'medium' });
@@ -261,7 +286,7 @@ export function onExtrasMessage(msg) {
     case 'screen_shot': onScreenShot(msg); break;   // my47
     case 'overnight': onOvernight(msg); break;   // my48
     case 'quiet': onQuiet(msg); break;   // my49
-    case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); break;
+    case 'prefs': prefs = { model: msg.model, effort: msg.effort }; applyPrefs(); startCheck(); break;
     case 'stars': stars = msg.list || []; repaintStars(); if (!starPanel.classList.contains('hidden')) drawStarList(); else document.getElementById('stars-count').textContent = stars.length ? `(${stars.length})` : ''; break;
     case 'refresh_result': {
       const p = document.querySelector('.quick-refresh');
