@@ -47,7 +47,7 @@ export function adviceFound(el, fields, key) {
       if (adv.advised) goBack(true);
       return;
     }
-    if (adv.advised) return;                                  // already on an advised model
+    if (adv.advised && modelSelect.value !== 'latest-sonnet' && !/sonnet/i.test(modelSelect.value)) return;   // already on an advised model (my54: a stuck flag no longer blocks it)
     const [to, effort, kind, ...rest] = fields;
     if (!['opus', 'haiku'].includes(to) || !pick(to)) return;
     card = { to, effort: ['low', 'medium', 'high'].includes(effort) ? effort : (to === 'opus' ? 'high' : 'low'), kind: kind || 'this job', reason: rest.join('|'), key: key + all.length };
@@ -87,6 +87,9 @@ function draw(note) {
     no.onclick = (e) => { e.preventDefault(); const c = card; markHandled(c.key); card = null; send({ type: 'advisor_set', declineKind: c.kind }); draw(); };
     row.append(yes, no); strip.append(row);
     strip.classList.remove('hidden');
+  } else if (adv.advised && /sonnet/i.test(modelSelect.value + ' ' + (modelSelect.selectedOptions[0]?.dataset.resolvedModel || '')) && (document.getElementById('effort-select')?.value || 'medium') === 'medium') {
+    send({ type: 'advisor_set', advised: false });   // my54: stuck flag, we are back on Sonnet Medium
+    strip.classList.add('hidden');
   } else if (adv.advised && !localStorage.getItem('adv-slim-gone')) {
     const row = mk('div', 'adv-row adv-slim');
     row.append(mk('span', 'adv-reason', 'Using a different model for this job.'));

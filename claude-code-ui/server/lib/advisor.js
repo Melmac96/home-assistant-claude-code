@@ -39,8 +39,11 @@ const isDefaultChoice = (model, effort) => (!model || /sonnet/i.test(model)) && 
 
 // The standing instruction added to the chat for this turn (or '' = none).
 export function advisorPrompt(model, effort) {
-  const a = getAdvisor();
+  let a = getAdvisor();
   if (!a.enabled) return '';
+  // my54: the 'advised' flag could stay stuck on after the model was put back to the default by hand or by a restart, which
+  // silenced the advisor for good (found 2026-11-09, flag stuck since 12:45). The real model and effort win.
+  if (a.advised && isDefaultChoice(model, effort)) a = setAdvisor({ advised: false });
   if (a.advised) {
     return [
       'MODEL ADVISOR (haAi): this chat was switched to a different model for one job. When that job is FINISHED and you are not expecting more steps of it,',
@@ -56,6 +59,10 @@ export function advisorPrompt(model, effort) {
     '⟦ADVISE|haiku|low|kind|reason⟧  when the job is clearly small and simple (a one-line fact, a quick status check, a tiny edit, a short rewrite).',
     '"kind" = 1-3 plain words naming the kind of job (e.g. debugging, quick check). "reason" = one short plain-English sentence with no | and no ⟧.',
     'Opus on High uses roughly two-thirds more allowance per reply than Sonnet, but can be cheaper overall if Sonnet would need a redo. Haiku should use less, but that saving is a guess, not measured: say so in the reason.',
+    'Judge EVERY request, not only the first one of a chat, and judge the job that is coming up, not only what was literally asked.',
+    'MUST: whenever he asks you whether a different model or effort would be better, or you say in words that one would suit the job better, you MUST also put the ⟦ADVISE|...⟧ line in that same reply (he gets the Switch button from it; a plain-words yes with no line is a failure).',
+    'Opus on High fits: building or changing an app or add-on, debugging that is not obvious, anything touching several files or devices, security or money, a plan that needs careful thought, work that already went wrong once in this chat.',
+    'Haiku on Low fits: a single fact, a status check, reading one file back, a one-line edit, a short rewrite, a yes/no.',
     'Still answer the request normally in the same reply. If it is not a clear case, write NOTHING about the advisor. Never suggest twice in a row for the same kind of job.' + skip,
   ].join(' ');
 }
