@@ -40,6 +40,8 @@ const cogPath = () => {
   for (let i = 0; i < 8; i++) for (const [o, r] of [[-.28, 7.4], [-.17, 10], [.17, 10], [.28, 7.4]]) { const a = i * Math.PI / 4 + o; p.push((12 + r * Math.cos(a)).toFixed(2) + ' ' + (12 + r * Math.sin(a)).toFixed(2)); }
   return `<path d="M${p.join('L')}Z"/><circle cx="12" cy="12" r="3"/>`;
 };
+// my63: bar icons 20% bigger on the tablet only. Uses the screen's short side, so turning a phone sideways or opening the keyboard changes nothing.
+if (Math.min(screen.width, screen.height) >= 600) document.documentElement.classList.add('haai-tablet');
 const SHAPES = {
   settings: cogPath(),
   accounts: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.5 3.6-7 8-7s8 2.5 8 7"/>',

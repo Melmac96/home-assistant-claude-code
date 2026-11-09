@@ -94,3 +94,16 @@
 .sc-stay{background:transparent;color:#e8e8e8;border:1px solid #555}
 .sc-switch{background:#4da3ff;color:#000;border:1px solid #4da3ff}
 .guard-toast{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:2147482000;width:min(440px,calc(100% - 24px));background:#0b0b0b;border:1px solid #4da3ff;color:#e8e8e8;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.35}
+
+/* my63: top and bottom bar icons exactly 20% bigger on the tablet only, same proportions (user 2026-11-09); menus move down by the 5.4px the bar grew */
+.haai-tablet .icon-group .icon-btn{width:31.2px!important;height:32.4px!important;border-radius:12px!important}
+.haai-tablet .icon-group .icon-btn svg{width:19.2px!important;height:19.2px!important}
+.haai-tablet #tidy-pin-btn{width:auto!important;min-width:36px;font-size:14.4px}
+.haai-tablet #tidy-pin-btn svg{width:15.6px!important;height:15.6px!important}
+.haai-tablet #job-store-btn{font-size:15.6px}
+.haai-tablet .composer-actions .attach-btn,.haai-tablet .composer-actions .tidy-morebtn,.haai-tablet .composer-actions .keep-btn,.haai-tablet .composer .attach-btn,.haai-tablet .composer .send-btn{width:38.4px!important;height:38.4px!important}
+.haai-tablet .composer-actions .attach-btn svg,.haai-tablet .composer .send-btn svg{width:21.6px!important;height:21.6px!important}
+.haai-tablet .composer-actions .keep-btn{font-size:24px}
+.haai-tablet .tidy-sheet:not(.tidy-more){top:61.4px}
+.haai-tablet .tidy-sheet.tidy-menu{top:45.4px}
+.haai-tablet :is(.settings-panel,.sessions-panel,.accounts-panel){top:65.4px}
