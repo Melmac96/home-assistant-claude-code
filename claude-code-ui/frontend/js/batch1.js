@@ -69,7 +69,20 @@ export function replyChips(bubble, content) {
     b.onclick = (e) => { e.stopPropagation(); sendText(text); };
     row.append(b);
   }
-  bubble.append(row);
+  // my48 (28, look B): "Another way?" opens three buttons that change the approach, not just the words
+  const more = mk('button', 'reply-chip', '🔁 Another way?'); more.type = 'button';
+  const ways = mk('div', 'h2-card plain hidden');
+  ways.append(mk('div', 'h2-title', 'Another way?'));
+  const wr = mk('div', 'h2-row');
+  for (const [label, text] of [['Simpler', 'Please do this a different, simpler way, and tell me what changes.'], ['Safer', 'Please do this a different, safer way (back up first), and tell me what changes.'], ['Faster', 'Please do this a different, faster way, and tell me what changes.']]) {
+    const b = mk('button', 'h2-btn', label); b.type = 'button';
+    b.onclick = (e) => { e.stopPropagation(); ways.classList.add('hidden'); sendText(text); };
+    wr.append(b);
+  }
+  ways.append(wr);
+  more.onclick = (e) => { e.stopPropagation(); ways.classList.toggle('hidden'); };
+  row.append(more);
+  bubble.append(row, ways);
 }
 
 // ── 7. Pinned summary: a one-line strip at the top that opens out ────────────

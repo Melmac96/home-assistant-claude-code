@@ -7,6 +7,7 @@
 import { S } from './state.js';
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
+import { undoText } from './batch4.js';   // my48
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -45,6 +46,7 @@ export function buildCards(el) {
       c = card('good', '✔ Finished (not confirmed yet)', 'green');
       line(c, f[0] && `Changed: ${f[0]}`); line(c, (f[1] || f[2]) && `Files updated: ${f[1] || '?'} · Undo kept: ${f[2] || 'yes'}`);
       c.append(row(btn('It works', 'g', () => sendText('It works. Confirmed.'), c), btn('Not working', 'r', () => sendText('That is not working. Please look at it again.'), c)));
+      c.append(row(btn('↩ Undo this job', '', () => sendText(undoText(f[2])), c)));
     } else if (k === 'ERR') {
       c = card('bad', 'Something went wrong', 'red');
       line(c, f[0]);
@@ -118,6 +120,7 @@ export function onBriefMessage(msg) {
   line(brief, `Home: ${b.home}`);
   if (b.sleptMin != null) line(brief, `Slept: ${Math.floor(b.sleptMin / 60)} h ${String(b.sleptMin % 60).padStart(2, '0')}`);
   line(brief, `Waiting for you: ${b.waiting}`);
+  if (b.overnight) { line(brief, `Overnight jobs started: ${b.overnight}`); if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'overnight_clear' })); }
   const x = mk('button', 'h2-btn', 'Start a job'); x.type = 'button';
   x.onclick = (e) => { e.preventDefault(); hideBrief(); const t = document.querySelector('#input-form textarea, textarea'); if (t) t.focus(); };
   brief.append(row(x));

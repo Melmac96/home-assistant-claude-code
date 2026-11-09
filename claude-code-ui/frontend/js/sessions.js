@@ -42,9 +42,36 @@ for (const name of Object.keys(SECTIONS)) {
   };
 }
 
+// my48 (26, look A): day buttons above the chat list: All, Today, Yesterday, then the weekday names of the days before
+let dayFilter = null;   // null = all, otherwise a Date at local midnight
+const dayStart = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+function dayList() {
+  if (dayFilter == null) return S.sessions;
+  return S.sessions.filter((s) => dayStart(s.updatedAt) === dayFilter);
+}
+function drawDays() {
+  const list = document.getElementById('sessions-list');
+  if (!list) return;
+  let bar = document.getElementById('day-bar');
+  if (!bar) { bar = document.createElement('div'); bar.id = 'day-bar'; bar.className = 'reply-chips day-bar'; list.before(bar); }
+  bar.textContent = '';
+  const mkChip = (label, val) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'reply-chip' + (dayFilter === val ? ' on' : ''); b.textContent = label;
+    b.onclick = () => { dayFilter = val; renderSessions(); };
+    bar.append(b);
+  };
+  mkChip('All', null);
+  const today = dayStart(Date.now());
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    mkChip(i === 0 ? 'Today' : i === 1 ? 'Yesterday' : d.toLocaleDateString('en-GB', { weekday: 'short' }), d.getTime());
+  }
+}
+
 export function renderSessions() {
+  drawDays();
   sessionsListEl.innerHTML = '';
-  const list = S.searchResults || S.sessions;   // my28
+  const list = S.searchResults || dayList();   // my28, my48
   document.getElementById('chats-count').textContent = S.searching ? '' : S.searchResults ? `(${list.length} found)` : `(${list.length})`;   // my29
   applySections();
   if (S.searching) {   // my30: the search of every chat takes a few seconds

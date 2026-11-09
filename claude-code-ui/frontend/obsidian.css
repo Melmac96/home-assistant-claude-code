@@ -393,3 +393,6 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .h3-conv.hidden,.h3-screens.hidden{display:none}.h3-conv-state{font-weight:700;color:#4da3ff}.h3-conv-heard{color:#7d8087;margin:2px 0 6px;min-height:1.2em}
 .h3-photo{position:fixed;inset:0;z-index:10000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px}
 .h3-canvas{max-width:100%;max-height:70vh;touch-action:none;border-radius:8px}.h3-hint{color:#9cc8ff;font:14px system-ui,sans-serif}
+
+/* my48 batch 4 */
+.day-bar{margin:4px 0 8px}.reply-chip.on{background:rgba(77,163,255,.18);border-color:#4da3ff;color:#4da3ff}.h4-queue .grey{color:#7d8087}.h4-night .h2-row{align-items:center;justify-content:space-between;gap:8px}.h4-queue.hidden,.h4-night.hidden{display:none}

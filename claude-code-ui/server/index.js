@@ -44,6 +44,7 @@ import { registerDiagRoutes } from './lib/diag.js';
 import { attach } from './lib/ws-protocol.js';
 import { runQuery } from './lib/run-query.js';
 import * as autoContinue from './lib/auto-continue.js';
+import { setOvernightRunner } from './lib/batch4.js';   // my48
 import * as notifier from './lib/notify.js';
 import * as deviceAuth from './lib/device-auth.js';
 
@@ -96,6 +97,7 @@ attach(wss);
 // run); auto-continue needs to call back into run-query when that resume fires.
 // Injecting it here keeps the module graph one-way.
 autoContinue.setResumeRunner(runQuery);
+setOvernightRunner(runQuery);   // my48
 
 sanitizeMcpState();
 loadActive();

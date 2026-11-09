@@ -2,6 +2,7 @@
  * The message box: sending, stopping, the send button's two states, and the
  * keyboard shortcuts.
  */
+import { noteAdded } from './batch4.js';   // my48
 import { S } from './state.js';
 import { contextLine } from './embed.js';
 import { attachments, clearAttachments, fileToDataURL } from './attachments.js';
@@ -79,6 +80,7 @@ inputForm.onsubmit = async (e) => {
   if (readFailed) appendErrorBubble(`${readFailed} attachment${readFailed > 1 ? 's' : ''} could not be read and ${readFailed > 1 ? 'were' : 'was'} skipped.`);
   if (!payload.length && !text && !kept.length) { updateSendBtn(); return; }   // nothing usable to send
 
+  if (adding) noteAdded(text);   // my48
   appendUserBubble(text, undefined, bubbleAtts);
   scrollBottom(true);   // sending a prompt re-pins to the bottom
   promptInput.value = '';
