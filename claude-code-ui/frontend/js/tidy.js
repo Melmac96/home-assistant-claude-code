@@ -196,8 +196,8 @@ function fillMenu() {
   menu.textContent = '';
   const h = mk('h4', null, '✳ haAi'); if (updateNo()) h.append(mk('span', 'tidy-sm tidy-inl', 'update ' + updateNo()));
   menu.append(h);
-  const go = (t, id) => { const r = mk('button', 'tidy-row'); r.type = 'button'; r.textContent = t; r.onclick = () => { closeAll(); $(id).click(); }; menu.append(r); };
-  if (!document.documentElement.classList.contains('haai-tablet')) { go('＋ New chat', 'new-session-btn'); if ($('prev-chat-btn') && !$('prev-chat-btn').classList.contains('hidden')) go('↩ Previous chat', 'prev-chat-btn'); }   // my64: phone only, these left the top bar
+  const go = (t, id) => { const r = mk('button', 'tidy-row'); r.type = 'button'; r.textContent = t; r.onclick = (e) => { e.stopPropagation(); closeAll(); $(id).click(); }; menu.append(r); };   // my69: stop the menu tap reaching the page, or History opened and shut again at once
+  if (!document.documentElement.classList.contains('haai-tablet')) { if ($('prev-chat-btn') && !$('prev-chat-btn').classList.contains('hidden')) go('↩ Previous chat', 'prev-chat-btn'); }   // my64: phone only; my69: New chat is back on the bar
   go('★ Favourites', 'stars-btn');
   go('⌕ Search', 'find-btn');
   go('◷ History', 'sessions-btn');
