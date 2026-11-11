@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my74',
+  version: 'my75',
   items: [
+    { t: 'Switching account picks the one with the most allowance left', how: 'When an account gets near its limit, haAi now offers (and at 90% moves to) whichever of your other accounts has the most left, not just the next one.' },
     { t: '"Broke a rule" button under every reply', how: 'Tap it when a reply breaks one of your rules. Claude finds the rule and suggests a fix.', flash: '.rule-btn' },
     { t: 'The Finished box shows what the job cost', how: 'The next Finished box says how much of your 5 hours that job used.', flash: '.h2-card.slim' },
     { t: 'Photos are made smaller, with a small note', how: 'Pick a photo. It shows "Made smaller" with the sizes before and after.', click: 'attach-btn' },

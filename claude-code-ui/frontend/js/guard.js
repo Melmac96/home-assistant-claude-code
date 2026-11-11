@@ -4,7 +4,7 @@
  *     "Continue this in a new chat" (saves a note and opens the new chat) or "Do one more thing here"
  *     (lets exactly ONE more message through, then asks again).
  *  2. Allowance: at 75% of either the 5-hour or the weekly allowance on the Claude account in use, a centre
- *     pop-up offers switching to the other Claude account (or carrying on for one more message).
+ *     pop-up offers switching to the other Claude account with the most allowance left (my75) (or carrying on for one more message).
  *  3. At 90% the switch happens by itself (only if the other account is under 75%), with a small bar saying so.
  * Figures come from the same per-account quota list the Accounts menu uses (live from Anthropic, about every minute).
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
@@ -43,7 +43,16 @@ function use(email) {
   return { f, w, max: Math.max(f, w), what: f >= w ? '5-hour' : '7-day' };
 }
 const nameOf = (a) => { const i = acc.saved.findIndex((x) => x.email === a.email); return `Claude Pro Account ${i + 1}`; };
-const otherAcc = () => acc.saved.find((a) => !a.active && a.email !== (acc.cur && acc.cur.email));
+// my75 (Michael 2026-11-11): with more than one other account, pick the one with the MOST allowance left
+// (lowest of its 5-hour / weekly figures, then lowest weekly), not just the next in the list. Accounts with no
+// figures yet are only used when none of the others has any.
+const otherAcc = () => {
+  const others = acc.saved.filter((a) => !a.active && a.email !== (acc.cur && acc.cur.email));
+  const known = others.map((a) => ({ a, u: use(a.email) })).filter((x) => x.u);
+  if (!known.length) return others[0];
+  known.sort((x, y) => (x.u.max - y.u.max) || (x.u.w - y.u.w));
+  return known[0].a;
+};
 
 // ── pop-up and bar ───────────────────────────────────────────────────────────
 function pop(title, text, buttons) {
@@ -96,7 +105,7 @@ inputForm.addEventListener('submit', (e) => {
         ['Carry on with this account', 'sc-stay', () => { passQuota = true; }],
       ]);
     } else {
-      pop(title, other ? (ou ? `The other account is also fairly used (${ou.max}%), so switching would not help right now.` : 'I do not have figures for your other account yet, so I cannot say if switching would help.') : 'There is no other saved account to switch to.', [
+      pop(title, other ? (ou ? `Your best other account is also fairly used (${ou.max}%), so switching would not help right now.` : 'I do not have figures for your other account yet, so I cannot say if switching would help.') : 'There is no other saved account to switch to.', [
         ['Carry on with this account', 'sc-switch', () => { passQuota = true; }],
       ]);
     }
