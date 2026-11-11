@@ -43,10 +43,14 @@ export function buildCards(el) {
     let f = []; try { f = JSON.parse(n.dataset.f); } catch { /* empty */ }
     const k = n.dataset.k; let c;
     if (k === 'DONE') {
-      c = card('good', '✔ Finished (not confirmed yet)', 'green');
-      line(c, f[0] && `Changed: ${f[0]}`); line(c, (f[1] || f[2]) && `Files updated: ${f[1] || '?'} · Undo kept: ${f[2] || 'yes'}`);
-      c.append(row(btn('It works', 'g', () => sendText('It works. Confirmed.'), c), btn('Not working', 'r', () => sendText('That is not working. Please look at it again.'), c)));
-      c.append(row(btn('↩ Undo this job', '', () => sendText(undoText(f[2])), c)));
+      // my71 (his Look A, finished-box-looks.html): slim card, 2 short lines, one row of small buttons; backup name hidden, Undo still uses it
+      c = card('good slim');
+      const t1 = mk('div', 'h2-slim-t'); t1.append(mk('span', 'green', '✔ Finished, not confirmed yet'));
+      if (f[1]) t1.append(document.createTextNode(' · ' + (/^\d+$/.test(f[1]) ? `${f[1]} file${f[1] === '1' ? '' : 's'}` : f[1])));
+      c.append(t1);
+      if (f[0]) { const t2 = mk('div', 'h2-slim-t grey', f[0]); t2.onclick = () => t2.classList.toggle('open'); c.append(t2); }
+      c.append(row(btn('✓ It works', 'g sm', () => sendText('It works. Confirmed.'), c), btn('✗ Not working', 'r sm', () => sendText('That is not working. Please look at it again.'), c),
+        btn('↩ Undo', 'sm', () => sendText(undoText(f[2])), c)));
     } else if (k === 'ERR') {
       c = card('bad', 'Something went wrong', 'red');
       line(c, f[0]);
