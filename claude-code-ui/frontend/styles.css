@@ -1267,11 +1267,11 @@ pre:hover > .copy-btn, .copy-btn:focus { opacity: 1; }
 .icon-group .icon-btn.active { background: rgba(33,150,243,.18); color: #2196f3; }
 
 /* ── 1.17.0-my10: Text panel (size + font) ── */
-@font-face{font-family:"CC Comfortaa";src:url("fonts/Comfortaa.ttf") format("truetype");font-weight:300 700;font-display:swap}
-@font-face{font-family:"CC Nunito";src:url("fonts/Nunito.ttf") format("truetype");font-weight:200 1000;font-display:swap}
-@font-face{font-family:"CC Atkinson";src:url("fonts/Atkinson.ttf") format("truetype");font-weight:400;font-display:swap}
-@font-face{font-family:"CC Atkinson";src:url("fonts/Atkinson-Bold.ttf") format("truetype");font-weight:700;font-display:swap}
-@font-face{font-family:"CC Lexend";src:url("fonts/Lexend.ttf") format("truetype");font-weight:100 900;font-display:swap}
+@font-face{font-family:"CC Comfortaa";src:url("fonts/Comfortaa.woff2") format("woff2");font-weight:300 700;font-display:swap}
+@font-face{font-family:"CC Nunito";src:url("fonts/Nunito.woff2") format("woff2");font-weight:200 1000;font-display:swap}
+@font-face{font-family:"CC Atkinson";src:url("fonts/Atkinson.woff2") format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"CC Atkinson";src:url("fonts/Atkinson-Bold.woff2") format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"CC Lexend";src:url("fonts/Lexend.woff2") format("woff2");font-weight:100 900;font-display:swap}
 button, input, select, textarea { font-family: inherit; }
 .text-box { margin: 8px 0 4px; padding-top: 8px; border-top: 1px solid var(--border); }
 .text-box .settings-row { align-items: center; }

@@ -31,17 +31,20 @@ RUN pip3 install --no-cache-dir --break-system-packages uv
 
 # Install server Node.js dependencies (includes Agent SDK with bundled CLI binary)
 COPY server/package.json /opt/server/package.json
-RUN cd /opt/server && npm install --omit=dev
 
 # Ensure the correct glibc platform binary is installed for the target arch.
 # (Debian is glibc; the musl variants would not run here.)
-RUN case "${BUILD_ARCH}" in \
+# my81: one step, so the unused musl engine copies (~267 MB) never reach the image.
+# On this Debian (glibc) system the SDK only ever starts the plain linux-<arch> copy.
+RUN cd /opt/server && npm install --omit=dev \
+    && case "${BUILD_ARCH}" in \
     aarch64) SDK_PKG="@anthropic-ai/claude-agent-sdk-linux-arm64" ;; \
     amd64)   SDK_PKG="@anthropic-ai/claude-agent-sdk-linux-x64" ;; \
     *) echo "ERROR: Unsupported arch ${BUILD_ARCH}" && exit 1 ;; \
     esac \
     && SDK_VER=$(node -e "console.log(require('/opt/server/node_modules/@anthropic-ai/claude-agent-sdk/package.json').version)") \
     && npm install --prefix /opt/server --no-save "${SDK_PKG}@${SDK_VER}" \
+    && rm -rf /opt/server/node_modules/@anthropic-ai/claude-agent-sdk-linux-*-musl \
     && npm cache clean --force
 
 # Expose the Agent SDK's bundled Claude binary as the system `claude` command.

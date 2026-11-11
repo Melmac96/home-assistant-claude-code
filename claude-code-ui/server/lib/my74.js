@@ -66,9 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my80',
+  version: 'my81',
   items: [
-    { t: 'Allowance bars stay up to date', how: 'haAi now asks Anthropic how much allowance is left every 5 minutes, and rests 30 minutes if Anthropic says too many requests. Before, it kept asking and was turned away, so the bars could show old figures.' },
+    { t: 'haAi is smaller', how: 'A spare copy of the Claude engine that this box could never use is gone (about 267 MB less), and the text style fonts are stored squeezed, so a new phone or tablet loads them quicker. Everything works and looks the same.' },
   ],
 };
 export function getWhatsNew() {
