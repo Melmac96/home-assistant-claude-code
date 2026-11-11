@@ -20,7 +20,7 @@ function refresh() {
   if (id && id !== pair.cur) { pair = { cur: id, prev: pair.cur }; save(); }
   btn.classList.toggle('hidden', !(pair.prev && (!S.sessions || !S.sessions.length || exists(pair.prev))));
 }
-setInterval(refresh, 1000);
+setInterval(() => { if (!document.hidden) refresh(); }, 1000);   // my82: rests while haAi is not on screen
 
 btn.onclick = () => {
   if (!pair.prev || !S.ws || !S.isConnected) return;

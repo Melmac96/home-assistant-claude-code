@@ -34,6 +34,7 @@ function here() {
 function save() {
   const cur = sid || S.activeSessionId;   // a brand-new chat gets its id after it was drawn
   if (!cur) return;
+  if (!S.stickToBottom && S.expandOlder) S.expandOlder();   // my82: message numbers count from the very first one
   const p = S.stickToBottom ? { idx: 0, frac: 0 } : here();
   wsSend({ type: 'scrollpos_set', sid: cur, bottom: !!S.stickToBottom, idx: p.idx, frac: p.frac, dev: DEV });
 }
@@ -59,6 +60,13 @@ function goTo(pos) {
   const off = b.getBoundingClientRect().top - messagesEl.getBoundingClientRect().top + messagesEl.scrollTop;
   S.stickToBottom = false;
   messagesEl.scrollTop = Math.max(0, off + (pos.frac || 0) * b.offsetHeight);
+}
+
+// my82: will this chat end up at the bottom once drawn? (only then may the older part wait)
+export function endsAtBottom(msg) {
+  const pos = msg.scrollPos;
+  const use = pos && (firstRender || msg.sid !== sid || pos.dev !== DEV);
+  return use ? !!pos.bottom : !!S.stickToBottom;
 }
 
 // Called by connection.js straight after a chat has been drawn.

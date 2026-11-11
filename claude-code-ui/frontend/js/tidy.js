@@ -129,7 +129,7 @@ function cycle(now) {
   };
   if (now) paint(); else { cyc.classList.add('f'); setTimeout(paint, 900); }
 }
-setInterval(() => cycle(false), 5000);
+setInterval(() => { if (!document.hidden) cycle(false); }, 5000);   // my82: rests while haAi is not on screen
 
 function drawNum() {
   const bad = lost || (health && health.status !== 'good');

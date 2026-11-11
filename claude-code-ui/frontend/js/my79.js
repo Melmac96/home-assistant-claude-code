@@ -111,7 +111,7 @@ function pushDraft() {
   }, 700);
 }
 promptInput.addEventListener('input', (e) => { if (e.isTrusted) { applied = null; drawNote(); } pushDraft(); });
-setInterval(() => { if (promptInput.value !== lastSent) pushDraft(); drawNote(); }, 1500);   // also catches the box being emptied by Send
+setInterval(() => { if (document.hidden) return; if (promptInput.value !== lastSent) pushDraft(); drawNote(); }, 1500);   // also catches the box being emptied by Send; my82: rests while not on screen   // also catches the box being emptied by Send
 function onDraft(msg) {
   if (msg.from === ME) return;
   const mine = promptInput.value;

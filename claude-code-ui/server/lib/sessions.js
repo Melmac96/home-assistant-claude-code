@@ -6,7 +6,7 @@
  * writes, so a session started here can be picked up there and vice versa. The
  * only thing this app keeps of its own is a pointer to the active session.
  */
-import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'fs';
+import { closeSync, existsSync, openSync, readFileSync, readSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { readFile } from 'fs/promises';   // my28
 import path from 'path';
 import { STORE_DIR, ACTIVE_FILE } from './config.js';
@@ -202,10 +202,35 @@ export function parseSession(id) {
   return items;
 }
 
+// my82: listing the chats read EVERY saved chat in full (613 MB, 2.5 s with the whole server standing
+// still) only to find the titles. A title is the first real message, so it is now looked for in the
+// first 256 KB of the file, and remembered: for good once found, otherwise until the file changes.
+const HEAD_BYTES = 256 * 1024;
+const titleCache = new Map();   // id -> { key, title, final }
+function readHead(file, bytes) {
+  const fd = openSync(file, 'r');
+  try { const b = Buffer.alloc(bytes); const n = readSync(fd, b, 0, bytes, 0); return b.toString('utf8', 0, n); }
+  finally { closeSync(fd); }
+}
+
 export function sessionTitle(id) {
+  const file = sessionFile(id);
+  let st; try { st = statSync(file); } catch { return null; }
+  const key = `${st.size}:${st.mtimeMs}`;
+  const c = titleCache.get(id);
+  if (c && (c.final || c.key === key)) return c.title;
+  let r = findTitle(st.size <= HEAD_BYTES ? readFileSync(file, 'utf8') : readHead(file, HEAD_BYTES), st.size <= HEAD_BYTES);
+  if (!r.final && st.size > HEAD_BYTES) r = findTitle(readFileSync(file, 'utf8'), true);
+  titleCache.set(id, { key, ...r });
+  return r.title;
+}
+
+function findTitle(body, whole) {
   let greeting = null;
   try {
-    for (const ln of readFileSync(sessionFile(id), 'utf8').split('\n')) {
+    const lines = body.split('\n');
+    if (!whole) lines.pop();   // the last line may be cut off part-way
+    for (const ln of lines) {
       if (!ln.trim()) continue;
       let obj; try { obj = JSON.parse(ln); } catch { continue; }
       if (obj.type !== 'user' || obj.isMeta || obj.isSidechain || obj.isCompactSummary) continue;
@@ -221,10 +246,10 @@ export function sessionTitle(id) {
       const shown = t.length > 80 ? t.slice(0, 80) + '…' : t;
       // my28: a bare greeting makes a useless title, so use the first real message when there is one.
       if (/^(hi|hello|hey)( claude| there)?[\s!.,]*$/i.test(t)) { greeting = greeting || shown; continue; }
-      return shown;
+      return { title: shown, final: true };
     }
   } catch {}
-  return greeting;
+  return { title: greeting, final: false };
 }
 
 export function listSessions() {
@@ -242,6 +267,7 @@ export function listSessions() {
 }
 
 export function deleteSession(id) {
+  titleCache.delete(id);   // my82
   try { unlinkSync(sessionFile(id)); return true; }
   catch (e) { console.warn('Could not delete session:', e.message); return false; }
 }

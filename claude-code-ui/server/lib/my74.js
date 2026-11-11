@@ -66,9 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my81',
+  version: 'my82',
   items: [
-    { t: 'haAi is smaller', how: 'A spare copy of the Claude engine that this box could never use is gone (about 267 MB less), and the text style fonts are stored squeezed, so a new phone or tablet loads them quicker. Everything works and looks the same.' },
+    { t: 'haAi is quicker', how: 'The chat list no longer reads every saved chat in full (it took about 2.5 seconds, and haAi stood still meanwhile). Long chats show their newest part first; scroll up and the rest appears where you are. The page is kept on your phone until the next update, and small checks rest while haAi is not on screen.' },
   ],
 };
 export function getWhatsNew() {

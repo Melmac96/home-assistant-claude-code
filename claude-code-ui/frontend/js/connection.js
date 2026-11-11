@@ -16,6 +16,7 @@ import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } fr
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
 import { closePermission, dropDialog, showPermissionPrompt, showUserDialog } from './dialogs.js';
+import { messagesEl } from './dom.js';   // my82
 import { autoContinueToggle, loginBtn, loginCodeForm, loginCodeInput, loginDesc, loginScreen, loginTitle, loginUrlEl, loginUrlSect, loginWaiting, modelSelect, permModeSelect, sessionsPanel, wsUrl } from './dom.js';
 import { relinkRenderedBubbles } from './links.js';
 import { announcePresence, applyNotifyState, attentionCue, showNotifyTestResult } from './notify.js';
@@ -24,9 +25,55 @@ import { renderSessions } from './sessions.js';
 import { setAutoContinueSupported } from './settings.js';
 import { hideThinking, showThinking } from './thinking.js';
 import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
-import { afterHistory } from './scrollmem.js';   // my73
+import { afterHistory, endsAtBottom } from './scrollmem.js';   // my73, my82
 import { afterHistory74, onMy74Message } from './my74.js';   // my74
 import { afterHistory79, onMy79Message } from './my79.js';   // my79
+
+// ── my82: long chats ─────────────────────────────────────────────────────
+// A long chat first draws only its newest part (about the last 120 items, starting at one of his
+// messages). The rest is drawn the moment he scrolls up or taps the line, and his place is kept.
+// Only for one chat on screen, and only when the chat will be shown at the bottom.
+const TAIL = 120;
+let olderItems = null;
+let fingerAt = 0;
+const olderLine = document.createElement('button');
+olderLine.type = 'button';
+olderLine.className = 'older-line';
+olderLine.textContent = 'Earlier messages: scroll up or tap here';
+olderLine.onclick = () => expandOlder();
+
+function drawHistory(msg) {
+  const items = msg.items || [];
+  olderItems = null;
+  olderLine.remove();
+  let cut = 0;
+  if (items.length > TAIL + 30 && !messagesEl.classList.contains('mc-on') && !(S.chatList && S.chatList.length > 1) && endsAtBottom(msg)) {
+    for (let i = items.length - TAIL; i < items.length; i++) if (items[i].kind === 'user') { cut = i; break; }
+  }
+  if (!cut) { renderHistory(items); return; }
+  renderHistory(items.slice(cut), items.slice(0, cut));
+  olderItems = items;
+  messagesEl.prepend(olderLine);
+}
+
+function expandOlder() {
+  const items = olderItems;
+  olderItems = null;
+  const shown = olderLine.isConnected;
+  olderLine.remove();
+  if (!items || !shown || messagesEl.classList.contains('mc-on')) return;
+  const fromBottom = messagesEl.scrollHeight - messagesEl.scrollTop;
+  S.stickToBottom = false;
+  renderHistory(items);
+  afterHistory74();
+  afterHistory79();
+  messagesEl.scrollTop = messagesEl.scrollHeight - fromBottom;
+}
+S.expandOlder = () => { if (olderItems) expandOlder(); };
+['touchstart', 'touchmove', 'wheel', 'keydown', 'pointerdown'].forEach((e) => messagesEl.addEventListener(e, () => { fingerAt = Date.now(); }, { passive: true }));
+messagesEl.addEventListener('scroll', () => {
+  if (olderItems && Date.now() - fingerAt < 1500 && messagesEl.scrollTop < messagesEl.clientHeight) expandOlder();
+}, { passive: true });
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
@@ -192,7 +239,7 @@ function handleOne(msg) {
       break;
 
     case 'history':
-      renderHistory(msg.items || []);
+      drawHistory(msg);   // my82: a long chat draws its newest part first
       afterHistory(msg);   // my73: open where he left it, on any device
       afterHistory74();   // my74: What's new card, job costs, messages waiting to send
       afterHistory79();   // my79: timed job cards, Checks for today card

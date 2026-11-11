@@ -171,3 +171,6 @@ body.mc-many #input-form .composer{border-color:var(--mc-target)}
 .mc-tab .mc-x{position:absolute;top:2px;right:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#c9cbd0;background:#1c1d20;border:1px solid var(--border);font-size:15px;line-height:1}
 .mc-tab .mc-x:active{background:#3a3c41}
 .mc-tab .mc-t1{padding-right:22px}
+
+/* my82: line at the top of a long chat while its older part is not drawn yet */
+.older-line { display: block; width: 100%; margin: 4px 0 10px; padding: 8px; background: none; border: 1px dashed #333; border-radius: 8px; color: #9a9da4; font: inherit; font-size: 13px; cursor: pointer; }

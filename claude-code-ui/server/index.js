@@ -27,6 +27,8 @@
  *   mcp.js            stripping persisted MCP servers at startup
  */
 import { createServer } from 'http';
+import { createHash } from 'crypto';   // my82
+import { readdirSync, readFileSync, statSync } from 'fs';   // my82
 import path from 'path';
 import express from 'express';
 import { WebSocketServer } from 'ws';
@@ -81,6 +83,27 @@ app.post('/pair', express.json({ limit: '1kb' }), (req, res) => {
 });
 
 registerWatchRoutes(app, express);   // my50: after the direct-port login gate
+
+// my82: the page files (about 50) were checked again on every open (max-age=0). Now the phone keeps
+// them until the next haAi update: index.html (never kept) points at them under v/<fingerprint of
+// the page files>/, so any change to them gives every file a new address at once.
+function pageFingerprint(dir) {
+  const h = createHash('sha1');
+  const walk = (d) => {
+    for (const f of readdirSync(d).sort()) {
+      const p = path.join(d, f);
+      if (statSync(p).isDirectory()) walk(p); else h.update(p).update(readFileSync(p));
+    }
+  };
+  walk(dir);
+  return h.digest('hex').slice(0, 10);
+}
+const PAGE_VER = pageFingerprint(FRONTEND_DIR);
+const INDEX_HTML = readFileSync(path.join(FRONTEND_DIR, 'index.html'), 'utf8')
+  .replace(/\b(src|href)="(?![a-z]+:|\/|#)([^"]+)"/g, `$1="v/${PAGE_VER}/$2"`);
+const sendIndex = (_req, res) => { res.set('Cache-Control', 'no-cache'); res.type('html').send(INDEX_HTML); };
+app.get(['/', '/index.html'], sendIndex);
+app.use(`/v/${PAGE_VER}`, express.static(FRONTEND_DIR, { maxAge: '365d', immutable: true, index: false }));
 app.use(express.static(FRONTEND_DIR));
 
 ensureUploadDir();
@@ -91,7 +114,7 @@ app.use('/uploads', express.static(UPLOAD_DIR));
 if (DEBUG_MODE) registerDiagRoutes(app);
 
 // Single-page app: every other path serves the shell, so ingress deep links work.
-app.get('*', (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'index.html')));
+app.get('*', sendIndex);   // my82: the same page, with the kept-file addresses
 
 attach(wss);
 

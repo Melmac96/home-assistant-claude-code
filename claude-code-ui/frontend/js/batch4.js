@@ -20,16 +20,20 @@ const queue = mk('div', 'h2-card info h4-queue hidden');
 inputForm.before(queue);
 let added = [];
 export function noteAdded(text) { const t = String(text || '').trim(); if (t) { added.push(t); drawQueue(); } }
+let queueDrawn = '';   // my82: only redraw when the list changed
 function drawQueue() {
   if (!S.isRunning) added = [];
-  if (!added.length) { queue.classList.add('hidden'); return; }
+  if (!added.length) { queue.classList.add('hidden'); queueDrawn = ''; return; }
+  const sig = added.join('\n');
+  if (sig === queueDrawn && !queue.classList.contains('hidden')) return;
+  queueDrawn = sig;
   queue.classList.remove('hidden');
   queue.textContent = '';
   queue.append(mk('div', 'h2-title', `Added while working (${added.length})`));
   added.forEach((t, i) => queue.append(mk('div', 'h2-line', `${i + 1} ● ${short(t)}`)));
   queue.append(mk('div', 'h2-line grey', 'Claude takes these in order as soon as it can.'));
 }
-setInterval(drawQueue, 1500);
+setInterval(() => { if (!document.hidden) drawQueue(); }, 1500);   // my82
 
 // ── 21. Overnight jobs ───────────────────────────────────────────────────────
 const night = mk('div', 'h2-card plain h4-night hidden');

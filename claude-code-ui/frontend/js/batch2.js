@@ -108,9 +108,13 @@ function scanSteps() {
     drawStep();
   }, 150);
 }
+let stepDrawn = '';   // my82: only redraw when the step changed
 function drawStep() {
   const n = Number(stepData && stepData[0]), t = Number(stepData && stepData[1]);
-  if (!stepData || !S.isRunning || !(t >= 2) || !(n >= 1)) { strip.classList.add('hidden'); return; }
+  if (!stepData || !S.isRunning || !(t >= 2) || !(n >= 1)) { strip.classList.add('hidden'); stepDrawn = ''; return; }
+  const sig = JSON.stringify(stepData);
+  if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
+  stepDrawn = sig;
   strip.classList.remove('hidden');
   bars.textContent = '';
   for (let i = 1; i <= t && i <= 12; i++) bars.append(mk('i', i < n ? 'd' : i === n ? 'n' : ''));
@@ -118,7 +122,7 @@ function drawStep() {
   sNow.append(mk('b', '', `Step ${n} of ${t}`), document.createTextNode(stepData[2] ? ` – ${stepData[2]}` : ''));
   sNext.textContent = stepData[3] ? `Next: ${stepData[3]}` : '';
 }
-setInterval(drawStep, 2000);
+setInterval(() => { if (!document.hidden) drawStep(); }, 2000);   // my82
 new MutationObserver(() => { scanSteps(); }).observe(messagesEl, { childList: true });
 
 // ── 20. Morning brief (my70, his Look E): ONE short grey line inside the chat, first open after waking;

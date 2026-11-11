@@ -415,12 +415,16 @@ export function appendAgentReport({ from, text, ts }) {
 // every re-appended bubble then calls scrollBottom() and the view jumps back
 // to the bottom while the user is reading. So: suppress the per-item
 // auto-scroll, rebuild, then restore where they were in one silent move.
-export function renderHistory(items) {
+export function renderHistory(items, hidden = []) {   // my82: hidden = older items not drawn yet
   const wasPinned = S.stickToBottom;
   const prevTop   = messagesEl.scrollTop;
   S.suppressAutoScroll = true;
   clearScreen();
   try {
+    for (const it of hidden) {   // my82: not drawn, but still counted in /usage
+      if (it.kind === 'user') S.usage.messages++;
+      else if (it.kind === 'result') for (const k of ['turns', 'cost', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens']) S.usage[k] += it[k] || 0;
+    }
     for (const it of items) {
       switch (it.kind) {
         case 'user':        S.usage.messages++; appendUserBubble(it.text, it.ts); break;
