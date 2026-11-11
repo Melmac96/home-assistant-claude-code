@@ -105,24 +105,29 @@ function drawStep() {
 setInterval(drawStep, 2000);
 new MutationObserver(() => { scanSteps(); }).observe(messagesEl, { childList: true });
 
-// ── 20. Morning brief: one calm card, first open after waking; fades when you type ──
-const brief = mk('div', 'h2-card info h2-brief hidden');
-inputForm.before(brief);
-const hideBrief = () => { brief.classList.add('hidden'); };
-inputForm.addEventListener('input', hideBrief);
+// ── 20. Morning brief (my70, his Look E): ONE short grey line inside the chat, first open after waking;
+//    it scrolls away with the chat (was a big card above the typing box that only went when he typed) ──
+const briefLine = mk('div', 'h2-brief-line');
+let briefLive = false, briefTimer = null;
+const placeBrief = () => { if (briefLive && !briefLine.isConnected) messagesEl.append(briefLine); };
+new MutationObserver(() => {
+  if (!briefLive) return;
+  if (briefLine.isConnected) {   // he has sent something after it: finished with, never put back after a rebuild
+    for (let n = briefLine.nextElementSibling; n; n = n.nextElementSibling) if (n.classList.contains('bubble-user')) { briefLive = false; return; }
+  } else { clearTimeout(briefTimer); briefTimer = setTimeout(placeBrief, 600); }   // chat rebuilt: wait until it settles
+}).observe(messagesEl, { childList: true });
 export function onBriefMessage(msg) {
   const b = msg.brief;
   if (!b) return;
   if (localStorage.getItem('brief-seen') === String(b.wokeAt)) return;
   localStorage.setItem('brief-seen', String(b.wokeAt));
-  brief.textContent = '';
-  brief.append(mk('div', 'h2-title', 'Good morning'));
-  line(brief, `Home: ${b.home}`);
-  if (b.sleptMin != null) line(brief, `Slept: ${Math.floor(b.sleptMin / 60)} h ${String(b.sleptMin % 60).padStart(2, '0')}`);
-  line(brief, `Waiting for you: ${b.waiting}`);
-  if (b.overnight) { line(brief, `Overnight jobs started: ${b.overnight}`); if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'overnight_clear' })); }
-  const x = mk('button', 'h2-btn', 'Start a job'); x.type = 'button';
-  x.onclick = (e) => { e.preventDefault(); hideBrief(); const t = document.querySelector('#input-form textarea, textarea'); if (t) t.focus(); };
-  brief.append(row(x));
-  brief.classList.remove('hidden');
+  const hr = new Date().getHours();
+  const parts = [hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening', `Home: ${b.home}`];
+  if (b.sleptMin != null) parts.push(`Slept ${Math.floor(b.sleptMin / 60)} h ${String(b.sleptMin % 60).padStart(2, '0')}`);
+  parts.push(`Waiting for you: ${b.waiting}`);
+  if (b.overnight) { parts.push(`Overnight jobs started: ${b.overnight}`); if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'overnight_clear' })); }
+  briefLine.textContent = '☀️ ' + parts.join(' · ');
+  briefLive = true;
+  briefLine.remove();
+  placeBrief();
 }

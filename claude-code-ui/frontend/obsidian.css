@@ -190,6 +190,15 @@ mark.find-hit.find-current{background:var(--accent);color:#000}
 .answer-card.picked::after{content:" ✓";color:#46bb68;font-weight:700}
 .answer-card.locked{opacity:.75;cursor:default}
 .answer-other{display:block;width:100%;background:var(--surface);border:1px solid var(--border-2);border-radius:10px;color:var(--text);padding:8px 10px;margin:0 0 7px;font:inherit}
+/* my70 (his Look E): answers as compact rows with a round letter; own-answer box grows; morning brief = one grey line in the chat */
+.answer-card{display:flex;align-items:flex-start;gap:9px;border:0;border-bottom:1px solid var(--border-2,#262626);border-radius:8px;padding:7px 4px;margin:0;line-height:1.35}
+.answer-card .ans-l{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--accent,#4da3ff);color:var(--accent,#4da3ff);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85em}
+.answer-card .ans-t{flex:1;padding-top:3px}
+.answer-card.picked .ans-l{border-color:#46bb68;color:#46bb68}
+.answer-card.picked::after{padding-top:3px}
+textarea.answer-other{resize:none;overflow:hidden;min-height:38px;margin-top:6px;line-height:1.35}
+.h2-brief-line{color:#7f8a99;font-size:.85em;line-height:1.35;margin:6px 4px 4px}
+.tv-view .h2-brief-line{display:none!important}
 .answer-send{display:block;width:100%;margin:10px 0 8px;background:var(--accent,#4da3ff);color:#000;border:0;border-radius:10px;padding:11px;font:inherit;font-weight:700;cursor:pointer}
 .answer-send:disabled{opacity:.45}
 /* my28: his own messages, solid blue (look 2A) */

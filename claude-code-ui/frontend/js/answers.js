@@ -44,6 +44,12 @@ export function enhanceQuestions(content) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'answer-card'; b.innerHTML = p.innerHTML;
       b._letter = letter; b._other = /any other answer/i.test(p.textContent);
+      // my70 (his Look E): compact row, the letter in a small round badge
+      const f = b.firstElementChild;
+      if (f && f.tagName === 'STRONG') {
+        const l = document.createElement('span'); l.className = 'ans-l'; l.textContent = letter; f.replaceWith(l);
+        const t = document.createElement('span'); t.className = 'ans-t'; while (l.nextSibling) t.append(l.nextSibling); b.append(t);
+      }
       p.replaceWith(b);
       cur.cards.push(b);
     }
@@ -65,7 +71,7 @@ export function enhanceQuestions(content) {
       for (const c of g.cards) {
         const on = !!p && p.l === c._letter;
         c.classList.toggle('picked', on);
-        if (c._box) c._box.hidden = !on;
+        if (c._box) { c._box.hidden = !on; if (on) requestAnimationFrame(c._box._grow); }
       }
     }
     send.disabled = !n;
@@ -76,10 +82,12 @@ export function enhanceQuestions(content) {
     const k = g.label || '_';
     for (const c of g.cards) {
       if (c._other) {
-        const box = document.createElement('input');
-        box.type = 'text'; box.className = 'answer-other'; box.placeholder = 'Type your answer'; box.hidden = true;
+        // my70: grows as he types, so all his words stay in view (was one line that cut them off)
+        const box = document.createElement('textarea');
+        box.rows = 1; box.className = 'answer-other'; box.placeholder = 'Type your answer'; box.hidden = true;
+        box._grow = () => { box.style.height = 'auto'; box.style.height = box.scrollHeight + 'px'; };
         if (picks[k] && picks[k].l === c._letter) box.value = picks[k].t || '';
-        box.oninput = () => { if (picks[k]) { picks[k].t = box.value; save(id, picks); } };
+        box.oninput = () => { box._grow(); if (picks[k]) { picks[k].t = box.value; save(id, picks); } };
         c.after(box);
         c._box = box;
       }
