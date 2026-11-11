@@ -229,6 +229,16 @@ function renderBars() {
       st.append(mk('span', 'mc-acct', c.free ? 'Free' : shortAcct(c.account)));
       if (!c.free) st.append(mk('span', 'mc-cost', `${c.cost || 0}%`));
       t.append(top, st);
+      if (c.status !== 'working') {   // my78: close a finished chat (it stays in Sessions)
+        const x = mk('span', 'mc-x', '×'); x.setAttribute('role', 'button'); x.setAttribute('aria-label', `Close ${label(c)}`);
+        x.onclick = (e) => {
+          e.stopPropagation();
+          if (c.id === S.chat) { const other = S.chatList.find((o) => o.id !== c.id); if (other) setTarget(other.id); }
+          if (S.only === c.id) S.only = null;
+          send({ type: 'close_chat', id: c.id });
+        };
+        t.append(x);
+      }
       t.title = `${label(c)}: ${LABEL[c.status] || ''}`;
       t.onclick = () => { setTarget(c.id); S.only = c.id; renderBars(); messagesEl.scrollTop = messagesEl.scrollHeight; };
       tabs.append(t);

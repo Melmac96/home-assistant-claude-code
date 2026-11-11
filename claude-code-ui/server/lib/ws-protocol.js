@@ -294,6 +294,19 @@ const handlers = {
     if (slot.finishedUnseen) { slot.finishedUnseen = false; broadcastChats(); }
   },
 
+  // my78: close a finished chat from the x on its tab. Like a folded chat it stays in Sessions. Never the last chat, never one still working.
+  close_chat(ws, msg) {
+    const slot = chats.get(String(msg.id || ''));
+    if (!slot || chats.size <= 1) return;
+    if (slot.query) { send(ws, { type: 'chat_limit', text: 'That chat is still working. Wait until it has finished, or stop it first.' }); return; }
+    chats.delete(slot.id);
+    const next = [...chats.values()][0];
+    for (const c of connections) if (c.chat === slot.id) c.chat = next.id;
+    if (view.last === slot.id) view.last = next.id;
+    log('INFO', `my78: chat ${slot.id} closed from its tab`);
+    broadcastChats();
+  },
+
   // my77: the other chats' messages for the all-in-one view (each shown in its own colour box).
   chat_histories(ws, msg) {
     const want = Array.isArray(msg.ids) ? msg.ids.map(String) : null;

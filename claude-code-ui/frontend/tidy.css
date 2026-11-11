@@ -165,3 +165,9 @@ body.mc-many #input-form .composer{border-color:var(--mc-target)}
 .mc-it{display:flex;gap:8px;align-items:center}
 .mc-sub{font-size:12.5px;color:#9a9da4}
 .mc-free{font-style:normal;font-size:11px;color:#c9cbd0;background:#3a3c41;border-radius:6px;padding:1px 6px}
+
+/* my78: x to close a finished chat, top right of its tab */
+.mc-tab{position:relative}
+.mc-tab .mc-x{position:absolute;top:2px;right:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;color:#c9cbd0;background:#1c1d20;border:1px solid var(--border);font-size:15px;line-height:1}
+.mc-tab .mc-x:active{background:#3a3c41}
+.mc-tab .mc-t1{padding-right:22px}
