@@ -170,8 +170,10 @@ function checkNight() {
   const now = new Date(), cur = now.getHours() * 60 + now.getMinutes();
   const a = toMin(ls('night-from', '22:00')), b = toMin(ls('night-to', '07:00'));
   const inside = a <= b ? cur >= a && cur < b : cur >= a || cur < b;
-  document.body.classList.toggle('night', on && inside);
+  // my72: also dim while Sleep as Android is on (the house rule for 'asleep'), whatever the clock says
+  document.body.classList.toggle('night', on && (inside || window.haaiAsleep === true));
 }
+window.addEventListener('haai-asleep', () => checkNight());
 
 // ── Settings controls ────────────────────────────────────────────────────────
 const bind = (id, key, def, isBool) => {

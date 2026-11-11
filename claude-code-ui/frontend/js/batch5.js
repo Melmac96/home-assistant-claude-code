@@ -25,7 +25,7 @@ const quiet = mk('button', 'reply-chip h5-quiet hidden'); quiet.type = 'button';
 const list = mk('div', 'h2-card plain h5-held hidden');
 bar.after(list);
 let q = { on: false, held: [] };
-export function onQuiet(msg) { q = { on: !!msg.on, held: msg.held || [] }; drawQuiet(); }
+export function onQuiet(msg) { q = { on: !!msg.on, held: msg.held || [] }; window.haaiAsleep = q.on; window.dispatchEvent(new Event('haai-asleep')); drawQuiet(); }
 function drawQuiet() {
   if (!q.on && !q.held.length) { quiet.classList.add('hidden'); list.classList.add('hidden'); return; }
   quiet.classList.remove('hidden');

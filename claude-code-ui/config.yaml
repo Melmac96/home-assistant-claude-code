@@ -1,5 +1,5 @@
 name: "haAi"
-version: "1.17.0-my71"
+version: "1.17.0-my72"
 slug: "my-claude-code-ui"
 description: "Claude Code in your browser with Home Assistant integration and mobile-friendly chat UI."
 url: "https://github.com/Melmac96/home-assistant-claude-code"
@@ -51,6 +51,11 @@ backup_exclude:
   - "esphome/venv/**"
   - ".local/share/uv"
   - ".local/share/uv/**"
+  # haAi: rebuildable tools (opencode/tools/restore_chat_tools.sh puts both back)
+  - "android-sdk"
+  - "android-sdk/**"
+  - "translator/venv"
+  - "translator/venv/**"
 options:
   anthropic_api_key: ""
   default_permission_mode: ask

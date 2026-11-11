@@ -222,6 +222,7 @@ textarea.answer-other{resize:none;overflow:hidden;min-height:38px;margin-top:6px
 .session-snippet{color:var(--text-muted);font-size:calc(12px * var(--ts,1));margin-top:2px}
 #waiting-list{padding:0 10px}
 #waiting-list:not(:empty){padding-top:8px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.waiting-job{font-size:calc(12px * var(--ts,1));color:var(--muted,#9aa0a6);margin:10px 2px 4px;font-weight:600}
 .waiting-row{display:flex;align-items:center;gap:6px;border:1px solid var(--border-2);border-radius:10px;padding:6px 8px;margin-bottom:6px}
 .waiting-text{flex:1;font-size:calc(13px * var(--ts,1))}
 .waiting-ok,.waiting-no{flex:none;width:36px;height:32px;border-radius:9px;background:transparent;color:var(--text);font:inherit;font-weight:700;cursor:pointer}

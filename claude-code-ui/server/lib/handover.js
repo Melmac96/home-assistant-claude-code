@@ -53,14 +53,15 @@ export function waitingDone(id) {
   writeFileSync(WAITING, JSON.stringify(l.filter((w) => w.id !== id), null, 1));
   try { appendFileSync(WAITING_LOG, `${ukNow()} | confirmed by Michael | ${hit.text}\n`); } catch { /* the chat message records it too */ }
 }
-function addWaiting(texts) {
+function addWaiting(texts, job) {
   const l = getWaiting();
   const have = new Set(l.map((w) => w.text.toLowerCase()));
+  const jobName = String(job || '').trim().slice(0, 40);
   for (const t of texts) {
     const text = String(t || '').trim().slice(0, 140);
     if (!text || have.has(text.toLowerCase())) continue;
     have.add(text.toLowerCase());
-    l.push({ id: randomBytes(4).toString('hex'), text, when: ukNow().slice(0, 10) });
+    l.push({ id: randomBytes(4).toString('hex'), text, when: ukNow().slice(0, 10), ...(jobName ? { job: jobName } : {}) });
   }
   writeFileSync(WAITING, JSON.stringify(l, null, 1));
 }
@@ -85,11 +86,15 @@ async function ask(prompt, model) {
   return out;
 }
 
-const PROMPT = (title, text) => `Below is the end of a chat between Michael and Claude about his Home Assistant, titled "${title}". Write the notes a new chat needs to carry on with no loss. Reply with JSON only, no code fences:
+const PROMPT = (title, text, waitingNow) => `Below is the end of a chat between Michael and Claude about his Home Assistant, titled "${title}". Write the notes a new chat needs to carry on with no loss. Reply with JSON only, no code fences:
 {"summary":"plain markdown: what the job is, what has been changed and where, what he decided, what is still to do, any question still waiting for his answer, anything not yet confirmed by him",
 "change_line":"one line for the change log describing changes actually made in this chat, or an empty string if none",
-"waiting":["short plain-English label for each thing Claude changed that Michael still has to test and has NOT confirmed, at most 8; empty if none"]}
+"job":"2 to 4 plain words naming this job, e.g. Energy watch",
+"waiting":["short plain-English label for each thing Claude changed that Michael still has to test and has NOT confirmed, at most 8; empty if none. Leave out anything already on his waiting list below, even if it is worded differently"]}
 Only state what the chat shows. Never include passwords, keys or tokens.
+
+ALREADY ON HIS WAITING LIST (do not repeat these):
+${waitingNow || '(empty)'}
 
 CHAT:
 ${text}`;
@@ -100,7 +105,7 @@ async function writeNotes(id, title, model, max) {
   let parsed = null;
   if (!modeState().free) {
     try {
-      const raw = await ask(PROMPT(title, text), model);
+      const raw = await ask(PROMPT(title, text, getWaiting().map((w) => '- ' + w.text).join('\n')), model);
       const m = raw.match(/\{[\s\S]*\}/);
       parsed = m ? JSON.parse(m[0]) : { summary: raw };
     } catch (e) { log('WARN', `chat notes summary failed: ${e?.message || e}`); }
@@ -118,7 +123,7 @@ async function writeNotes(id, title, model, max) {
       if (at > 0) writeFileSync(CHANGES, s.slice(0, at + 1) + `- ${ukNow().slice(0, 10)} | haAi auto-save | ${String(parsed.change_line).replace(/\s+/g, ' ').slice(0, 400)} | Note: ${file.replace('/config/', '')}\n` + s.slice(at + 1));
     } catch (e) { log('WARN', `change log line failed: ${e?.message || e}`); }
   }
-  if (Array.isArray(parsed?.waiting) && parsed.waiting.length) { try { addWaiting(parsed.waiting); } catch { /* the note still has them */ } }
+  if (Array.isArray(parsed?.waiting) && parsed.waiting.length) { try { addWaiting(parsed.waiting, parsed.job); } catch { /* the note still has them */ } }
   const saved = readJson(SAVED, {});
   try { saved[id] = statSync(sessionFile(id)).mtimeMs; writeFileSync(SAVED, JSON.stringify(saved)); } catch { /* only used to skip repeat saves */ }
   return { file, summarised: !!parsed?.summary };

@@ -120,7 +120,13 @@ function drawWaiting(list) {
   document.getElementById('waiting-toggle').classList.toggle('sec-closed', !list.length);   // my29: drop-down heading
   document.getElementById('waiting-count').textContent = `(${list.length})`;
   if (!list.length) return;
-  for (const w of list) {
+  // my72: items of the same job sit together under one small heading (first-seen order kept)
+  const order = [], groups = {};
+  for (const w of list) { const j = w.job || ''; if (!groups[j]) { groups[j] = []; order.push(j); } groups[j].push(w); }
+  const sorted = order.flatMap((j) => groups[j]);
+  let lastJob = null;
+  for (const w of sorted) {
+    if ((w.job || '') !== lastJob) { lastJob = w.job || ''; if (lastJob) waitingEl.append(el('div', 'waiting-job', `${lastJob} (${groups[lastJob].length})`)); }
     const row = el('div', 'waiting-row');
     const yes = el('button', 'waiting-ok', '✓');
     const no = el('button', 'waiting-no', '✗');

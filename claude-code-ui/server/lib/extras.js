@@ -60,6 +60,8 @@ const QUOTA = path.join(DATA_DIR, 'haai-quota.json');
 const ACC_DIR = path.join(DATA_DIR, 'claude-accounts');
 const CACHE_MS = 60 * 1000;
 let lastFetch = 0;
+const BACKOFF_MS = 30 * 60 * 1000;   // after Anthropic says "too many requests", leave that account alone this long
+const restUntil = {};
 
 const toWin = (w) => (w && w.utilization != null
   ? { used: Math.max(0, Math.min(100, Math.round(Number(w.utilization)))), resetsAt: w.resets_at ? Math.round(Date.parse(w.resets_at) / 1000) : null }
@@ -95,10 +97,13 @@ export async function getQuota(force = false) {
       if (store[key]) store[key].live = false;
       continue;   // key too old to use without renewing it: keep the last figures seen
     }
+    if (!force && restUntil[key] > Date.now()) { if (store[key]) store[key].live = false; continue; }
     try {
       store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
+      delete restUntil[key];
     } catch (e) {
-      log('WARN', `quota for ${key.split('@')[0]}: ${e?.message || e}`);
+      if (e?.status === 429) restUntil[key] = Date.now() + BACKOFF_MS;
+      log('WARN', `quota for ${key.split('@')[0]}: ${e?.message || e}${e?.status === 429 ? ' - resting it for 30 min' : ''}`);
       if (store[key]) store[key].live = false;
     }
   }
