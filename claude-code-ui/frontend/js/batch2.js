@@ -9,12 +9,13 @@ import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { undoText } from './batch4.js';   // my48
 import { costKey, costText, saveJobText } from './my74.js';   // my74
+import { timedCard, clashCard } from './my79.js';   // my79 H17 + H5
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE)\|([^⟧\n]*)⟧/g;
+const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH)\|([^⟧\n]*)⟧/g;
 const STEP = /⟦STEP\|([^⟧\n]*)⟧[ \t]*\n?/;
-const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|STEP)[^⟧]*$/;
+const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|STEP)[^⟧]*$/;
 
 export function prepareCards(raw) {
   const m = raw.match(STEP);
@@ -58,6 +59,10 @@ export function buildCards(el) {
       if (f[0]) { const l = mk('div', 'h2-line'); l.append(mk('b', '', `Rule: "${f[0]}"`)); c.append(l); }
       line(c, f[1]); if (f[2]) line(c, 'Fix: ' + f[2]);
       c.append(row(btn('Fix it', 'g', () => sendText('Yes, fix it as you suggested.'), c), btn('Not now', '', () => sendText('Not now, leave that rule fix.'), c)));
+    } else if (k === 'TIMED') {   // my79 H17
+      c = timedCard(f, card, line);
+    } else if (k === 'CLASH') {   // my79 H5
+      c = clashCard(f, card, line, row, btn);
     } else if (k === 'ERR') {
       c = card('bad', 'Something went wrong', 'red');
       line(c, f[0]);
@@ -136,6 +141,8 @@ export function onBriefMessage(msg) {
   const parts = [hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening', `Home: ${b.home}`];
   if (b.sleptMin != null) parts.push(`Slept ${Math.floor(b.sleptMin / 60)} h ${String(b.sleptMin % 60).padStart(2, '0')}`);
   parts.push(`Waiting for you: ${b.waiting}`);
+  if (b.checks) parts.push(`Checks for today: ${b.checks}`);   // my79 H10
+  if (b.expire && b.expire.text) parts.push(`Next to expire: ${b.expire.text}`);   // my79 H11
   if (b.overnight) { parts.push(`Overnight jobs started: ${b.overnight}`); if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'overnight_clear' })); }
   briefLine.textContent = '☀️ ' + parts.join(' · ');
   briefLive = true;

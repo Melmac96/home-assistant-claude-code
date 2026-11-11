@@ -456,3 +456,13 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .h74-flash{outline:2px solid #4da3ff;outline-offset:2px;border-radius:10px;transition:outline-color .3s}
 .quick-job-pill{border-color:#4da3ff}
 .tv-view .rule-btn,.tv-view .h74-news{display:none!important}
+/* my79: rule clash card, Checks for today, typing-from line, haAi group under the heart */
+.h79-clash{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.h79-rule{border:1px solid #26282d;border-radius:8px;padding:6px 8px;background:#0c0d0f;font-size:calc(13.5px * var(--ts,1));overflow-wrap:anywhere}
+.h79-rule b{display:block;color:#9cc8ff;margin-bottom:3px}
+.h79-check{padding:6px 0;border-top:1px solid #1c1d20}.h79-check:first-of-type{border-top:0}
+.h2-line.grey,.h79-state.grey{color:#7d8087}.h2-line.green{color:#46bb68}.h2-line.red{color:#f3736c}
+.h79-from{margin:0 12px 3px;color:#7d8087;font-size:calc(12px * var(--ts,1))}.h79-from.hidden{display:none}
+.hh-group{margin-top:10px;padding-top:7px;border-top:1px solid #2c2e33;color:#9cc8ff;font-weight:700;font-size:calc(14px * var(--ts,1))}
+.hh-line.hh-ok{color:#46bb68}.hh-line.hh-bad{color:#f3736c}
+.tv-view .h79-from{display:none!important}

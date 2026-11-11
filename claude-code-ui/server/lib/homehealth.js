@@ -5,12 +5,13 @@
 import { SUPERVISOR_URL } from './config.js';
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
+import { getHaaiChecks } from './my79.js';   // my79 H12
 
 const CHECK_MS = 60 * 1000;
 const STALE_MS = 15 * 60 * 1000;   // the house rule: older than 15 minutes = stopped updating
 let state = { status: 'wait', count: 0, lines: [], last: null };
 
-export const getHomeHealth = () => state;
+export const getHomeHealth = () => ({ ...state, haai: getHaaiChecks() });   // my79 H12: haAi's own checks ride along
 
 export function readHealth(sensor, now = Date.now()) {
   const a = sensor?.attributes || {};
@@ -36,7 +37,7 @@ export async function checkHomeHealth() {
     log('WARN', `home health check failed: ${e?.message || e}`);
     state = { status: 'stale', count: 0, lines: [], last: state.last };
   }
-  broadcast({ type: 'home_health', ...state });   // every time: the page treats silence as a problem
+  broadcast({ type: 'home_health', ...getHomeHealth() });   // every time: the page treats silence as a problem
 }
 
 export function startHomeHealthCheck() {

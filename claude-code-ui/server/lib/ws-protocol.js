@@ -39,6 +39,7 @@ import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, start
 import { takeScreenshot } from './screen.js';   // my47
 import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
+import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
 startSelfUpdateCheck();
@@ -48,6 +49,7 @@ startBrief();   // my46
 startMy74();   // my74
 startOvernight();   // my48
 startQuiet();   // my49
+startMy79();   // my79
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
@@ -103,6 +105,9 @@ function greetFor(ws) {
   send(ws, { type: 'jobcost', map: jobCosts() });   // my74
   send(ws, { type: 'whatsnew', ...getWhatsNew() });   // my74
   send(ws, { type: 'overnight', ...listOvernight() });   // my48
+  send(ws, { type: 'timed', list: listTimed() });   // my79 H17
+  send(ws, { type: 'dated_checks', list: getDatedChecks() });   // my79 H10
+  { const d = getDraft(); if (d) send(ws, { type: 'draft', ...d }); }   // my79 H9
   send(ws, { type: 'quiet', ...quietState() });   // my49
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
   if (runtime.lastCtx && runtime.lastCtx.sid && runtime.lastCtx.sid === runtime.activeSessionId) send(ws, runtime.lastCtx);   // my40
@@ -367,10 +372,13 @@ const handlers = {
   async quota_get(ws, msg) { send(ws, { type: 'quota', ...(await extras.getQuota(!!msg.force)) }); },
   app_latest_get(ws) { send(ws, { type: 'app_latest', latest: extras.appLatest() }); },
   scrollpos_set(_ws, msg) { scrollmem.setPos(msg); },   // my73
+  timed_cancel(_ws, msg) { cancelTimed(String(msg.id || '')); },   // my79 H17
+  draft(_ws, msg) { setDraft(msg); },   // my79 H9
   waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
   waiting_done(_ws, msg) {
     handover.waitingDone(String(msg.id || ''));
     broadcast({ type: 'waiting', list: handover.getWaiting() });
+    checksAfterTick();   // my79 H10: the Checks for today card drops that line
   },
   sessions_search(ws, msg) {
     searchSessions(msg.q).then((results) => send(ws, { type: 'search_results', seq: msg.seq, results }))

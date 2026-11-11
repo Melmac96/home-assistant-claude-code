@@ -12,6 +12,7 @@ import { broadcast } from './broadcast.js';
 import { getWaiting } from './handover.js';
 import { getHomeHealth } from './homehealth.js';
 import { overnightDoneCount } from './batch4.js';   // my48
+import { nextExpiry, getDatedChecks } from './my79.js';   // my79 H10 + H11
 
 const FILE = '/data/haai-brief.json';
 const SLEEP = 'binary_sensor.sleeping_bedroom_sleep_as_android';
@@ -22,7 +23,7 @@ export function getBrief() {
   const b = read();
   if (!b.wokeAt || Date.now() - b.wokeAt > 6 * 3600 * 1000) return null;
   const h = getHomeHealth();
-  return { wokeAt: b.wokeAt, sleptMin: b.sleptMin ?? null, home: h.status === 'good' ? 'fine' : h.status === 'bad' ? `${h.count} thing(s) need a look` : 'not checked', waiting: getWaiting().length, overnight: overnightDoneCount() };
+  return { wokeAt: b.wokeAt, sleptMin: b.sleptMin ?? null, home: h.status === 'good' ? 'fine' : h.status === 'bad' ? `${h.count} thing(s) need a look` : 'not checked', waiting: getWaiting().length, overnight: overnightDoneCount(), expire: nextExpiry(), checks: getDatedChecks().length };
 }
 
 async function tick() {

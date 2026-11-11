@@ -26,6 +26,7 @@ import { hideThinking, showThinking } from './thinking.js';
 import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
 import { afterHistory } from './scrollmem.js';   // my73
 import { afterHistory74, onMy74Message } from './my74.js';   // my74
+import { afterHistory79, onMy79Message } from './my79.js';   // my79
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
@@ -194,6 +195,7 @@ function handleOne(msg) {
       renderHistory(msg.items || []);
       afterHistory(msg);   // my73: open where he left it, on any device
       afterHistory74();   // my74: What's new card, job costs, messages waiting to send
+      afterHistory79();   // my79: timed job cards, Checks for today card
       S.isRunning = !!msg.running;
       if (S.isRunning) showThinking();
       // The task list itself follows right behind, in the same greeting burst
@@ -403,6 +405,10 @@ function handleOne(msg) {
 
     case 'jobcost': case 'whatsnew':   // my74
       onMy74Message(msg);
+      break;
+
+    case 'timed': case 'dated_checks': case 'draft':   // my79
+      onMy79Message(msg);
       break;
 
     case 'home_health':   // my34

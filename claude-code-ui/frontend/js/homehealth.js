@@ -45,6 +45,14 @@ function fillPanel() {
     add('hh-title', 'Everything checked and fine');
   }
   if (data.last) add('hh-when', `Last checked ${data.last} UK time`);
+  const own = Array.isArray(data.haai) ? data.haai : [];   // my79 H12 (Look A): haAi's own checks at the bottom
+  if (own.length) {
+    const nBad = own.filter((c) => !c.ok).length;
+    add('hh-group', nBad ? `haAi: ${nBad} need${nBad === 1 ? 's' : ''} a look` : 'haAi: all fine');
+    for (const c of own) add('hh-line ' + (c.ok ? 'hh-ok' : 'hh-bad'), (c.ok ? '✓ ' : '✗ ') + c.text);
+    const badOwn = own.filter((c) => !c.ok).map((c) => c.text);
+    if (badOwn.length && !ask) ask = `The haAi part of the Home health heart shows a problem. Please find out why and tell me in plain English:\n${badOwn.join('\n')}`;
+  }
   if (ask) {
     const b = el('button', 'hh-ask', 'Ask Claude to look');
     b.type = 'button';

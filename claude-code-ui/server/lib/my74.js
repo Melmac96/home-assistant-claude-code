@@ -66,16 +66,14 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my77',
+  version: 'my79',
   items: [
-    { t: 'Up to three chats at once, all in one window', how: 'Tap the New chat icon (far right), then Open a 2nd chat or Open a 3rd chat. Each chat has its own colour box: Purple, Gold and Teal.', click: 'new-session-btn' },
-    { t: 'Colour buttons above the typing box choose where your message goes', how: 'Tap a colour to send your next message to that chat. Tap it again to see only that chat. All shows every chat again.' },
-    { t: 'Tabs under the top bar show each chat', how: 'Each tab shows the job name, Working (blue), Needs you (red) or Finished (green), its account and what it has used so far.' },
-    { t: 'The phone message says which chat it is from', how: 'Its title starts with the chat name, for example Chat 2 (Gold), in that chat\'s colour.' },
-    { t: 'Close a finished chat', how: 'Tap the small x at the top right of its tab. It stays in Sessions if you want it back.' },
-    { t: 'Each chat keeps its own account', how: 'A new chat takes the account with the most allowance left. A finished chat folds into Previous chats after 30 minutes.' },
-    { t: 'A grey chat on a free account', how: 'In the New chat list, Open a chat on a free account. No health, home security, money or passwords there: those stay in your Claude chats.' },
-    { t: 'Clash guard', how: 'If a chat is about to change a file another chat changed in the last 10 minutes, it stops and asks you first.' },
+    { t: 'Ask for a job at a time you choose', how: 'Just say it, for example: at 3pm check the Toilet humidity and tell me. A card shows the time it is set for, with Cancel.' },
+    { t: 'Checks for today, worked out first', how: 'A check saved for a later day appears in the chat on that day. haAi shows what it found; tap Agree, or Look again to have Claude look.' },
+    { t: 'Next thing to run out, in the morning line', how: 'The morning line now ends with the next thing that expires, for example the GitHub key in 26 days.' },
+    { t: 'The heart also checks haAi itself', how: 'Tap the heart. Under your home there is now a haAi group: the free-mode switch, the phone and TV tools, and the backup size.', click: 'health-btn' },
+    { t: 'Typing follows you between phone and tablet', how: 'Start typing on one, pick up the other: the same words are in the box, with a small grey line saying where they came from.' },
+    { t: 'Weekly rule clash check', how: 'In the Monday and Friday weekly checks Claude looks for two of your rules that disagree. A card shows both, with Keep rule 1, Keep rule 2 or Both.' },
   ],
 };
 export function getWhatsNew() {
