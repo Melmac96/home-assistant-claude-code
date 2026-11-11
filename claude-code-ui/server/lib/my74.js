@@ -66,14 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my79',
+  version: 'my80',
   items: [
-    { t: 'Ask for a job at a time you choose', how: 'Just say it, for example: at 3pm check the Toilet humidity and tell me. A card shows the time it is set for, with Cancel.' },
-    { t: 'Checks for today, worked out first', how: 'A check saved for a later day appears in the chat on that day. haAi shows what it found; tap Agree, or Look again to have Claude look.' },
-    { t: 'Next thing to run out, in the morning line', how: 'The morning line now ends with the next thing that expires, for example the GitHub key in 26 days.' },
-    { t: 'The heart also checks haAi itself', how: 'Tap the heart. Under your home there is now a haAi group: the free-mode switch, the phone and TV tools, and the backup size.', click: 'health-btn' },
-    { t: 'Typing follows you between phone and tablet', how: 'Start typing on one, pick up the other: the same words are in the box, with a small grey line saying where they came from.' },
-    { t: 'Weekly rule clash check', how: 'In the Monday and Friday weekly checks Claude looks for two of your rules that disagree. A card shows both, with Keep rule 1, Keep rule 2 or Both.' },
+    { t: 'Allowance bars stay up to date', how: 'haAi now asks Anthropic how much allowance is left every 5 minutes, and rests 30 minutes if Anthropic says too many requests. Before, it kept asking and was turned away, so the bars could show old figures.' },
   ],
 };
 export function getWhatsNew() {

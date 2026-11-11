@@ -58,7 +58,7 @@ export async function refreshScreens() {
 // ── Accounts quota ───────────────────────────────────────────────────────────
 const QUOTA = path.join(DATA_DIR, 'haai-quota.json');
 const ACC_DIR = path.join(DATA_DIR, 'claude-accounts');
-const CACHE_MS = 60 * 1000;
+const CACHE_MS = 5 * 60 * 1000;   // my80: ask Anthropic every 5 min, not every minute (it answered 429 about 220 times in 2 days)
 let lastFetch = 0;
 const BACKOFF_MS = 30 * 60 * 1000;   // after Anthropic says "too many requests", leave that account alone this long
 const restUntil = {};
@@ -72,7 +72,7 @@ async function fetchUsage(token) {
     headers: { Authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20' },
     signal: AbortSignal.timeout(15000),
   });
-  if (!res.ok) throw new Error(`Anthropic answered ${res.status}`);
+  if (!res.ok) { const err = new Error(`Anthropic answered ${res.status}`); err.status = res.status; throw err; }   // my80: status kept, so the 30-min rest after a 429 really happens
   const j = await res.json();
   return { five_hour: toWin(j.five_hour), seven_day: toWin(j.seven_day) };
 }
