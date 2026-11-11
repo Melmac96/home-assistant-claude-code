@@ -239,6 +239,33 @@ export function freeChatReadyAsync(cb) {
   });
 }
 
+// my78: the free service a free chat runs on, in plain words ("OpenRouter · deepseek-v4.1-flash"), for its typing box.
+const PNAME = { openrouter: 'OpenRouter', google: 'Google', groq: 'Groq', mistral: 'Mistral', cerebras: 'Cerebras', huggingface: 'Hugging Face',
+  nvidia: 'NVIDIA', ollama: 'Ollama', github: 'GitHub', cloudflare: 'Cloudflare', sambanova: 'SambaNova' };
+export function freeServiceText(provider, model) {
+  let p = provider || '', m = model || '';
+  if (p === 'auto' || !m || ['smart', 'fast', 'long'].includes(m)) {
+    try {
+      const r = JSON.parse(readFileSync('/data/translator/routes.json', 'utf8'));
+      const step = ((r.routes || r)[['fast', 'long'].includes(m) ? m : 'smart'] || [])[0];
+      if (step && (p === 'auto' || !p || step.provider === p)) { p = step.provider || p; m = step.model || ''; }
+    } catch { /* no routes file: name the provider only */ }
+  }
+  if (['smart', 'fast', 'long'].includes(m)) m = '';
+  const name = PNAME[p] || (p && p !== 'auto' ? p : 'Free');
+  const mod = String(m).split('/').pop().replace(/:free$/, '');
+  return mod ? `${name} · ${mod}` : name;
+}
+let freeSvc = { at: 0, text: '' };
+/** Cached name of the service a NEW free chat would use (checked at most every 5 minutes, never holds anything up). */
+export function freeServiceNow() {
+  if (Date.now() - freeSvc.at > 300000) {
+    freeSvc.at = Date.now();
+    freeChatReadyAsync((r) => { if (r.ok) freeSvc.text = freeServiceText(r.provider, ''); });
+  }
+  return freeSvc.text;
+}
+
 /** Build the free chat's settings folder. Returns { email:'', dir, model, provider } or throws with a plain reason. */
 export function prepareFreeDir() {
   const r = spawnSync('python3', ['-I', SWITCH, 'chatenv'], { encoding: 'utf8', timeout: 60000, env: process.env });

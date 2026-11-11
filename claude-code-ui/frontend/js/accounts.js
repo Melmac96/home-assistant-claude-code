@@ -22,7 +22,7 @@ const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 
 const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account', 'rf.mike@gmail.com': 'PAID - 3rd Claude Pro Account' };
 const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com'];
 const rank = (e) => { const i = ORDER.indexOf(String(e).toLowerCase()); return i < 0 ? 99 : i; };
-const shortName = (email) => SHORT[email.toLowerCase()] || email.split('@')[0];
+export const shortName = (email) => SHORT[String(email).toLowerCase()] || String(email).split('@')[0];   // my78: also used by the chat tabs
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };

@@ -26,7 +26,7 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
-import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir } from './accounts.js';
+import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText } from './accounts.js';
 import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
 import { hooksFor, makeCanUseTool } from './permissions.js';
@@ -194,6 +194,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     acct = pickChatAccount(others.map((x) => x.account), slot, alone);
   }
   slot.account = acct.email;
+  if (acct.free) slot.service = freeServiceText(acct.provider, acct.model);   // my78: named in its typing box
   slot.finishedUnseen = false;
   slot.asks = false;   // my77: he has answered
   slot.turnText = '';

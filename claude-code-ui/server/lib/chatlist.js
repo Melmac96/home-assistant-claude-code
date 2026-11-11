@@ -8,6 +8,7 @@ import { pendingDialogs } from './dialogs.js';
 import { pendingPermissions } from './permissions.js';
 import { sessionTitle } from './sessions.js';
 import { broadcast } from './broadcast.js';
+import { freeServiceNow } from './accounts.js';   // my78
 
 function needsYou(id) {
   for (const d of pendingDialogs.values()) if (d.chat === id) return true;
@@ -25,7 +26,7 @@ export function chatList() {
     const status = needsYou(s.id) || (s.asks && !s.query) ? 'needs' : s.query ? 'working' : s.finishedUnseen ? 'finished' : 'idle';
     out.push({ id: s.id, n: s.n, name: name || 'New chat', status, account: s.free ? 'Free' : (s.account || ''),
       colour: s.colour ? s.colour.key : '', colourName: s.colour ? s.colour.name : '', hex: s.colour ? s.colour.hex : '',
-      free: !!s.free, cost: Math.round(s.cost || 0) });
+      free: !!s.free, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '' });   // my78
   }
   return out;
 }

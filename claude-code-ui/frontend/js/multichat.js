@@ -19,6 +19,7 @@ import { showThinking } from './thinking.js';
 import { updateSendBtn } from './composer.js';
 import { refreshBgTasksStrip } from './banners.js';
 import { openNewChat } from './quick.js';
+import { shortName } from './accounts.js';   // my78
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
@@ -200,7 +201,9 @@ const tabs = mk('div', 'mc-tabs hidden'); tabs.id = 'mc-tabs';
 const row = mk('div', 'mc-send hidden'); row.id = 'mc-send';
 document.querySelector('#input-form .composer').before(row);
 
-const shortAcct = (a) => (a === 'Free' ? 'Free' : String(a || '').replace(/@.*/, '') || 'Main');
+const shortAcct = (a) => (a === 'Free' ? 'Free' : a ? shortName(a) : 'Main');   // my78: Main / 2nd, not the start of the email
+// my78: which service a chat runs on, shown in its typing box
+const service = (c) => (c.free ? (c.service || 'Free') : `Claude${c.account ? ' ' + shortName(c.account) : ''}`);
 
 function renderBars() {
   const on = merged();
@@ -208,7 +211,7 @@ function renderBars() {
   document.body.classList.toggle('mc-many', on);
   applyOnly();
   const target = byId(S.chat);
-  if (on && target) { if (promptInput.dataset.basePh == null) promptInput.dataset.basePh = promptInput.placeholder; promptInput.placeholder = `Message ${label(target)}…`; }
+  if (on && target) { if (promptInput.dataset.basePh == null) promptInput.dataset.basePh = promptInput.placeholder; promptInput.placeholder = `Message ${label(target)} · ${service(target)}…`; }
   else if (promptInput.dataset.basePh != null) { promptInput.placeholder = promptInput.dataset.basePh; delete promptInput.dataset.basePh; }
   document.getElementById('input-form').style.setProperty('--mc-target', on && target ? target.hex : 'transparent');
   // tabs
