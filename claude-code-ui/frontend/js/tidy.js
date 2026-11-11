@@ -354,7 +354,7 @@ new MutationObserver(() => {
   setWm();
   jl.classList.toggle('hidden', nearEnd());
   clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 250);
-}).observe(messagesEl, { childList: true, subtree: true });
+}).observe(messagesEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });   // my78: redraw when a question is locked
 window.addEventListener('mc-view', () => { clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 50); });   // my77
 
 setWm(); drawBars(); drawTk(); drawNum(); drawPins(); cycle(true);

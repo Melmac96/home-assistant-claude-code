@@ -6,6 +6,10 @@
  * (coming back to the phone) and anything held only in memory was lost: that was the my26 bug.
  */
 import { inputForm, messagesEl, promptInput } from './dom.js';
+import { S } from './state.js';
+
+// my78: with several chats in one window, another chat's messages never close this chat's question.
+const several = () => (S.chatList || []).length > 1;
 
 const KEY = 'haai-answers';
 const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
@@ -16,7 +20,9 @@ const leadStrong = (p) => { const f = p.firstElementChild; return f && f.tagName
 
 function isStale(content) {
   const bubble = content.parentElement;
+  const mine = several() && bubble && bubble.dataset.chat;
   for (let n = bubble && bubble.nextElementSibling; n; n = n.nextElementSibling) {
+    if (mine && n.dataset.chat && n.dataset.chat !== mine) continue;   // my78: another chat's item
     if (n.classList.contains('bubble-user') || n.querySelector?.('.answer-card')) return true;
   }
   return false;
@@ -128,7 +134,11 @@ function lock(root) {
 }
 
 /** A message has gone in, so every question above it is finished with. */
-export function lockAnswers() { lock(messagesEl); }
+export function lockAnswers() {
+  const id = several() && (S.renderChat || S.chat);
+  if (!id) { lock(messagesEl); return; }
+  for (const n of messagesEl.children) if (!n.dataset.chat || n.dataset.chat === id) lock(n);   // my78: only the chat the message went to
+}
 
 /** After the chat is rebuilt, only the newest unanswered question can still be answered. */
 export function syncAnswers() {
