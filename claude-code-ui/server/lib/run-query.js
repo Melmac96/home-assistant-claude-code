@@ -18,7 +18,7 @@
  * spawned has actually finished defers that close until it is genuinely safe.
  */
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import { appendFileSync, statSync, writeFileSync } from 'fs';
+import { appendFileSync, readFileSync, statSync, writeFileSync } from 'fs';
 import {
   WORK_DIR, PLUGINS, EFFORT_LEVELS, DEFAULT_PERMISSION_MODE, STALL_WARN_MS, STALL_CHECK_MS,
 } from './config.js';
@@ -26,8 +26,8 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
-import { freeModelOverride, pickChatAccount, syncChatAccount } from './accounts.js';
-import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING } from './chats.js';   // my58
+import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir } from './accounts.js';
+import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
@@ -58,17 +58,39 @@ function noteTouch(slot, tool, input) {
     if (tool === 'Bash' && typeof input?.command === 'string') {
       for (const m of input.command.matchAll(/"entity_id"\s*:\s*"([a-z_]+\.[a-z0-9_]+)"/g)) keys.push(m[1]);
     }
+    const now = Date.now();
+    for (const [k, t] of slot.touched) if (now - t > CLASH_MS) slot.touched.delete(k);   // my77: keep the last 10 minutes, across turns
     for (const k of keys) {
-      for (const other of runningChats()) {
+      // my77: files are stopped and asked about BEFORE they change (permissions.js clash guard); devices still get the warning.
+      if (!k.startsWith('/')) for (const other of chats.values()) {
         if (other === slot) continue;
-        if (other.touched.has(k)) {
+        const t = other.touched.get(k);
+        if (t && now - t < CLASH_MS) {
           broadcast({ type: 'chat_overlap', what: k, with: other.id, chat: slot.id });
           log('WARN', `my58: chats ${slot.id} and ${other.id} both change ${k}`);
         }
       }
-      slot.touched.set(k, Date.now());
+      slot.touched.set(k, now);
     }
   } catch { /* a warning must never stop a run */ }
+}
+
+/** my77: what this chat has used so far, in % of the 5 hours of its own account (shown on its tab). */
+function addChatCost(slot, email, unified) {
+  const w = unified && unified.five_hour;
+  if (!w || w.utilization == null) return;
+  const used = w.utilization <= 1 ? w.utilization * 100 : Number(w.utilization);
+  const key = String(email || 'main');
+  let last = slot.costLast[key];
+  if (!last) {   // first figure on this account: start from the last one seen for it, so the first message counts too
+    try {
+      const q = JSON.parse(readFileSync('/data/haai-quota.json', 'utf8'))[key.toLowerCase()]?.five_hour;
+      if (q && q.used != null) last = { used: q.used, resetsAt: q.resetsAt || null };
+    } catch { /* no figures yet */ }
+  }
+  if (last && last.resetsAt === (w.resetsAt || null)) slot.cost += Math.max(0, used - last.used);
+  else if (last && last.resetsAt && Date.now() / 1000 >= last.resetsAt) slot.cost += used;
+  slot.costLast[key] = { used, resetsAt: w.resetsAt || null };
 }
 
 /** my58: refuse a third chat working at the same time. Returns true when a new run may start. */
@@ -95,6 +117,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // just ended (channel closed), it falls through and is sent as a normal new message.
   if (autoAttempts === 0 && add && runtime.activeRun?.phase === 'turn' && runtime.activeRun.channel.push(text)) {
     runtime.activeRun.pendingAdds = (runtime.activeRun.pendingAdds || 0) + 1;
+    slotNow().asks = false;   // my77
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
     log('INFO', `my26: message added into the running turn (no stop): promptLen=${text.length}`);
     return;
@@ -109,6 +132,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   if (autoAttempts === 0 && runtime.activeRun?.phase === 'background') {
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
     runtime.activeRun.channel.push(text);
+    slotNow().asks = false;   // my77
     log('INFO', `prompt queued into backgrounded run (waiting on ${runtime.backgroundTasks.size} task(s)): promptLen=${text.length}`);
     const fm0 = freeModelOverride(); if (fm0) model = fm0;   // my17
     if (model && model !== runtime.activeRun.model) {
@@ -152,16 +176,34 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // reply notification keys off rather than a guess from `result`.
   // my58: this chat's own slot, and which sign-in it runs on (a second chat running at the same time uses the other Pro account).
   const slot = slotNow();
-  const acct = pickChatAccount(runningChats().filter((x) => x !== slot && x.account).map((x) => x.account));
+  // my77: a grey free-account chat runs on the free provider in its own settings folder; every other chat keeps
+  // its own Claude account, and one opened alongside others takes the account with the most allowance left.
+  let acct;
+  if (slot.free) {
+    try { acct = prepareFreeDir(); }
+    catch (e) {
+      log('WARN', `my77: free chat ${slot.id} could not start: ${e?.message || e}`);
+      if (runtime.activeQuery === abortController) runtime.activeQuery = null;
+      broadcast({ type: 'error', message: `The free account could not start: ${e?.message || e}. Nothing was sent. Use one of your Claude chats instead, or try again later.` });
+      chatHooks.changed();
+      return;
+    }
+  } else {
+    const others = runningChats().filter((x) => x !== slot && x.account && !x.free);
+    const alone = ![...chats.values()].some((x) => x !== slot && !x.free && (x.query || x.sessionId || x.opened));
+    acct = pickChatAccount(others.map((x) => x.account), slot, alone);
+  }
   slot.account = acct.email;
-  slot.touched = new Map();
   slot.finishedUnseen = false;
+  slot.asks = false;   // my77: he has answered
+  slot.turnText = '';
   const opts = {
     cwd: WORK_DIR, abortController, plugins: PLUGINS, settings: MCP_FREE_SETTINGS,
-    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(acct.dir ? { CLAUDE_CONFIG_DIR: acct.dir } : {}) },
+    env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(acct.dir ? { CLAUDE_CONFIG_DIR: acct.dir } : {}),
+      ...(acct.free ? { HAAI_FREE_CHAT: '1' } : {}) },
   };
-  log('INFO', `my58: chat ${slot.id} runs on ${acct.email || 'the main sign-in'}${acct.dir ? ' (own settings folder)' : ''}`);
-  const fm = freeModelOverride();   // my17: in Free mode the chosen free model wins over the dropdown
+  log('INFO', `my58: chat ${slot.id} runs on ${acct.free ? `the free account (${acct.provider})` : (acct.email || 'the main sign-in')}${acct.dir ? ' (own settings folder)' : ''}`);
+  const fm = acct.free ? (acct.model || null) : freeModelOverride();   // my17: in Free mode the chosen free model wins over the dropdown; my77: a free chat uses its own
   if (fm) opts.model = fm;
   else if (model) opts.model = model;
   // Only override effort when the UI asked for a level; otherwise the SDK's own
@@ -394,6 +436,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           if (block.type === 'text' && block.text) {
             vlog(`text: ${block.text.length} chars`);
             broadcast({ type: 'text', text: block.text });
+            slot.turnText = (slot.turnText || '').slice(-4000) + block.text;   // my77: does this reply end on a question?
             noteDoneText(event.session_id || runtime.activeSessionId, block.text);   // my74
           } else if (block.type === 'tool_use') {
             vlog(`tool_use: ${block.name}`);
@@ -453,7 +496,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         runtime.lastUsage = { status: info.status, rateLimitType: info.rateLimitType,
           resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
-        try { noteUsage(info.unifiedWindows); } catch {}   // my40: Accounts quota, account in use
+        try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch {}   // my77: cost so far on the chat's tab (before the store moves on)
+        try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch {}   // my40: Accounts quota, account in use; my77: this chat's own account
         try { noteJobUsage(event.session_id || runtime.activeSessionId, info.unifiedWindows); } catch {}   // my74: job cost
         if (info.status === 'rejected' && info.rateLimitType === 'five_hour' && info.resetsAt) {
           limitHit = { resetsAt: info.resetsAt, rateLimitType: info.rateLimitType };
@@ -543,7 +587,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     }
   } finally {
     clearInterval(watchdog);
-    syncChatAccount(acct.dir);   // my58
+    if (!acct.free) syncChatAccount(acct.dir);   // my58
     channel.close();   // idempotent — tidy up on an error/abort path too
     if (runtime.activeQuery === abortController) runtime.activeQuery = null;
     if (runtime.activeRun && runtime.activeRun.q === q) runtime.activeRun = null;
@@ -561,6 +605,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     }
 
     slot.finishedUnseen = !abortController.signal.aborted && !failed;   // my58
+    slot.finishedAt = Date.now();   // my77: folds into Previous chats 30 minutes after this
+    slot.asks = !abortController.signal.aborted && /⟦QUESTION⟧/.test(slot.turnText || '');   // my77: "Chat 2 needs your answer"
     chatHooks.changed();
     // The new or updated session (and its title) should appear in the list.
     broadcast({ type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });

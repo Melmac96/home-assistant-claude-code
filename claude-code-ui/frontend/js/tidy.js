@@ -319,7 +319,8 @@ $('input-form').prepend(chips);
 let chipTimer = 0;
 function drawChips() {
   chips.textContent = '';
-  const cards = [...messagesEl.querySelectorAll('.answer-card:not(.locked)')];
+  const only = messagesEl.dataset.only || '';   // my77: seeing one chat by itself: only its own answers
+  const cards = [...messagesEl.querySelectorAll('.answer-card:not(.locked)')].filter((c) => !only || c.closest('#messages > [data-chat]')?.dataset.chat === only);
   const groups = new Set(cards.map((c) => c.closest('.bubble, .bubble-assistant, div')));
   // my58: Q1/Q2/Q3 blocks sit in the same bubble too, so count the A cards: more than one A
   // means several questions, and a chip would send after the first answer. Use the cards then.
@@ -354,5 +355,6 @@ new MutationObserver(() => {
   jl.classList.toggle('hidden', nearEnd());
   clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 250);
 }).observe(messagesEl, { childList: true, subtree: true });
+window.addEventListener('mc-view', () => { clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 50); });   // my77
 
 setWm(); drawBars(); drawTk(); drawNum(); drawPins(); cycle(true);

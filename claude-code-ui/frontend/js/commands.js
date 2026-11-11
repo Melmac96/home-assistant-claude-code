@@ -155,7 +155,7 @@ export function showHelp() {
 
 // The current session is preserved in the store (browsable via Sessions), so
 // requestNewSession only asks when a query is actively running.
-newSessionBtn.onclick = () => { openNewChat(); };   // my28 card
+// my77: the New chat icon now opens the New chat list (multichat.js); "New chat here" there opens this card.
 
 sessionsBtn.onclick = (e) => {
   e.stopPropagation();

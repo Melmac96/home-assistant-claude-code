@@ -112,9 +112,9 @@ export async function getQuota(force = false) {
 }
 
 /** The account in use: a usage update from the chat itself also counts as "seen". */
-export function noteUsage(unified) {
-  const cur = currentIdentity();
-  if (!cur || !unified) return;
+export function noteUsage(unified, email = null) {
+  const cur = email ? { email } : currentIdentity();   // my77: a chat on another account reports for THAT account
+  if (!cur || !cur.email || !unified) return;
   const w = (x) => (x && x.utilization != null ? { used: Math.round(x.utilization <= 1 ? x.utilization * 100 : x.utilization), resetsAt: x.resetsAt || null } : null);
   const store = readJson(QUOTA) || {};
   const key = cur.email.toLowerCase();

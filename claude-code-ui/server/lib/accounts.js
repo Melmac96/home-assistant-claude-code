@@ -106,7 +106,7 @@ export function listAccounts() {
   const saved = [];
   try {
     for (const f of readdirSync(DIR)) {
-      if (!f.endsWith('.json')) continue;
+      if (!f.endsWith('.json') || f.length <= 5) continue;   // my77: never a nameless file
       const a = readJson(path.join(DIR, f));
       if (a && a.email) saved.push({ id: f.slice(0, -5), email: a.email, displayName: a.displayName || '',
         active: !!cur && cur.email === a.email });
@@ -171,18 +171,95 @@ export function useProvider(id) {
 const CHAT_CFG = path.join(DATA_DIR, 'chat-config');
 const NOT_LINKED = new Set(['.credentials.json', '.claude.json', 'sessions', 'session-env', 'shell-snapshots', 'backups', 'cache', '.last-cleanup']);
 
-/** Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in. */
-export function pickChatAccount(otherAccounts) {
+/** my77: how much of an account's allowance is used (higher of 5-hour and weekly), or null with no figures. */
+function useOf(email) {
+  const q = readJson(path.join(DATA_DIR, 'haai-quota.json')) || {};
+  const r = q[String(email || '').toLowerCase()];
+  if (!r) return null;
+  const a = r.five_hour?.used, b = r.seven_day?.used;
+  if (a == null && b == null) return null;
+  return { max: Math.max(a || 0, b || 0), week: b || 0 };
+}
+
+/**
+ * Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in.
+ * my77 (Michael 2026-11-11): each chat KEEPS its own account while no other working chat is using it; a chat opened
+ * alongside others takes the not-busy account with the MOST allowance left (accounts with no figures only when none has any).
+ */
+export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   const cur = currentIdentity();
   if (!cur || modeState().free) return { email: cur ? cur.email : '', dir: null };
   const saved = listAccounts().saved;
-  if (saved.length < 2 || !otherAccounts.length) return { email: cur.email, dir: null };
   const used = new Set(otherAccounts);
-  const free = saved.find((a) => !used.has(a.email));
-  if (!free) return { email: cur.email, dir: null };   // every saved account is busy: share
-  if (free.email === cur.email) return { email: cur.email, dir: null };
-  try { return { email: free.email, dir: prepareChatDir(free.id) }; }
-  catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
+  const as = (a) => {
+    if (a.email === cur.email) return { email: cur.email, dir: null };
+    try { return { email: a.email, dir: prepareChatDir(a.id) }; }
+    catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
+  };
+  // Keep the account this chat already had, if nobody else is on it now.
+  if (slot && slot.account) {
+    const mine = saved.find((a) => a.email === slot.account);
+    if (mine && !used.has(mine.email)) return as(mine);
+  }
+  // The only chat (or no other saved accounts): the main sign-in, as before.
+  if (saved.length < 2 || (alone && !used.size)) return { email: cur.email, dir: null };
+  const open = saved.filter((a) => !used.has(a.email));
+  if (!open.length) return { email: cur.email, dir: null };   // every saved account is busy: share
+  const ranked = open.map((a) => ({ a, u: useOf(a.email) }));
+  const withFig = ranked.filter((r) => r.u);
+  const pool = withFig.length ? withFig.sort((x, y) => x.u.max - y.u.max || x.u.week - y.u.week) : ranked;
+  return as(pool[0].a);
+}
+
+// ── my77: a chat on a FREE account (grey) ───────────────────────────────────
+// Its own settings folder /data/chat-config/free: the free provider's connection settings and the lighter rules
+// (exactly what Free mode writes for the whole app, but only for this one chat). The privacy guard reads this
+// folder's settings, so health, home security, money and passwords stay off the free model.
+const FREE_DIR = path.join(CHAT_CFG_DIR(), 'free');
+function CHAT_CFG_DIR() { return path.join(DATA_DIR, 'chat-config'); }
+const CTX_SRC = '/config/opencode/free-mode-context.md';
+const FREE_OWN = new Set(['settings.json', 'CLAUDE.md', 'free-mode-context.md', '.credentials.json', '.claude.json']);
+
+/** Can a free-account chat be opened? { ok, why } (cheap check, no translator start). */
+export function freeChatReady() {
+  if (!existsSync(SWITCH)) return { ok: false, why: 'The free-model tool is missing.' };
+  try {
+    const r = spawnSync('python3', ['-I', SWITCH, 'chatenv', '--check'], { encoding: 'utf8', timeout: 15000, env: process.env });
+    if (r.status === 0) return { ok: true, provider: (r.stdout || '').trim() };
+    return { ok: false, why: (r.stderr || r.stdout || '').trim().slice(0, 200) || 'No free provider is ready.' };
+  } catch (e) { return { ok: false, why: 'Could not check the free providers.' }; }
+}
+
+/** The same check without holding up the other chats while it runs. */
+export function freeChatReadyAsync(cb) {
+  if (!existsSync(SWITCH)) return cb({ ok: false, why: 'The free-model tool is missing.' });
+  execFile('python3', ['-I', SWITCH, 'chatenv', '--check'], { encoding: 'utf8', timeout: 15000, env: process.env }, (err, out, errText) => {
+    if (!err) return cb({ ok: true, provider: String(out || '').trim() });
+    cb({ ok: false, why: String(errText || out || '').trim().slice(0, 200) || 'No free provider is ready.' });
+  });
+}
+
+/** Build the free chat's settings folder. Returns { email:'', dir, model, provider } or throws with a plain reason. */
+export function prepareFreeDir() {
+  const r = spawnSync('python3', ['-I', SWITCH, 'chatenv'], { encoding: 'utf8', timeout: 60000, env: process.env });
+  if (r.status !== 0) throw new Error((r.stderr || r.stdout || '').trim().slice(0, 200) || 'No free provider is ready.');
+  const j = JSON.parse(r.stdout);
+  mkdirSync(FREE_DIR, { recursive: true, mode: 0o700 });
+  const main = readJson(SETTINGS()) || {};
+  const st = { ...main, env: { ...(main.env || {}), ...j.env }, claudeMdExcludes: j.excludes || [] };
+  writePrivate(path.join(FREE_DIR, 'settings.json'), JSON.stringify(st, null, 2));
+  writePrivate(path.join(FREE_DIR, 'free-mode-context.md'), readFileSync(CTX_SRC, 'utf8'));
+  try { writePrivate(path.join(FREE_DIR, 'CLAUDE.md'), readFileSync(path.join(CLAUDE_CONFIG_DIR, 'CLAUDE.md'), 'utf8')); } catch { /* none */ }
+  const ident = readJson(IDENT()) || {};
+  delete ident.oauthAccount;   // no Claude sign-in in this folder: it must only ever talk to the free provider
+  writePrivate(path.join(FREE_DIR, '.claude.json'), JSON.stringify(ident));
+  for (const name of readdirSync(CLAUDE_CONFIG_DIR)) {
+    if (NOT_LINKED.has(name) || FREE_OWN.has(name) || name.endsWith('.key') || name.endsWith('.account')) continue;
+    const to = path.join(FREE_DIR, name);
+    try { lstatSync(to); continue; } catch { /* not there yet */ }
+    try { symlinkSync(path.join(CLAUDE_CONFIG_DIR, name), to); } catch { /* best effort */ }
+  }
+  return { email: '', dir: FREE_DIR, model: j.env.ANTHROPIC_MODEL || '', provider: j.provider || '', free: true };
 }
 
 function prepareChatDir(id) {

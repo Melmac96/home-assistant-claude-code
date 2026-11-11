@@ -19,9 +19,9 @@ import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
 import { saveAttachments, describeAttachments } from './uploads.js';
 import { runQuery, abortActive, canStartRun } from './run-query.js';
-import { chats, view, makeSlot, inChat, anyRunning, runningChats, MAX_RUNNING } from './chats.js';   // my58
-import { chatsMessage, broadcastChats } from './chatlist.js';   // my58
-import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel, providerStats, useProvider } from './accounts.js';
+import { chats, view, makeSlot, inChat, anyRunning, runningChats, MAX_RUNNING, pickColour } from './chats.js';   // my58, my77
+import { chatsMessage, broadcastChats, chatList } from './chatlist.js';   // my58, my77
+import { saveCurrent, listAccounts, switchTo, setMode, setFreeModel, providerStats, useProvider, freeChatReadyAsync } from './accounts.js';
 import * as autoContinue from './auto-continue.js';
 import * as notifier from './notify.js';
 import * as deviceAuth from './device-auth.js';
@@ -251,11 +251,25 @@ const handlers = {
   },
 
   new_session(ws, msg) {
+    // my77: Open a 2nd / 3rd chat, or a grey chat on a free account, from the New chat list (up to three chats).
+    if (msg.mode === 'extra' || msg.mode === 'extra_free') {
+      if (chatList().length >= MAX_RUNNING) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `You already have ${MAX_RUNNING} chats open. A finished one folds away 30 minutes after it ends, or start a New chat here instead.` }); return; }
+      if (msg.mode === 'extra_free' && [...chats.values()].some((c) => c.free)) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: 'A grey free-account chat is already open.' }); return; }
+      const slot = makeSlot();
+      slot.opened = true;
+      if (msg.mode === 'extra_free') { slot.free = true; slot.colour = pickColour(slot); }
+      ws.chat = slot.id; view.last = slot.id;
+      send(ws, { type: 'chat_opened', id: slot.id });
+      broadcastChats();
+      send(ws, { type: 'history', chat: slot.id, merge: true, items: [], running: false, background: false });
+      return;
+    }
     // my58 (user 2026-11-09, option B): if this chat is working, ask each time whether to start another alongside or stop it.
     if (runtime.activeQuery && msg.mode !== 'stop' && msg.mode !== 'alongside') { send(ws, { type: 'new_chat_ask' }); return; }
     if (runtime.activeQuery && msg.mode === 'alongside') {
       if (runningChats().length >= MAX_RUNNING) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `${MAX_RUNNING} chats are already working, so I cannot start another alongside. Stop one or wait for one to finish.` }); return; }
       const slot = makeSlot();
+      slot.opened = true;   // my77
       ws.chat = slot.id; view.last = slot.id;
       send(ws, { type: 'chat_opened', id: slot.id });
       send(ws, { type: 'cleared', chat: slot.id });
@@ -267,8 +281,37 @@ const handlers = {
     if (getAdvisor().advised) { broadcast({ type: 'prefs', ...setPrefs({ model: 'latest-sonnet', effort: 'medium' }) }); broadcast({ type: 'advisor', ...setAdvisor({ advised: false }) }); }   // my42: a new chat starts on Sonnet/Medium
     abortActive();
     startFresh();
+    { const sl = chats.get(ws.chat); if (sl) { sl.asks = false; sl.cost = 0; sl.costLast = {}; sl.finishedAt = 0; } }   // my77: a fresh start in the same chat
     if (msg.save) handover.saveInBackground(old);   // my28: the old chat's notes, behind the scenes
     broadcastChats();
+  },
+
+  // my77: the colour buttons - which chat the next message goes to, without reloading the screen.
+  chat_target(ws, msg) {
+    const slot = chats.get(String(msg.id || ''));
+    if (!slot) return;
+    ws.chat = slot.id; view.last = slot.id;
+    if (slot.finishedUnseen) { slot.finishedUnseen = false; broadcastChats(); }
+  },
+
+  // my77: the other chats' messages for the all-in-one view (each shown in its own colour box).
+  chat_histories(ws, msg) {
+    const want = Array.isArray(msg.ids) ? msg.ids.map(String) : null;
+    for (const slot of [...chats.values()]) {
+      if (want && !want.includes(slot.id)) continue;
+      inChat(slot, () => {
+        send(ws, { type: 'history', chat: slot.id, merge: true, items: slot.sessionId ? parseSession(slot.sessionId) : [], running: !!slot.query, background: slot.bgTasks.size > 0 });
+        if (slot.id === ws.chat) return;   // the chat being sent to already had its questions replayed
+        for (const [id, d] of pendingDialogs) if (d.chat === slot.id) send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload, chat: d.chat });
+        for (const [, e] of pendingPermissions) if (e.chat === slot.id) send(ws, { ...e.req, chat: slot.id });
+      });
+    }
+  },
+
+  // my77: what the New chat list may offer right now (lines that cannot be used are greyed out).
+  new_chat_menu(ws) {
+    freeChatReadyAsync((r) => send(ws, { type: 'new_chat_menu', freeOk: !!r.ok, freeWhy: r.ok ? '' : r.why,
+      hasFree: [...chats.values()].some((c) => c.free), count: chatList().length, working: runningChats().length, max: MAX_RUNNING }));
   },
 
   // my58: look at another chat

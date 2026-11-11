@@ -126,3 +126,42 @@ html:not(.haai-tablet) #new-session-btn{order:-3}
 html:not(.haai-tablet) #new-session-btn{order:99}
 html:not(.haai-tablet) #settings-btn,html:not(.haai-tablet) #accounts-btn{display:none!important}
 .settings-panel{left:10px!important;right:10px!important;width:auto!important;min-width:0!important;max-width:none!important}
+
+/* ── my77: three chats at once - tabs, colour boxes, Send to buttons, pinned line, New chat list ── */
+.mc-tabs{display:flex;gap:6px;overflow-x:auto;padding:6px 10px;border-bottom:1px solid var(--border);background:#000;scrollbar-width:none;flex:0 0 auto}
+.mc-tabs::-webkit-scrollbar{display:none}
+.mc-tabs.hidden,.mc-send.hidden,.mc-pin.hidden{display:none}
+.mc-tab{flex:1 1 0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0;max-width:60vw;overflow:hidden;padding:5px 10px;border-radius:10px;background:#0b0b0c;border:1px solid var(--border);border-top:3px solid var(--mc,#8a8d91);color:#e8e8e8;font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.mc-tab.mc-all{flex:0 0 auto;align-items:center;border-top-color:#4da3ff;font-weight:600;min-width:46px}
+.mc-tab.sel{background:#111a24;border-color:var(--mc,#4da3ff);background:color-mix(in srgb,var(--mc,#4da3ff) 16%,#0b0b0c)}
+.mc-tab.mc-all.sel{border-color:#4da3ff}
+.mc-tab.target .mc-n{box-shadow:0 0 0 2px #000,0 0 0 3px var(--mc)}
+.mc-t1{display:flex;gap:6px;align-items:center;max-width:100%}
+.mc-n{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--mc);color:#000;font-size:11px;font-weight:700;flex:0 0 auto}
+.mc-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-t2{display:flex;gap:8px;font-size:11.5px;color:#9a9da4;white-space:nowrap;overflow:hidden;max-width:100%}
+.mc-st{font-weight:600}
+.mc-tab.free .mc-acct{color:#c9cbd0;background:#3a3c41;border-radius:6px;padding:0 5px}
+#messages.mc-on > [data-chat]{box-shadow:inset 3px 0 0 var(--mc,transparent);background-color:color-mix(in srgb,var(--mc,transparent) 8%,transparent);border-radius:10px;padding-left:12px}
+#messages.mc-on > [data-chat].mc-first::before{content:attr(data-mclabel);display:block;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--mc);margin:0 0 4px}
+#messages.mc-on > .thinking[data-chat]::before{content:attr(data-mclabel);display:inline;color:var(--mc);font-size:12px;font-weight:700;margin-right:8px}
+#messages.mc-only > [data-chat]::before{display:none}
+.mc-send{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:2px 2px 6px}
+.mc-to{font-size:12px;color:#9a9da4;margin-right:2px}
+.mc-btn{display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 4px;border-radius:999px;border:1px solid var(--mc);background:transparent;color:#e8e8e8;font:inherit;font-size:13px;cursor:pointer;opacity:.75}
+.mc-btn b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--mc);color:#000;font-size:11px}
+.mc-btn.sel{opacity:1;font-weight:700;background:color-mix(in srgb,var(--mc) 24%,transparent)}
+.mc-btn.only{box-shadow:0 0 0 2px var(--mc)}
+.mc-btn.mc-allbtn{padding:4px 12px;--mc:#4da3ff}
+.mc-btn.mc-allbtn.sel-all{opacity:1;background:#4da3ff22}
+body.mc-many #input-form .composer{border-color:var(--mc-target)}
+.mc-pin{display:flex;flex-direction:column;gap:4px;padding:6px 10px;background:#000;border-bottom:1px solid var(--border);flex:0 0 auto}
+.mc-pinrow{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:10px;border:1px solid #f3736c;background:#f3736c14;color:#e8e8e8;font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.mc-pinrow i{width:12px;height:12px;border-radius:50%;background:var(--mc);flex:0 0 auto}
+.mc-pinrow em{margin-left:auto;font-style:normal;color:#faaea7;font-size:12.5px}
+.mc-menu{width:340px}
+.mc-item{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;padding:11px 14px;background:none;border:0;border-bottom:1px solid var(--border);color:#e8e8e8;font:inherit;font-size:15px;text-align:left;cursor:pointer}
+.mc-item.off{opacity:.42;cursor:default}
+.mc-it{display:flex;gap:8px;align-items:center}
+.mc-sub{font-size:12.5px;color:#9a9da4}
+.mc-free{font-style:normal;font-size:11px;color:#c9cbd0;background:#3a3c41;border-radius:6px;padding:1px 6px}

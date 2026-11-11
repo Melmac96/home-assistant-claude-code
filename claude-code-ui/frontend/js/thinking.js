@@ -14,6 +14,7 @@ import { scrollBottom } from './scroll.js';
 export let thinkingTimer = null;
 export function showThinking() {
   if (S.thinkingEl) { messagesEl.appendChild(S.thinkingEl); scrollBottom(); return; }
+  // my77: each chat has its own Working… line, so the timer belongs to the line (not one shared timer).
   const start = Date.now();
   S.thinkingEl = document.createElement('div');
   S.thinkingEl.className = 'thinking';
@@ -22,15 +23,17 @@ export function showThinking() {
     '<span class="thinking-label">Working…</span>';
   messagesEl.appendChild(S.thinkingEl);
   const label = S.thinkingEl.querySelector('.thinking-label');
-  thinkingTimer = setInterval(() => {
-    if (!S.thinkingEl) return;
+  const el = S.thinkingEl;
+  thinkingTimer = el._timer = setInterval(() => {
+    if (!el.isConnected && el !== S.thinkingEl) { clearInterval(el._timer); return; }
     const s = Math.round((Date.now() - start) / 1000);
-    if (s >= 30) { label.textContent = `Working… ${s}s — long turns can take a minute or more`; S.thinkingEl.classList.add('slow'); }
+    if (s >= 30) { label.textContent = `Working… ${s}s — long turns can take a minute or more`; el.classList.add('slow'); }
     else if (s >= 3) label.textContent = `Working… ${s}s`;
   }, 1000);
   scrollBottom();
 }
 export function hideThinking() {
-  if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+  if (S.thinkingEl && S.thinkingEl._timer) { clearInterval(S.thinkingEl._timer); if (thinkingTimer === S.thinkingEl._timer) thinkingTimer = null; }   // my77
+  else if (thinkingTimer && !S.thinkingEl) { clearInterval(thinkingTimer); thinkingTimer = null; }
   if (S.thinkingEl) { S.thinkingEl.remove(); S.thinkingEl = null; }
 }

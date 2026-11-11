@@ -8,7 +8,7 @@ import { onKeepMessage } from './keep.js';   // my35
 import { onExtrasMessage } from './extras.js';   // my40
 import { onSearchResults } from './sessions.js';   // my28
 import { S } from './state.js';
-import { isOtherChat, onChatsMessage } from './multichat.js';   // my58
+import { isOtherChat, onChatsMessage, dispatch } from './multichat.js';   // my58, my77
 import { updateUsage, noteReply } from './usage.js';   // my45
 import { showAccounts, showAccountResult, showStats } from './accounts.js';
 import { showPairCode, showDevices } from './devices.js';
@@ -119,6 +119,10 @@ loginCodeForm.onsubmit = (e) => {
 export function handleServerMessage(msg) {
   if (onChatsMessage(msg)) return;   // my58: chat list, New chat question, limits
   if (isOtherChat(msg)) return;   // my58: this message is about a chat you are not looking at
+  dispatch(msg, handleOne);   // my77: drawn for its own chat (all chats together in one window)
+}
+
+function handleOne(msg) {
   switch (msg.type) {
     case 'connected': break;
     case 'session':   break;

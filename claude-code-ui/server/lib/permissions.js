@@ -17,7 +17,7 @@ import { runtime } from './state.js';
 import { broadcast } from './broadcast.js';
 import { askQuestion, formatQuestionDenial, askQuestionHook, pendingDialogs } from './dialogs.js';
 import { notify, clearAttention } from './notify.js';
-import { inChat, slotNow, hooks as chatHooks } from './chats.js';   // my58
+import { inChat, slotNow, hooks as chatHooks, recentClash, chatLabel, CLASH_MS } from './chats.js';   // my58, my77
 
 /**
  * Render the SDK's suggested permission rules into a short human label for the
@@ -82,9 +82,38 @@ export const ADDON_CONFIGS_HOOKS = ADDON_CONFIGS_HOOK
  * (checking `tool_name !== 'AskUserQuestion'` and returning `{continue:true}`
  * unchanged), one more control-protocol message per call for nothing.
  */
+// ── my77: clash guard ────────────────────────────────────────────────────────
+// Before a chat changes a file that ANOTHER chat changed in the last 10 minutes, it stops and asks
+// (Michael 2026-11-11). In the normal modes that is a permission card; in Auto mode Claude is told to ask
+// him in the chat first (a second try at the same file then goes ahead).
+const CLASH_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
+export function clashFor(slot, toolName, input) {
+  try {
+    if (!slot || !CLASH_TOOLS.has(toolName)) return null;
+    const f = String(input?.file_path || input?.notebook_path || '');
+    if (!f) return null;
+    const ok = slot.clashOk.get(f);
+    if (ok && Date.now() - ok < CLASH_MS) return null;
+    const c = recentClash(slot, f);
+    if (!c) return null;
+    return { file: f, text: `${chatLabel(c.other)} changed ${f.split('/').pop()} ${c.mins} minute${c.mins > 1 ? 's' : ''} ago. Let ${chatLabel(slot)} change it too?` };
+  } catch { return null; }   // the guard must never stop a run by itself failing
+}
+function clashHook(slot, input) {
+  const c = clashFor(slot, input?.tool_name, input?.tool_input);
+  if (!c) return { continue: true };
+  const w = slot.clashWarned.get(c.file);
+  if (w && Date.now() - w < CLASH_MS) { slot.clashOk.set(c.file, Date.now()); return { continue: true }; }
+  slot.clashWarned.set(c.file, Date.now());
+  log('WARN', `my77: clash guard stopped ${slot.id} before changing ${c.file}`);
+  return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny',
+    permissionDecisionReason: `${c.text.replace(/\?$/, '.')} Before changing it, stop and ask Michael in this chat (a marked lettered question) whether to go ahead, so the two chats do not undo each other.` } };
+}
+
 export function hooksFor(mode, slot) {
   const pre = [];
   if (ADDON_CONFIGS_HOOK) pre.push({ hooks: [ADDON_CONFIGS_HOOK] });
+  if (mode === 'auto' && slot) pre.push({ matcher: 'Edit|Write|MultiEdit|NotebookEdit', hooks: [async (input) => clashHook(slot, input)] });   // my77
   if (mode === 'auto') pre.push({ matcher: 'AskUserQuestion', hooks: [slot ? (...a) => inChat(slot, () => askQuestionHook(...a)) : askQuestionHook] });   // my58
   return pre.length ? { PreToolUse: pre } : undefined;
 }
@@ -129,7 +158,7 @@ export function resolvePromptsAllowedBy(mode) {
   const permits = (toolName) => mode === 'bypass' || EDIT_TOOLS.has(toolName);
 
   for (const [id, entry] of pendingPermissions) {
-    if (!permits(entry.toolName)) continue;
+    if (!permits(entry.toolName) || entry.req?.clash) continue;   // my77: a clash question waits for his own answer
     pendingPermissions.delete(id);
     entry.resolve('allow');
     broadcast({ type: 'permission_resolved', id });
@@ -154,12 +183,13 @@ export function makeCanUseTool(slot) {
     }
 
     const mode = runtime.activePermMode;
-    if (mode === 'bypass' || (mode === 'acceptEdits' && EDIT_TOOLS.has(toolName))) {
+    const clash = clashFor(slot, toolName, input);   // my77: another chat changed this file a few minutes ago: always ask
+    if (!clash && (mode === 'bypass' || (mode === 'acceptEdits' && EDIT_TOOLS.has(toolName)))) {
       return Promise.resolve({ behavior: 'allow', updatedInput: input });
     }
     // Plan mode: the SDK restricts the model to read-only tools, so allow those
     // silently and only prompt when it proposes leaving plan mode.
-    if (mode === 'plan' && toolName !== 'ExitPlanMode') {
+    if (!clash && mode === 'plan' && toolName !== 'ExitPlanMode') {
       return Promise.resolve({ behavior: 'allow', updatedInput: input });
     }
 
@@ -176,8 +206,9 @@ export function makeCanUseTool(slot) {
         id,
         toolName,
         input,
-        title: options.title,
+        title: clash ? clash.text : options.title,
         description: options.description,
+        clash: !!clash,   // my77
         canAlways: suggestions.length > 0,
         alwaysLabel: describeSuggestions(suggestions),
       };
@@ -188,8 +219,8 @@ export function makeCanUseTool(slot) {
       // and a disconnected/headless run still reaches whoever is around.
       broadcast(req);
       notify('permission', {
-        title: 'Claude needs permission',
-        message: options.title || `Allow ${toolName}?`,
+        title: clash ? 'Two chats, same file' : 'Claude needs permission',
+        message: clash ? clash.text : (options.title || `Allow ${toolName}?`),
       });
 
       // 'allow' (this call) | 'always' (this call + persist the rule) | 'deny'
@@ -198,6 +229,7 @@ export function makeCanUseTool(slot) {
           log('INFO', `permission: always-allow ${describeSuggestions(suggestions)}`);
           resolve({ behavior: 'allow', updatedInput: input, updatedPermissions: suggestions });
         } else if (decision === 'always' || decision === 'allow') {
+          if (clash && slot) slot.clashOk.set(clash.file, Date.now());   // my77: he said go ahead for this file
           resolve({ behavior: 'allow', updatedInput: input });
         } else {
           resolve({ behavior: 'deny', message: 'Denied by user' });

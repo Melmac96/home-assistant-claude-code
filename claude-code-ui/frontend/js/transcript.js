@@ -27,6 +27,7 @@ export function addTime(bubble, ts) {
   t.textContent = fmtTime(ts);
   t.title = (ts ? new Date(ts) : new Date()).toLocaleString();
   bubble.appendChild(t);
+  if (!bubble.dataset.t) { const n = Number(ts ? new Date(ts) : new Date()); if (n) bubble.dataset.t = String(n); }   // my77: time order for the all-in-one view
 }
 
 export function appendUserBubble(text, ts, atts) {
