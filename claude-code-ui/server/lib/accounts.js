@@ -181,6 +181,15 @@ function useOf(email) {
   return { max: Math.max(a || 0, b || 0), week: b || 0 };
 }
 
+/** my83: has this account used ALL of its 5-hour or weekly allowance (a figure whose reset time has passed does not count)? */
+function isFull(email) {
+  const q = readJson(path.join(DATA_DIR, 'haai-quota.json')) || {};
+  const r = q[String(email || '').toLowerCase()];
+  if (!r) return false;
+  const now = Date.now() / 1000;
+  return ['five_hour', 'seven_day'].some((k) => r[k] && r[k].used >= 100 && !(r[k].resetsAt && r[k].resetsAt <= now));
+}
+
 /**
  * Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in.
  * my77 (Michael 2026-11-11): each chat KEEPS its own account while no other working chat is using it; a chat opened
@@ -197,15 +206,18 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
     catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
   };
   // Keep the account this chat already had, if nobody else is on it now.
+  // my83: ...but never one that has used all its allowance while another free account still has some left.
+  const spare = (email) => saved.some((a) => a.email !== email && !used.has(a.email) && !isFull(a.email));
   if (slot && slot.account) {
     const mine = saved.find((a) => a.email === slot.account);
-    if (mine && !used.has(mine.email)) return as(mine);
+    if (mine && !used.has(mine.email) && !(isFull(mine.email) && spare(mine.email))) return as(mine);
   }
-  // The only chat (or no other saved accounts): the main sign-in, as before.
-  if (saved.length < 2 || (alone && !used.size)) return { email: cur.email, dir: null };
+  // The only chat (or no other saved accounts): the main sign-in, as before (my83: unless it is full and another is not).
+  if (saved.length < 2 || (alone && !used.size && !(isFull(cur.email) && spare(cur.email)))) return { email: cur.email, dir: null };
   const open = saved.filter((a) => !used.has(a.email));
   if (!open.length) return { email: cur.email, dir: null };   // every saved account is busy: share
-  const ranked = open.map((a) => ({ a, u: useOf(a.email) }));
+  const notFull = open.filter((a) => !isFull(a.email));   // my83: full accounts only when every free one is full
+  const ranked = (notFull.length ? notFull : open).map((a) => ({ a, u: useOf(a.email) }));
   const withFig = ranked.filter((r) => r.u);
   const pool = withFig.length ? withFig.sort((x, y) => x.u.max - y.u.max || x.u.week - y.u.week) : ranked;
   return as(pool[0].a);

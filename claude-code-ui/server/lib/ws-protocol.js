@@ -198,6 +198,9 @@ const handlers = {
       return;
     }
     const r = switchTo(msg.id);
+    // my83 (Michael 2026-11-11): the account he picks is the one the next message uses. Without this a chat kept the
+    // account it had before (my77 'keep its own account') and every switch went on hitting the old account's limit.
+    if (r.ok) for (const s of chats.values()) if (!s.free) s.account = null;
     send(ws, { type: 'account_result', ...r });
     broadcast({ type: 'accounts', ...listAccounts() });
   },

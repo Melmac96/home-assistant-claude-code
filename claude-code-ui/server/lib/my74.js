@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my82',
+  version: 'my83',
   items: [
+    { t: 'Picking an account really moves the chat', how: 'When you choose an account in the Accounts menu, your next message now goes to that account. Before, an open chat stayed on the account it had, so every account seemed to be at 100%. A chat is also moved off an account that has used all its allowance when another account still has some left.' },
     { t: 'haAi is quicker', how: 'The chat list no longer reads every saved chat in full (it took about 2.5 seconds, and haAi stood still meanwhile). Long chats show their newest part first; scroll up and the rest appears where you are. The page is kept on your phone until the next update, and small checks rest while haAi is not on screen.' },
   ],
 };
