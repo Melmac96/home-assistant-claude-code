@@ -5,7 +5,6 @@
  *    each in its own colour box (Purple, Gold, Teal; a free-account chat is grey);
  *  - colour buttons above the typing box choose which chat the next message goes to; tap the chosen one again to
  *    see only that chat; All shows everything again. Answer buttons inside a colour box go to that box's chat;
- *  - a pinned line at the top when a chat needs your answer (tap to jump to it);
  *  - the New chat icon opens a small list: New chat here, Open a 2nd chat, Open a 3rd chat, Open a chat on a free account.
  * With only one chat everything looks exactly as before.
  *
@@ -198,8 +197,6 @@ const LABEL = { working: 'Working', needs: 'Needs you', finished: 'Finished', id
 const COLOUR = { working: '#4da3ff', needs: '#f3736c', finished: '#46bb68', idle: '#8a8d91' };
 const tabs = mk('div', 'mc-tabs hidden'); tabs.id = 'mc-tabs';
 (document.getElementById('usage-panel') || document.querySelector('.header')).after(tabs);
-const pin = mk('div', 'mc-pin hidden'); pin.id = 'mc-pin';
-document.getElementById('chat-scroll').before(pin);
 const row = mk('div', 'mc-send hidden'); row.id = 'mc-send';
 document.querySelector('#input-form .composer').before(row);
 
@@ -255,23 +252,7 @@ function renderBars() {
     a.onclick = () => { S.only = null; renderBars(); };
     row.append(a);
   }
-  // pinned "needs your answer" line
-  pin.textContent = '';
-  const needs = on ? S.chatList.filter((c) => c.status === 'needs' && !(S.only === c.id)) : [];
-  pin.classList.toggle('hidden', !needs.length);
-  for (const c of needs) {
-    const p = mk('button', 'mc-pinrow'); p.type = 'button'; p.style.setProperty('--mc', c.hex || '#f3736c');
-    p.append(mk('i'), mk('span', null, `${label(c)} needs your answer`), mk('em', null, 'Tap to see it'));
-    p.onclick = () => {
-      setTarget(c.id);
-      if (S.only && S.only !== c.id) S.only = null;
-      renderBars();
-      const mine = [...messagesEl.querySelectorAll(':scope > [data-chat]')].filter((n) => n.dataset.chat === c.id);
-      const last = mine[mine.length - 1];
-      if (last) { last.scrollIntoView({ block: 'end', behavior: 'smooth' }); last.classList.add('flash'); setTimeout(() => last.classList.remove('flash'), 1700); }
-    };
-    pin.append(p);
-  }
+  // my78: the pinned "needs your answer" line was removed at Michael's request (the tab shows Needs you)
 }
 
 // An answer button (or any button) inside a colour box goes to that box's chat.

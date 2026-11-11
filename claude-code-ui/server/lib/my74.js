@@ -71,7 +71,7 @@ const WHATS_NEW = {
     { t: 'Up to three chats at once, all in one window', how: 'Tap the New chat icon (far right), then Open a 2nd chat or Open a 3rd chat. Each chat has its own colour box: Purple, Gold and Teal.', click: 'new-session-btn' },
     { t: 'Colour buttons above the typing box choose where your message goes', how: 'Tap a colour to send your next message to that chat. Tap it again to see only that chat. All shows every chat again.' },
     { t: 'Tabs under the top bar show each chat', how: 'Each tab shows the job name, Working (blue), Needs you (red) or Finished (green), its account and what it has used so far.' },
-    { t: 'A red line at the top when a chat needs your answer', how: 'Tap it to jump to that chat. The phone message also says which chat, in its colour.' },
+    { t: 'The phone message says which chat it is from', how: 'Its title starts with the chat name, for example Chat 2 (Gold), in that chat\'s colour.' },
     { t: 'Each chat keeps its own account', how: 'A new chat takes the account with the most allowance left. A finished chat folds into Previous chats after 30 minutes.' },
     { t: 'A grey chat on a free account', how: 'In the New chat list, Open a chat on a free account. No health, home security, money or passwords there: those stay in your Claude chats.' },
     { t: 'Clash guard', how: 'If a chat is about to change a file another chat changed in the last 10 minutes, it stops and asks you first.' },

@@ -53,34 +53,7 @@ function drawCtx() {
 }
 window.addEventListener('haai-ctx', drawCtx);
 
-// ── 2. Question pinned above the chat ────────────────────────────────────────
-const pin = mk('button', 'q-pin hidden');
-pin.type = 'button';
-document.getElementById('chat-scroll').before(pin);
-let pinTarget = null;
-pin.onclick = () => { if (pinTarget && pinTarget.isConnected) pinTarget.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
-function drawPin() {
-  const open = [...messagesEl.querySelectorAll('.bubble-assistant .answer-card:not([disabled])')];
-  if (!open.length) { pin.classList.add('hidden'); pinTarget = null; return; }
-  const content = open[open.length - 1].closest('.bubble-content');
-  const cards = [...content.querySelectorAll('.answer-card:not([disabled])')];
-  pinTarget = cards[0];
-  const qs = [...content.querySelectorAll('p')].filter((p) => /^Q\d+$/.test(p.firstElementChild?.tagName === 'STRONG' ? p.firstElementChild.textContent.trim() : ''));
-  let text = '';
-  if (qs.length > 1) text = `${qs.length} questions are waiting for you. Tap to see them`;
-  else {
-    for (let n = cards[0].previousElementSibling; n; n = n.previousElementSibling) {
-      const t = n.textContent.trim();
-      if (n.tagName === 'P' && t && !t.includes('⟦')) { text = t.replace(/^Q\d+\s*/, ''); break; }
-    }
-    text = (text || 'A question is waiting for you') + ' (tap to see it)';
-  }
-  pin.textContent = '❓ ' + text;
-  pin.classList.remove('hidden');
-}
-let pinTimer = null;
-new MutationObserver(() => { clearTimeout(pinTimer); pinTimer = setTimeout(drawPin, 200); })
-  .observe(messagesEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });
+// ── 2. (my78: the pinned question line was removed at Michael's request; the tab and answer buttons show it) ──
 
 // ── 3. Starred replies ───────────────────────────────────────────────────────
 let stars = [];
