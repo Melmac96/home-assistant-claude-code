@@ -24,6 +24,7 @@ import { renderSessions } from './sessions.js';
 import { setAutoContinueSupported } from './settings.js';
 import { hideThinking, showThinking } from './thinking.js';
 import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
+import { afterHistory } from './scrollmem.js';   // my73
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
@@ -186,6 +187,7 @@ export function handleServerMessage(msg) {
 
     case 'history':
       renderHistory(msg.items || []);
+      afterHistory(msg);   // my73: open where he left it, on any device
       S.isRunning = !!msg.running;
       if (S.isRunning) showThinking();
       // The task list itself follows right behind, in the same greeting burst

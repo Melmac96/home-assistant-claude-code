@@ -37,6 +37,8 @@ import { startQuiet, quietState, clearHeld } from './batch5.js';   // my49
 import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, startOvernight } from './batch4.js';   // my48
 import { takeScreenshot } from './screen.js';   // my47
 import { ideasList, ideasOp } from './ideas.js';   // my59
+import * as scrollmem from './scrollmem.js';   // my73
+const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -73,6 +75,7 @@ function greetFor(ws) {
   send(ws, { type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
   send(ws, {
     type: 'history',
+    ...withPos(runtime.activeSessionId),
     items: parseSession(runtime.activeSessionId),
     running: !!runtime.activeQuery,
     // The foreground turn is done but a background task it spawned (a
@@ -270,7 +273,7 @@ const handlers = {
     if (!slot) return;
     ws.chat = slot.id; view.last = slot.id; slot.finishedUnseen = false;
     inChat(slot, () => {
-      send(ws, { type: 'history', chat: slot.id, items: parseSession(slot.sessionId), running: !!slot.query, background: slot.bgTasks.size > 0 });
+      send(ws, { type: 'history', chat: slot.id, ...withPos(slot.sessionId), items: parseSession(slot.sessionId), running: !!slot.query, background: slot.bgTasks.size > 0 });
       send(ws, { type: 'session', chat: slot.id, id: slot.sessionId });
       for (const [id, d] of pendingDialogs) if (d.chat === slot.id) send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload, chat: d.chat });
       for (const [, e] of pendingPermissions) if (e.chat === slot.id) send(ws, { ...e.req, chat: slot.id });
@@ -301,6 +304,7 @@ const handlers = {
   async refresh_screens(ws) { send(ws, { type: 'refresh_result', ...(await extras.refreshScreens()) }); },
   async quota_get(ws, msg) { send(ws, { type: 'quota', ...(await extras.getQuota(!!msg.force)) }); },
   app_latest_get(ws) { send(ws, { type: 'app_latest', latest: extras.appLatest() }); },
+  scrollpos_set(_ws, msg) { scrollmem.setPos(msg); },   // my73
   waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
   waiting_done(_ws, msg) {
     handover.waitingDone(String(msg.id || ''));
@@ -322,7 +326,7 @@ const handlers = {
     autoContinue.clearLimitOffer('session-switch');
     runtime.activeSessionId = msg.id || null;
     saveActive();
-    broadcast({ type: 'history', items: parseSession(runtime.activeSessionId), running: false });
+    broadcast({ type: 'history', ...withPos(runtime.activeSessionId), items: parseSession(runtime.activeSessionId), running: false });
     broadcastSessions();
   },
 

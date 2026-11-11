@@ -13,6 +13,7 @@ import { runtime } from './state.js';
 import { broadcast, send } from './broadcast.js';
 import { parseSession, sessionFile, sessionTitle } from './sessions.js';
 import { modeState } from './accounts.js';
+import { SUPERVISOR_URL } from './config.js';   // my73
 
 const NOTES_DIR = '/config/opencode/handovers';
 const WAITING = '/config/opencode/waiting-for-you.json';
@@ -45,23 +46,57 @@ export function saveQuick(msg) {
   return q;
 }
 
-export function getWaiting() { const l = readJson(WAITING, []); return Array.isArray(l) ? l : []; }
+// my73 (Michael 2026-11-11, Q13 D): a check that can only be done after a date or an event is
+// kept OUT of the list until then. show_from = "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" (UK time);
+// after = an automation or entity id: shown once it has fired / changed after the line was added;
+// after = "flag:<name>": shown once /config/opencode/waiting-flags/<name> exists (e.g. energy_watch.py's gas warnings).
+export function getAllWaiting() { const l = readJson(WAITING, []); return Array.isArray(l) ? l : []; }
+const fired = {};   // id -> ms of the last firing / change, read from Home Assistant
+const addedMs = (w) => { const t = Date.parse(w.added_at || w.when || ''); return Number.isFinite(t) ? t : 0; };
+function isDue(w) {
+  if (w.show_from && ukNow().slice(0, 16) < String(w.show_from).slice(0, 16)) return false;
+  if (/^flag:[a-z0-9-]{1,60}$/.test(String(w.after || ''))) return existsSync(`/config/opencode/waiting-flags/${w.after.slice(5)}`);   // a tool wrote it when the thing happened
+  if (w.after) return (fired[w.after] || 0) > addedMs(w);
+  return true;
+}
+export function getWaiting() { return getAllWaiting().filter(isDue); }
+async function readFired() {
+  const ids = [...new Set(getAllWaiting().map((w) => w.after).filter((a) => /^[a-z_]+\.[a-z0-9_]+$/.test(String(a || ''))))];
+  for (const id of ids) {
+    try {
+      const r = await fetch(`${SUPERVISOR_URL}/core/api/states/${id}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` }, signal: AbortSignal.timeout(10000) });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const t = Date.parse(j.attributes?.last_triggered || j.last_changed || '');
+      if (Number.isFinite(t)) fired[id] = t;
+    } catch { /* try again next round */ }
+  }
+}
+let dueKey = null;
+async function dueRound() {
+  await readFired();
+  const key = getWaiting().map((w) => w.id).join(',');
+  if (dueKey !== null && key !== dueKey) broadcast({ type: 'waiting', list: getWaiting() });
+  dueKey = key;
+}
+setTimeout(() => { dueRound(); setInterval(dueRound, 5 * 60 * 1000); }, 20 * 1000);
 export function waitingDone(id) {
-  const l = getWaiting();
+  const l = getAllWaiting();
   const hit = l.find((w) => w.id === id);
   if (!hit) return;
   writeFileSync(WAITING, JSON.stringify(l.filter((w) => w.id !== id), null, 1));
   try { appendFileSync(WAITING_LOG, `${ukNow()} | confirmed by Michael | ${hit.text}\n`); } catch { /* the chat message records it too */ }
 }
 function addWaiting(texts, job) {
-  const l = getWaiting();
+  const l = getAllWaiting();
   const have = new Set(l.map((w) => w.text.toLowerCase()));
   const jobName = String(job || '').trim().slice(0, 40);
   for (const t of texts) {
-    const text = String(t || '').trim().slice(0, 140);
+    const text = String((t && typeof t === 'object' ? t.text : t) || '').trim().slice(0, 140);
     if (!text || have.has(text.toLowerCase())) continue;
     have.add(text.toLowerCase());
-    l.push({ id: randomBytes(4).toString('hex'), text, when: ukNow().slice(0, 10), ...(jobName ? { job: jobName } : {}) });
+    const from = t && typeof t === 'object' && /^\d{4}-\d\d-\d\d( \d\d:\d\d)?$/.test(String(t.show_from || '')) ? { show_from: String(t.show_from) } : {};   // my73
+    l.push({ id: randomBytes(4).toString('hex'), text, when: ukNow().slice(0, 10), ...from, ...(jobName ? { job: jobName } : {}) });
   }
   writeFileSync(WAITING, JSON.stringify(l, null, 1));
 }
@@ -90,7 +125,7 @@ const PROMPT = (title, text, waitingNow) => `Below is the end of a chat between 
 {"summary":"plain markdown: what the job is, what has been changed and where, what he decided, what is still to do, any question still waiting for his answer, anything not yet confirmed by him",
 "change_line":"one line for the change log describing changes actually made in this chat, or an empty string if none",
 "job":"2 to 4 plain words naming this job, e.g. Energy watch",
-"waiting":["short plain-English label for each thing Claude changed that Michael still has to test and has NOT confirmed, at most 8; empty if none. Leave out anything already on his waiting list below, even if it is worded differently"]}
+"waiting":["short plain-English label for each thing Claude changed that Michael still has to test and has NOT confirmed, at most 8; empty if none. Leave out anything already on his waiting list below, even if it is worded differently. If a check can only be done AFTER a future date or time (for example 'tomorrow morning', 'on 18 Nov'), write it as {"text":"label","show_from":"YYYY-MM-DD HH:MM"} with the UK time it can first be checked, so it stays hidden until then. Leave out checks that only make sense after an event that may never happen (a warning firing); the note can mention them"]}
 Only state what the chat shows. Never include passwords, keys or tokens.
 
 ALREADY ON HIS WAITING LIST (do not repeat these):
@@ -105,7 +140,7 @@ async function writeNotes(id, title, model, max) {
   let parsed = null;
   if (!modeState().free) {
     try {
-      const raw = await ask(PROMPT(title, text, getWaiting().map((w) => '- ' + w.text).join('\n')), model);
+      const raw = await ask(PROMPT(title, text, getAllWaiting().map((w) => '- ' + w.text + (isDue(w) ? '' : ' (hidden until it can be checked)')).join('\n')), model);
       const m = raw.match(/\{[\s\S]*\}/);
       parsed = m ? JSON.parse(m[0]) : { summary: raw };
     } catch (e) { log('WARN', `chat notes summary failed: ${e?.message || e}`); }
