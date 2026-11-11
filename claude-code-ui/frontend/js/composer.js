@@ -17,6 +17,7 @@ import { hideThinking, showThinking } from './thinking.js';
 import { openNewChat } from './quick.js';   // my28
 import { appendErrorBubble, appendInfoLine, appendUserBubble } from './transcript.js';
 import { joinKept, keepItems, keepSettled, updateKeepBtn } from './keep.js';   // my35
+import { queueOffline } from './my74.js';   // my74
 
 // ── Input form ─────────────────────────────────────────────────────────────
 
@@ -47,7 +48,16 @@ inputForm.onsubmit = async (e) => {
   const boxText = promptInput.value.trim();
   const text = joinKept(kept, boxText);
   const hasAtt = attachments.some((a) => useKeep || !a.cid);
-  if ((!text && !hasAtt && !kept.length) || !S.isConnected) return;
+  if (!text && !hasAtt && !kept.length) return;
+  if (!S.isConnected) {   // my74 H8: no connection: the words wait and go by themselves when haAi is back
+    if (hasAtt || kept.length || !text || text.startsWith('/')) { appendInfoLine('No connection. Photos and commands cannot wait, so nothing was sent. Press Send again when haAi is back.'); return; }
+    queueOffline(text);
+    promptInput.value = '';
+    localStorage.removeItem('draft');
+    resizeTextarea();
+    updateSendBtn();
+    return;
+  }
 
   // UI slash command? handle locally (only when there's no attachment).
   const ui = !hasAtt && !kept.length && UI_COMMANDS.find((c) => '/' + c.name === text);
@@ -169,7 +179,7 @@ export function updateSendBtn() {
     sendBtn.setAttribute('aria-label', 'Stop');
     sendBtn.classList.add('stop');
   } else {
-    sendBtn.disabled = (!promptInput.value.trim() && !attachments.length && !keepItems.length) || !S.isConnected;
+    sendBtn.disabled = (!promptInput.value.trim() && !attachments.length && !keepItems.length) || (!S.isConnected && !promptInput.value.trim());   // my74: words can wait offline
     sendBtn.innerHTML = SEND_ICON;
     sendBtn.setAttribute('aria-label', 'Send');
     sendBtn.classList.remove('stop');

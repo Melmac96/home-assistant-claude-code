@@ -8,12 +8,13 @@ import { S } from './state.js';
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { undoText } from './batch4.js';   // my48
+import { costKey, costText, saveJobText } from './my74.js';   // my74
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK)\|([^⟧\n]*)⟧/g;
+const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE)\|([^⟧\n]*)⟧/g;
 const STEP = /⟦STEP\|([^⟧\n]*)⟧[ \t]*\n?/;
-const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|STEP)[^⟧]*$/;
+const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|STEP)[^⟧]*$/;
 
 export function prepareCards(raw) {
   const m = raw.match(STEP);
@@ -48,9 +49,15 @@ export function buildCards(el) {
       const t1 = mk('div', 'h2-slim-t'); t1.append(mk('span', 'green', '✔ Finished, not confirmed yet'));
       if (f[1]) t1.append(document.createTextNode(' · ' + (/^\d+$/.test(f[1]) ? `${f[1]} file${f[1] === '1' ? '' : 's'}` : f[1])));
       c.append(t1);
+      const cs = mk('div', 'h2-slim-t h74-cost'); costText(cs, costKey(f)); c.append(cs);   // my74 H6: what the job cost (Look C), own small line
       if (f[0]) { const t2 = mk('div', 'h2-slim-t grey', f[0]); t2.onclick = () => t2.classList.toggle('open'); c.append(t2); }
       c.append(row(btn('✓ It works', 'g sm', () => sendText('It works. Confirmed.'), c), btn('✗ Not working', 'r sm', () => sendText('That is not working. Please look at it again.'), c),
-        btn('↩ Undo', 'sm', () => sendText(undoText(f[2])), c)));
+        btn('↩ Undo', 'sm', () => sendText(undoText(f[2])), c), btn('💾 Save as button', 'sm save', () => sendText(saveJobText(f[0])), c)));   // my74 H20
+    } else if (k === 'RULE') {   // my74 H4: which rule a reply broke, and the fix
+      c = card('bad', 'Broke a rule', 'red');
+      if (f[0]) { const l = mk('div', 'h2-line'); l.append(mk('b', '', `Rule: "${f[0]}"`)); c.append(l); }
+      line(c, f[1]); if (f[2]) line(c, 'Fix: ' + f[2]);
+      c.append(row(btn('Fix it', 'g', () => sendText('Yes, fix it as you suggested.'), c), btn('Not now', '', () => sendText('Not now, leave that rule fix.'), c)));
     } else if (k === 'ERR') {
       c = card('bad', 'Something went wrong', 'red');
       line(c, f[0]);

@@ -14,6 +14,7 @@ import { broadcast, send } from './broadcast.js';
 import { parseSession, sessionFile, sessionTitle } from './sessions.js';
 import { modeState } from './accounts.js';
 import { SUPERVISOR_URL } from './config.js';   // my73
+import { DEFAULT_QUICK } from './quick-default.js';   // my74
 
 const NOTES_DIR = '/config/opencode/handovers';
 const WAITING = '/config/opencode/waiting-for-you.json';
@@ -26,16 +27,6 @@ const TMP = '/tmp/haai-save';
 const readJson = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return d; } };
 const ukNow = () => new Date().toLocaleString('sv-SE', { timeZone: 'Europe/London' });
 
-const DEFAULT_QUICK = {
-  jobs: [
-    { label: 'Check notes', text: 'Check notes' },
-    { label: 'Full HA check', text: 'Full HA check' },
-    { label: 'Weekly checks', text: 'Do the weekly checks' },
-    { label: 'Overnight?', text: 'What happened overnight? Tell me only what needs me.' },
-    { label: 'Refresh screens', text: 'Refresh my screens' },
-  ],
-  replies: ['Yes please', 'Continue', 'Finished', 'All confirmed', 'It works, thank you', "Not right, here's a picture", 'Explain that more simply', 'Show the question again'],
-};
 export function getQuick() { return readJson(QUICK, DEFAULT_QUICK); }
 export function saveQuick(msg) {
   const clean = (s, n) => String(s || '').trim().slice(0, n);

@@ -25,6 +25,7 @@ import { setAutoContinueSupported } from './settings.js';
 import { hideThinking, showThinking } from './thinking.js';
 import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
 import { afterHistory } from './scrollmem.js';   // my73
+import { afterHistory74, onMy74Message } from './my74.js';   // my74
 
 // ── WebSocket ─────────────────────────────────────────────────────────────
 
@@ -188,6 +189,7 @@ export function handleServerMessage(msg) {
     case 'history':
       renderHistory(msg.items || []);
       afterHistory(msg);   // my73: open where he left it, on any device
+      afterHistory74();   // my74: What's new card, job costs, messages waiting to send
       S.isRunning = !!msg.running;
       if (S.isRunning) showThinking();
       // The task list itself follows right behind, in the same greeting burst
@@ -393,6 +395,10 @@ export function handleServerMessage(msg) {
 
     case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders': case 'brief': case 'screen_shot': case 'overnight': case 'quiet':   // my40, my45, my46 (brief was missing), my47, my48
       onExtrasMessage(msg);
+      break;
+
+    case 'jobcost': case 'whatsnew':   // my74
+      onMy74Message(msg);
       break;
 
     case 'home_health':   // my34

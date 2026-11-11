@@ -41,6 +41,7 @@ import { noteUsage } from './extras.js';   // my40
 import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
+import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
 // before the log says so, and how often it checks — only while a turn is
@@ -167,7 +168,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // model default applies.
   if (effort && EFFORT_LEVELS.has(effort)) opts.effort = effort;
 
-  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt(), batch2Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
+  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt(), batch2Prompt(), my74Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
   if (advice) opts.systemPrompt = { type: 'preset', preset: 'claude_code', append: advice };
 
   runtime.activePermMode = permissionMode || DEFAULT_PERMISSION_MODE;
@@ -393,6 +394,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           if (block.type === 'text' && block.text) {
             vlog(`text: ${block.text.length} chars`);
             broadcast({ type: 'text', text: block.text });
+            noteDoneText(event.session_id || runtime.activeSessionId, block.text);   // my74
           } else if (block.type === 'tool_use') {
             vlog(`tool_use: ${block.name}`);
             liveToolNames.set(block.id, block.name);
@@ -452,6 +454,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
         try { noteUsage(info.unifiedWindows); } catch {}   // my40: Accounts quota, account in use
+        try { noteJobUsage(event.session_id || runtime.activeSessionId, info.unifiedWindows); } catch {}   // my74: job cost
         if (info.status === 'rejected' && info.rateLimitType === 'five_hour' && info.resetsAt) {
           limitHit = { resetsAt: info.resetsAt, rateLimitType: info.rateLimitType };
           log('WARN', `usage limit reached (five_hour); resets at ${new Date(info.resetsAt * 1000).toISOString()}`);
@@ -484,6 +487,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           background: runtime.backgroundTasks.size > 0,
           more,
         });
+        try { finishTurn(event.session_id || runtime.activeSessionId); } catch {}   // my74: job cost onto its Finished box
         await reportContextUsage(q);
         if (more) {
           // Keep the run open for the added message. If the CLI already folded it into

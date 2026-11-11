@@ -22,6 +22,7 @@ import { onScreenShot } from './batch3.js';   // my47
 import { onOvernight } from './batch4.js';   // my48
 import { onIdeas } from './ideas.js';   // my59
 import { onQuiet } from './batch5.js';   // my49
+import { ruleButton } from './my74.js';   // my74
 
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -96,7 +97,7 @@ export function decorateStar(content) {
     const getRaw = () => stripMarks(content._rawMd || '');
     const top = speakerButton(getRaw); top.classList.add('read-top');
     const bottom = speakerButton(getRaw);
-    foot.append(bottom);
+    foot.append(ruleButton(getRaw), bottom);   // my74 H4: Broke a rule, left of the speaker and star
     bubble.append(foot);
     replyChips(bubble, content);   // my45
     bubble.prepend(top);

@@ -9,6 +9,17 @@ import { promptInput } from './dom.js';
 import { appendErrorBubble } from './transcript.js';
 
 export let keepItems = [];
+// my74 H7 (Look A): photos are always made smaller before they go; a small note says by how much (kept per photo on this device)
+const SHRINK = 'haai-shrunk';
+let shrunk = {}; try { shrunk = JSON.parse(localStorage.getItem(SHRINK) || '{}') || {}; } catch { shrunk = {}; }
+const mb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+function noteShrink(cid, before, dataUrl) {
+  const after = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 3 / 4);
+  if (!before || after >= before * 0.9) return;
+  shrunk[cid] = `Made smaller: ${mb(before)} to ${mb(after)}`;
+  const ks = Object.keys(shrunk); if (ks.length > 40) for (const k of ks.slice(0, ks.length - 40)) delete shrunk[k];
+  try { localStorage.setItem(SHRINK, JSON.stringify(shrunk)); } catch { /* full */ }
+}
 let pendingText = null;   // { cid, text }: stays in the typing box until haAi says it is saved
 
 const tray = document.getElementById('keep-tray');
@@ -68,6 +79,7 @@ function draw() {
       img.src = item.thumb;
       img.alt = item.name;
       body.append(img);
+      if (shrunk[item.cid]) body.append(el('span', 'h74-shrunk', shrunk[item.cid]));   // my74 H7
     } else {
       body.textContent = `📎 ${item.name}`;
     }
@@ -112,6 +124,7 @@ export async function flushKeep() {
     let name = a.name;
     if (a.isImage && /jpeg/.test(mediaType) && !/\.jpe?g$/i.test(name)) name = `${name.replace(/\.[^.]+$/, '')}.jpg`;
     const thumb = a.isImage ? await makeThumb(data) : '';
+    if (a.isImage) noteShrink(a.cid, a.file.size || 0, data);   // my74 H7
     wsSend({ type: 'keep_add', kind: 'file', cid: a.cid, name, mediaType, isImage: a.isImage, thumb, data });
   }
 }

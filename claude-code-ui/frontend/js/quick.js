@@ -73,6 +73,16 @@ let replyEditing = false;
 
 function drawReplies() {
   sheet.innerHTML = '';
+  // my74 H20 (Look A): saved jobs (and the other Quick jobs) also sit here, one tap sends the job
+  if (quick.jobs.length && !replyEditing) {
+    sheet.append(el('div', 'quick-head', 'Quick jobs'));
+    for (const j of quick.jobs) {
+      const b = el('button', 'quick-pill quick-job-pill', j.text.startsWith('Saved job:') ? '💾 ' + j.label : j.label);
+      b.type = 'button';
+      b.onclick = (e) => { e.stopPropagation(); sheet.classList.add('hidden'); sendText(j.text); };
+      sheet.append(b);
+    }
+  }
   sheet.append(el('div', 'quick-head', 'Quick replies'));
   // my40: Refresh screens acts straight away (no message to Claude); the answer shows on the pill.
   const rf = el('button', 'quick-pill quick-refresh', '⟳ Refresh screens');
