@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my75',
+  version: 'my76',
   items: [
+    { t: 'Phone: New chat is the far-right icon; Settings and Accounts are in the Menu', how: 'On the phone, tap the Menu button on the top bar, then Settings or Accounts. Both open across the whole screen.', click: 'tidy-menu-btn' },
     { t: 'Switching account picks the one with the most allowance left', how: 'When an account gets near its limit, haAi now offers (and at 90% moves to) whichever of your other accounts has the most left, not just the next one.' },
     { t: '"Broke a rule" button under every reply', how: 'Tap it when a reply breaks one of your rules. Claude finds the rule and suggests a fix.', flash: '.rule-btn' },
     { t: 'The Finished box shows what the job cost', how: 'The next Finished box says how much of your 5 hours that job used.', flash: '.h2-card.slim' },

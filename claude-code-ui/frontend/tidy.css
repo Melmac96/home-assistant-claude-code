@@ -120,3 +120,9 @@ html:not(.haai-tablet) #tidy-pin-btn{width:auto!important;min-width:40px}
 
 /* my69: New chat back on the PHONE top bar as the first icon of the right-hand group (user 2026-11-10) */
 html:not(.haai-tablet) #new-session-btn{order:-3}
+
+/* my76 (user 2026-11-11): PHONE top bar - New chat is the far-right icon; Accounts and Settings move into the Menu.
+   Settings and Accounts pages open across the full screen width on every screen size. */
+html:not(.haai-tablet) #new-session-btn{order:99}
+html:not(.haai-tablet) #settings-btn,html:not(.haai-tablet) #accounts-btn{display:none!important}
+.settings-panel{left:10px!important;right:10px!important;width:auto!important;min-width:0!important;max-width:none!important}
