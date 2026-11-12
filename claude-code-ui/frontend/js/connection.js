@@ -16,7 +16,7 @@ import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } fr
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
 import { closePermission, dropDialog, showPermissionPrompt, showUserDialog } from './dialogs.js';
-import { messagesEl } from './dom.js';   // my82
+import { messagesEl, promptInput } from './dom.js';   // my82, my85
 import { autoContinueToggle, loginBtn, loginCodeForm, loginCodeInput, loginDesc, loginScreen, loginTitle, loginUrlEl, loginUrlSect, loginWaiting, modelSelect, permModeSelect, sessionsPanel, wsUrl } from './dom.js';
 import { relinkRenderedBubbles } from './links.js';
 import { announcePresence, applyNotifyState, attentionCue, showNotifyTestResult } from './notify.js';
@@ -170,9 +170,29 @@ export function handleServerMessage(msg) {
   dispatch(msg, handleOne);   // my77: drawn for its own chat (all chats together in one window)
 }
 
+// my85: after a haAi update an open page only reconnected and kept running its OLD code (Michael did not see
+// the my84 progress box). On every (re)connect, ask for the page again; if it now points at a different
+// v/<fingerprint>/, reload as soon as nothing is running and the typing box is empty (checked every 5 s).
+const MY_VER = (import.meta.url.match(/\/v\/([0-9a-f]{10})\//) || [])[1];
+let newPageTimer = null;
+function checkNewPage() {
+  if (!MY_VER || newPageTimer) return;
+  fetch(location.pathname.replace(/[^/]*$/, ''), { cache: 'no-store' }).then(r => r.ok ? r.text() : '')
+    .then(html => {
+      if (!html || !/\bv\/[0-9a-f]{10}\//.test(html) || html.includes(`v/${MY_VER}/`)) return;
+      const tryReload = () => {
+        if (S.isRunning || promptInput.value.trim() || document.querySelector('.answer-own textarea:focus, textarea:focus')) return;
+        clearInterval(newPageTimer);
+        location.reload();
+      };
+      newPageTimer = setInterval(tryReload, 5000);
+      tryReload();
+    }).catch(() => {});
+}
+
 function handleOne(msg) {
   switch (msg.type) {
-    case 'connected': break;
+    case 'connected': checkNewPage(); break;   // my85
     case 'session':   break;
 
     case 'config':
