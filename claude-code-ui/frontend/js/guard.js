@@ -31,7 +31,7 @@ window.addEventListener('haai-accounts', (e) => {
   if (pendingAuto && em && em === pendingAuto.email) { toast(pendingAuto.text); pendingAuto = null; }
 });
 window.addEventListener('haai-usage', () => setTimeout(() => send({ type: 'quota_get' }), 2500));
-setInterval(() => { if (S.isConnected && !S.isRunning) send({ type: 'quota_get' }); }, 90000);
+setInterval(() => { if (S.isConnected && !S.isRunning && !document.hidden) send({ type: 'quota_get' }); }, 90000);   // my88: rests while not on screen
 setTimeout(() => send({ type: 'quota_get' }), 4000);
 
 // ── what we know ─────────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ inputForm.addEventListener('submit', (e) => {
 
 // ── automatic switch at 90% ──────────────────────────────────────────────────
 setInterval(() => {
-  if (!S.isConnected || S.isRunning || acc.free || !acc.cur || pendingAuto) return;
+  if (document.hidden || !S.isConnected || S.isRunning || acc.free || !acc.cur || pendingAuto) return;   // my88: rests while not on screen
   if (document.querySelector('.start-check') || Date.now() - lastAuto < 10 * 60000) return;
   const me = use(acc.cur.email);
   if (!me || me.max < AUTO) return;

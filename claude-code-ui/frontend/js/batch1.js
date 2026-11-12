@@ -188,7 +188,8 @@ bind('rest-min', 'rest-min', '40', false);
 bind('night-toggle', 'night-on', '0', true);
 bind('night-from', 'night-from', '22:00', false);
 bind('night-to', 'night-to', '07:00', false);
-setInterval(() => { checkRest(); checkNight(); }, 30000);
+setInterval(() => { if (document.hidden) return; checkRest(); checkNight(); }, 30000);   // my88: rests while haAi is not on screen
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNight(); });   // my88
 checkNight();
 
 export function onBatch1Message(msg) {

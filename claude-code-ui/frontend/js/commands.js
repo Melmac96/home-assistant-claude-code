@@ -137,6 +137,7 @@ export function completeFromMenu(i) {
 
 export function clearScreen() {
   messagesEl.innerHTML = '';
+  S.hist = null;   // my88: what is on screen no longer matches a saved chat
   toolCallEls.clear();
   S.lastAssistantBubble = null;
   S.currentToolGroup = null;

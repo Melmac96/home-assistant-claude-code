@@ -189,9 +189,17 @@ export function lineToItems(line, toolNames = new Map()) {
   return items;
 }
 
+// my88: the chat that was read last is kept in memory until its file changes (size or time), so a
+// reconnect, the watch and the chat list no longer read and parse the whole chat file again each time.
+// Callers only read the list; nobody may change it.
+const parseCache = new Map();   // id -> { key, items }
 export function parseSession(id) {
   const file = sessionFile(id);
   if (!id || !existsSync(file)) return [];
+  let key = '';
+  try { const st = statSync(file); key = `${st.size}:${st.mtimeMs}`; } catch { /* read it fresh */ }
+  const c = parseCache.get(id);
+  if (key && c && c.key === key) { parseCache.delete(id); parseCache.set(id, c); return c.items; }
   const items = [];
   const toolNames = new Map();
   for (const ln of readFileSync(file, 'utf8').split('\n')) {
@@ -199,7 +207,20 @@ export function parseSession(id) {
     let obj; try { obj = JSON.parse(ln); } catch { continue; }
     items.push(...lineToItems(obj, toolNames));
   }
+  if (key) {
+    parseCache.set(id, { key, items });
+    while (parseCache.size > 4) parseCache.delete(parseCache.keys().next().value);   // the 4 chats used last
+  }
   return items;
+}
+
+// my88: a short fingerprint of one history item, the same sum the page works out (connection.js itemSum),
+// so a page coming back can say "I have the first n items, the last one is this" and get only what is new.
+export function itemSum(it) {
+  const s = JSON.stringify(it ?? null);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
 }
 
 // my82: listing the chats read EVERY saved chat in full (613 MB, 2.5 s with the whole server standing

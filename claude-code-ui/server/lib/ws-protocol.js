@@ -13,7 +13,7 @@ import { connections, send, broadcast } from './broadcast.js';
 import {
   isAuthenticated, isSubscriptionAuth, startLoginFlow, loginUrl, loginProcess, stopLoginProc,
 } from './auth.js';
-import { listSessions, parseSession, deleteSession, saveActive, searchSessions } from './sessions.js';
+import { listSessions, parseSession, deleteSession, saveActive, searchSessions, itemSum } from './sessions.js';   // my88 itemSum
 import * as handover from './handover.js';   // my28
 import { pendingDialogs, answerDialog } from './dialogs.js';
 import { pendingPermissions, resolvePermission, resolvePromptsAllowedBy } from './permissions.js';
@@ -41,6 +41,21 @@ import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
+
+// my88: a page that is still open and only reconnects says what it already has (ws.have, from the address it
+// connects to: sid, n = how many items, h = fingerprint of the last one). If that still matches the chat file,
+// only the items after n are sent (delta), so nothing is read, sent or drawn twice. Anything that does not match
+// gets the whole chat, as before.
+function historyFor(ws, sid) {
+  const items = parseSession(sid);
+  const base = { type: 'history', ...withPos(sid), n: items.length, h: items.length ? itemSum(items[items.length - 1]) : '' };
+  const have = ws.have; ws.have = null;
+  if (have && sid && have.sid === sid && have.n > 0 && have.n <= items.length && itemSum(items[have.n - 1]) === have.h) {
+    return { ...base, delta: true, from: have.n, items: items.slice(have.n) };
+  }
+  return { ...base, items };
+}
+const sums = (items) => ({ n: items.length, h: items.length ? itemSum(items[items.length - 1]) : '' });   // my88
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
@@ -78,9 +93,7 @@ function greetFor(ws) {
   send(ws, { type: 'ha_links', entities: runtime.haLinks.entities, automations: runtime.haLinks.automations });
   send(ws, { type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
   send(ws, {
-    type: 'history',
-    ...withPos(runtime.activeSessionId),
-    items: parseSession(runtime.activeSessionId),
+    ...historyFor(ws, runtime.activeSessionId),   // my88: only what is new when the page already has the rest
     running: !!runtime.activeQuery,
     // The foreground turn is done but a background task it spawned (a
     // subagent, a backgrounded shell command) is still running — distinct from
@@ -341,7 +354,7 @@ const handlers = {
     if (!slot) return;
     ws.chat = slot.id; view.last = slot.id; slot.finishedUnseen = false;
     inChat(slot, () => {
-      send(ws, { type: 'history', chat: slot.id, ...withPos(slot.sessionId), items: parseSession(slot.sessionId), running: !!slot.query, background: slot.bgTasks.size > 0 });
+      send(ws, { type: 'history', chat: slot.id, ...withPos(slot.sessionId), ...(() => { const items = parseSession(slot.sessionId); return { items, ...sums(items) }; })(), running: !!slot.query, background: slot.bgTasks.size > 0 });
       send(ws, { type: 'session', chat: slot.id, id: slot.sessionId });
       for (const [id, d] of pendingDialogs) if (d.chat === slot.id) send(ws, { type: 'user_dialog', id, dialogKind: 'askUserQuestion', payload: d.payload, chat: d.chat });
       for (const [, e] of pendingPermissions) if (e.chat === slot.id) send(ws, { ...e.req, chat: slot.id });
@@ -399,7 +412,7 @@ const handlers = {
     autoContinue.clearLimitOffer('session-switch');
     runtime.activeSessionId = msg.id || null;
     saveActive();
-    broadcast({ type: 'history', ...withPos(runtime.activeSessionId), items: parseSession(runtime.activeSessionId), running: false });
+    broadcast({ type: 'history', ...withPos(runtime.activeSessionId), ...(() => { const items = parseSession(runtime.activeSessionId); return { items, ...sums(items) }; })(), running: false });
     broadcastSessions();
   },
 
@@ -470,18 +483,44 @@ const handlers = {
     broadcast({ type: 'notify_state', ...notifier.notifySettings });
   },
 
+  // my88: the page's heartbeat (every 30 s while on screen). The answer proves the link still works both ways.
+  ping(ws, msg) { send(ws, { type: 'pong', t: msg.t || 0 }); },
+
+  // my88: the page could not use a delta (it no longer had the start), so it asks for the whole chat once.
+  history_full(ws) {
+    send(ws, { ...historyFor(ws, runtime.activeSessionId), running: !!runtime.activeQuery, background: runtime.backgroundTasks.size > 0 });
+  },
+
   async test_notify(ws) {
     send(ws, { type: 'notify_test', ...(await notifier.sendTest()) });
   },
 };
 
 export function attach(wss) {
-  wss.on('connection', (ws) => {
+  // my88: heartbeat. Every 30 s each link is pinged; one that has not answered (or sent anything) for 3 rounds
+  // is a dead phone link and is closed, so the server stops sending to it.
+  setInterval(() => {
+    for (const ws of connections) {
+      if ((ws.misses || 0) >= 3) { try { ws.terminate(); } catch { /* gone */ } connections.delete(ws); continue; }
+      ws.misses = (ws.misses || 0) + 1;
+      try { ws.ping(); } catch { /* closed */ }
+    }
+  }, 30000).unref?.();
+  wss.on('connection', (ws, req) => {
     connections.add(ws);
+    // my88: what an open page already has (see historyFor)
+    try {
+      const q = new URL(req?.url || '/', 'http://x').searchParams;
+      const n = Number(q.get('n'));
+      if (q.get('sid') && Number.isInteger(n) && n > 0) ws.have = { sid: q.get('sid'), n, h: String(q.get('h') || '') };
+    } catch { ws.have = null; }
+    ws.misses = 0;
+    ws.on('pong', () => { ws.misses = 0; });
 
     greet(ws);
 
     ws.on('message', (raw) => {
+      ws.misses = 0;   // my88
       let msg;
       try { msg = JSON.parse(raw); } catch { return; }
       const handler = handlers[msg.type];

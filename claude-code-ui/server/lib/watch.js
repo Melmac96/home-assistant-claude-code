@@ -34,15 +34,24 @@ const strip = (s) => String(s || '')
   .replace(/\*\*/g, '').replace(/`/g, '').replace(/[ \t]+/g, ' ').trim();
 const idOf = (s) => crypto.createHash('sha1').update(String(s || '')).digest('hex').slice(0, 12);
 
-function newestText() {
-  const items = parseSession(runtime.activeSessionId);
+// my88: worked out once per change of the chat (parseSession keeps the same list until the chat file changes),
+// so the watch's checks no longer go through the whole chat every time.
+const memo = { items: null, full: null, short: null };
+function newestText(items) {
   for (let i = items.length - 1; i >= 0; i--) { if (items[i].kind === 'text') return items[i].text; }
   return '';
 }
 
 /** The newest assistant text of the current chat, as {reply, question, options}. */
 export function newestReply(full = false) {
-  const last = newestText();
+  const items = parseSession(runtime.activeSessionId);
+  if (memo.items !== items) { memo.items = items; memo.full = null; memo.short = null; }
+  const key = full ? 'full' : 'short';
+  if (!memo[key]) memo[key] = workOut(newestText(items), full);
+  return { ...memo[key], options: memo[key].options.map((o) => ({ ...o })) };
+}
+
+function workOut(last, full) {
   if (!last) return { reply: '', question: '', options: [], qid: '' };
   const q = /⟦QUESTION⟧([\s\S]*?)⟦\/QUESTION⟧/.exec(last);
   if (q) {
@@ -133,7 +142,7 @@ export function registerWatchRoutes(app, express) {
     res.json({ home: { status: h.status, count: h.count, temp: await houseTemp() }, quiet: isQuiet(), working: !!runtime.activeQuery, ...newestReply() });
   });
   app.get('/watch/reply', (_req, res) => {
-    const last = newestText();
+    const last = newestText(parseSession(runtime.activeSessionId));
     res.json({ id: idOf(last), working: !!runtime.activeQuery, quiet: isQuiet(), ...newestReply(true) });
   });
   app.post('/watch/answer', express.json({ limit: '1kb' }), (req, res) => {
@@ -148,7 +157,7 @@ export function registerWatchRoutes(app, express) {
     if (!text) return res.status(400).json({ ok: false });
     log('INFO', `my26: watch said ${text.length} chars`);
     runQuery({ readyState: 3 }, { text: '(Said on my watch, please answer short and plain, it may be read aloud) ' + text, permissionMode: 'default', add: true });
-    res.json({ ok: true, id: idOf(newestText()) });
+    res.json({ ok: true, id: idOf(newestText(parseSession(runtime.activeSessionId))) });
   });
   app.get('/watch/page/:name', async (req, res) => {
     try {

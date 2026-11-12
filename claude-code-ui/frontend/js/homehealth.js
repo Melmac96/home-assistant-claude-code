@@ -85,7 +85,8 @@ btn.addEventListener('click', () => {
   document.addEventListener('pointerdown', outside, true);
 });
 
-setInterval(draw, 30 * 1000);
+setInterval(() => { if (!document.hidden) draw(); }, 30 * 1000);   // my88: rests while haAi is not on screen
+document.addEventListener('visibilitychange', () => { if (!document.hidden) draw(); });   // my88
 
 export function onHomeHealth(msg) {
   data = msg;

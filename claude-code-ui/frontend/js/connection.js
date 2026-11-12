@@ -93,26 +93,46 @@ function scheduleReconnect() {
 export function connect() {
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (S.ws && (S.ws.readyState === WebSocket.OPEN || S.ws.readyState === WebSocket.CONNECTING)) return;
-  const ws = new WebSocket(wsUrl);
+  // my88: an open page says what it already has, so the server sends only what is new (one chat on screen only)
+  const h = S.hist;
+  const one = !messagesEl.classList.contains('mc-on') && !(S.chatList && S.chatList.length > 1);
+  const ws = new WebSocket(h && one && h.items.length ? `${wsUrl}?sid=${encodeURIComponent(h.sid)}&n=${h.items.length}&h=${encodeURIComponent(h.h || '')}` : wsUrl);
   S.ws = ws;
 
-  ws.onopen    = () => { if (S.ws !== ws) return; reconnectTries = 0; S.isConnected = true;  setStatus('connected'); announcePresence(); };
+  ws.onopen    = () => { if (S.ws !== ws) return; reconnectTries = 0; lastHeard = Date.now(); S.isConnected = true;  setStatus('connected'); announcePresence(); };
   ws.onclose   = () => { if (S.ws !== ws) return; S.isConnected = false; S.isRunning = false; setStatus('disconnected'); updateSendBtn(); scheduleReconnect(); };
   ws.onerror   = () => ws.close();
-  ws.onmessage = (e) => { if (S.ws === ws) handleServerMessage(JSON.parse(e.data)); };
+  ws.onmessage = (e) => { if (S.ws === ws) { lastHeard = Date.now(); handleServerMessage(JSON.parse(e.data)); } };
+}
+
+function replaceSocket() {
+  const old = S.ws;
+  S.ws = null;
+  try { old.onclose = null; old.onerror = null; old.onmessage = null; old.close(); } catch { /* ignore */ }
+  S.isConnected = false; setStatus('disconnected'); connect();
 }
 
 function pageBack() {
   const away = hiddenAt ? Date.now() - hiddenAt : 0;
   hiddenAt = 0;
   if (!S.ws || S.ws.readyState === WebSocket.CLOSED || S.ws.readyState === WebSocket.CLOSING) { connect(); return; }
-  if (S.ws.readyState === WebSocket.OPEN && away > 5000) {
-    const old = S.ws;
-    S.ws = null;
-    try { old.onclose = null; old.onerror = null; old.onmessage = null; old.close(); } catch { /* ignore */ }
-    S.isConnected = false; setStatus('disconnected'); connect();
-  }
+  if (S.ws.readyState === WebSocket.OPEN && away > 5000) replaceSocket();
 }
+
+// my88: the haAi phone app calls this when it comes back to the front, instead of reloading the whole page.
+window.haaiReconnect = (awayMs) => { hiddenAt = Date.now() - (Number(awayMs) || 10000); pageBack(); };
+
+// my88: heartbeat. Every 30 s while haAi is on screen the page asks the server for a sign of life. If nothing at
+// all has come back 10 s later, the link is dead (it can still look open after Wi-Fi changes), so it is replaced.
+let lastHeard = 0;
+setInterval(() => {
+  if (document.hidden || !S.ws || S.ws.readyState !== WebSocket.OPEN) return;
+  const asked = Date.now();
+  try { S.ws.send(JSON.stringify({ type: 'ping', t: asked })); } catch { /* replaced below */ }
+  setTimeout(() => {
+    if (!document.hidden && S.ws && S.ws.readyState === WebSocket.OPEN && lastHeard < asked) replaceSocket();
+  }, 10000);
+}, 30000);
 document.addEventListener('visibilitychange', () => { if (document.hidden) hiddenAt = Date.now(); else pageBack(); });
 window.addEventListener('pageshow', () => pageBack());
 window.addEventListener('online', () => pageBack());
@@ -258,8 +278,28 @@ function handleOne(msg) {
       if (!sessionsPanel.classList.contains('hidden')) renderSessions();
       break;
 
+    case 'pong': break;   // my88: heartbeat answer (lastHeard is set for every message)
+
     case 'history':
+      // my88: only what is new since the page last had the chat. Nothing new = the page stays exactly as it is.
+      if (msg.delta) {
+        const h = S.hist;
+        if (!h || h.sid !== msg.sid || h.items.length !== msg.from) {
+          if (S.ws && S.isConnected) S.ws.send(JSON.stringify({ type: 'history_full' }));
+          break;
+        }
+        if (!(msg.items || []).length) {
+          h.h = msg.h;
+          S.isRunning = !!msg.running;
+          if (S.isRunning) showThinking(); else hideThinking();
+          if (!msg.background) { S.backgroundTasks = []; refreshBgTasksStrip(); }
+          updateSendBtn();
+          break;
+        }
+        msg = { ...msg, items: h.items.concat(msg.items) };
+      }
       drawHistory(msg);   // my82: a long chat draws its newest part first
+      if (!msg.merge && msg.sid && Number.isInteger(msg.n) && (msg.items || []).length === msg.n) S.hist = { sid: msg.sid, items: msg.items, h: msg.h };   // my88
       afterHistory(msg);   // my73: open where he left it, on any device
       afterHistory74();   // my74: What's new card, job costs, messages waiting to send
       afterHistory79();   // my79: timed job cards, Checks for today card
