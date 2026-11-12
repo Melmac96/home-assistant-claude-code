@@ -98,9 +98,11 @@ export function buildCards(el) {
 // and (from the 5th STEP field) about how long is left; shows after 5 s of work even without a STEP marker.
 const strip = mk('div', 'h2-step hidden');
 const bars = mk('div', 'h2-bars'), sNow = mk('div', 'h2-now'), sLive = mk('div', 'h2-live'), sNext = mk('div', 'h2-next');
-strip.append(bars, sNow, sLive, sNext);
+const sEst = mk('div', 'h2-est');   // my86: Michael's wording, own line
+strip.append(bars, sNow, sLive, sEst, sNext);
 inputForm.before(strip);
 let stepData = null, stepTimer = null;
+let estKey = '', estAt = 0;   // my86
 export function stepFound(contentEl, fields) { contentEl.dataset.step = JSON.stringify(fields); scanSteps(); }
 function scanSteps() {
   clearTimeout(stepTimer);
@@ -109,6 +111,9 @@ function scanSteps() {
     const all = [...messagesEl.querySelectorAll('.bubble-user, .bubble-assistant .bubble-content[data-step]')];
     const last = all[all.length - 1];
     stepData = last && !last.classList.contains('bubble-user') ? JSON.parse(last.dataset.step) : null;
+    // my86: remember when this time-left guess first appeared, so it can count down
+    const key = stepData ? JSON.stringify(stepData) : '';
+    if (key !== estKey) { estKey = key; estAt = Date.now(); }
     drawStep();
   }, 150);
 }
@@ -129,6 +134,20 @@ function plainAction(t) {
     default: return String(t.name || '').startsWith('mcp__') ? 'Using a connected service' : String(t.name || '');
   }
 }
+// my86 (Michael 12 Nov): 'Estimated time before I'll need you', counting down from my guess in the 5th STEP field
+// ("about 3 min", "2-4 min", "30 sec"); text it cannot read is shown as written; no guess = 'working it out'.
+function estText(raw) {
+  const lead = "Estimated time before I'll need you: ";
+  const g = String(raw || '').replace(/\s*left\s*$/i, '').trim();
+  if (!g) return lead + 'working it out';
+  const m = g.match(/(\d+(?:\.\d+)?)(?:\s*(?:-|to)\s*(\d+(?:\.\d+)?))?\s*(h|hour|hours|hr|min|mins|minute|minutes|m|s|sec|secs|seconds)\b/i);
+  if (!m) return lead + g;
+  const u = m[3].toLowerCase(), per = u.startsWith('h') ? 3600 : u.startsWith('s') ? 1 : 60;
+  const secs = Number(m[2] || m[1]) * per - (Date.now() - estAt) / 1000;
+  if (secs <= 20) return lead + 'any moment now';
+  if (secs < 90) return lead + 'about 1 min';
+  return lead + `about ${Math.round(secs / 60)} min`;
+}
 const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; }
 function drawStep() {
@@ -139,9 +158,9 @@ function drawStep() {
   const took = Date.now() - runStart;
   if (!hasStep && took < 5000) { hideStrip(); return; }
   const act = plainAction(S.lastTool);
-  const left = hasStep && stepData[4] ? stepData[4].replace(/\s*left\s*$/i, '') + ' left' : '';
-  const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`, left].filter(Boolean).join(' · ');
-  const sig = JSON.stringify([hasStep ? stepData : null, live]);
+  const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`].filter(Boolean).join(' · ');
+  const est = estText(hasStep ? stepData[4] : '');
+  const sig = JSON.stringify([hasStep ? stepData : null, live, est]);
   if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
   stepDrawn = sig;
   strip.classList.remove('hidden');
@@ -152,6 +171,7 @@ function drawStep() {
   if (hasStep) sNow.append(mk('b', '', `Step ${n} of ${t}`), document.createTextNode(stepData[2] ? ` – ${stepData[2]}` : ''));
   else sNow.append(mk('b', '', 'Working'));
   sLive.textContent = live;
+  sEst.textContent = est;
   sNext.textContent = hasStep && stepData[3] ? `Next: ${stepData[3]}` : '';
 }
 setInterval(() => { if (!document.hidden) drawStep(); }, 1000);   // my84: every second, for the ticking time (was 2 s)

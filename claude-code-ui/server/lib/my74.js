@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my85',
+  version: 'my86',
   items: [
+    { t: 'Estimated time before I\'ll need you', how: 'The progress box above the typing box now has its own line saying how long until I will need you, and it counts down. If I have not given a guess yet it says working it out.' },
     { t: 'haAi shows its new screen by itself', how: 'After an update, haAi used to keep showing the old screen until you closed it fully. Now it loads the new screen by itself a few seconds after the update, as soon as I am not working and your typing box is empty.' },
     { t: 'A progress box while I work', how: 'Above the typing box you now see what I am doing this second, how long it has been, and on bigger jobs which step I am on and about how long is left (your Look A). It goes away when I finish.' },
     { t: 'Answers to the Claude app keep running', how: 'My automatic, read-only answers to the Claude app now start again by themselves whenever haAi restarts.' },
