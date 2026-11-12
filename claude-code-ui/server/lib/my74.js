@@ -66,8 +66,10 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my83',
+  version: 'my84',
   items: [
+    { t: 'A progress box while I work', how: 'Above the typing box you now see what I am doing this second, how long it has been, and on bigger jobs which step I am on and about how long is left (your Look A). It goes away when I finish.' },
+    { t: 'Answers to the Claude app keep running', how: 'My automatic, read-only answers to the Claude app now start again by themselves whenever haAi restarts.' },
     { t: 'Picking an account really moves the chat', how: 'When you choose an account in the Accounts menu, your next message now goes to that account. Before, an open chat stayed on the account it had, so every account seemed to be at 100%. A chat is also moved off an account that has used all its allowance when another account still has some left.' },
     { t: 'haAi is quicker', how: 'The chat list no longer reads every saved chat in full (it took about 2.5 seconds, and haAi stood still meanwhile). Long chats show their newest part first; scroll up and the rest appears where you are. The page is kept on your phone until the next update, and small checks rest while haAi is not on screen.' },
   ],

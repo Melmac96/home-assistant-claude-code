@@ -45,7 +45,7 @@ export function startBrief() { tick(); setInterval(tick, 60000).unref?.(); }
 export function batch2Prompt() {
   return [
     'CARDS (haAi): write these hidden marker lines on their own line; the page turns each into a card. No | and no ⟧ inside any field; keep every field one short plain line.',
-    'PROGRESS: while doing a job of 3 or more steps, put ⟦STEP|n|total|what is happening now|what comes next⟧ under your bold heading in each message you write between steps.',
+    'PROGRESS: while doing a job of 3 or more steps, put ⟦STEP|n|total|what is happening now|what comes next|about how long is left, e.g. about 3 min⟧ under your bold heading in each message you write between steps (the last field is your honest guess; leave it out if you cannot judge).',
     'FINISHED: when a job that changed something is done, end your reply with ⟦DONE|what changed|how many files|where the undo is⟧ (it shows It works / Not working buttons). Never call it fixed in words; he confirms with the button.',
     'ERROR: when a step fails, write ⟦ERR|likely cause in everyday words|technical detail⟧ instead of pasting error text.',
     'APPROVE: for a real choice that changes a setting write ⟦ASK|what you want to change|from|to|when or where⟧ (Yes / Not now buttons). Do not use it for things he already said yes to, and never as well as a lettered question for the same thing.',

@@ -94,35 +94,67 @@ export function buildCards(el) {
 }
 
 // ── 13. Job progress strip: only while Claude is working ─────────────────────
+// my84 (Michael's Look A, progress-looks.html): also a live line - what Claude is doing this second, time so far,
+// and (from the 5th STEP field) about how long is left; shows after 5 s of work even without a STEP marker.
 const strip = mk('div', 'h2-step hidden');
-const bars = mk('div', 'h2-bars'), sNow = mk('div', 'h2-now'), sNext = mk('div', 'h2-next');
-strip.append(bars, sNow, sNext);
+const bars = mk('div', 'h2-bars'), sNow = mk('div', 'h2-now'), sLive = mk('div', 'h2-live'), sNext = mk('div', 'h2-next');
+strip.append(bars, sNow, sLive, sNext);
 inputForm.before(strip);
 let stepData = null, stepTimer = null;
 export function stepFound(contentEl, fields) { contentEl.dataset.step = JSON.stringify(fields); scanSteps(); }
 function scanSteps() {
   clearTimeout(stepTimer);
   stepTimer = setTimeout(() => {
-    const all = [...messagesEl.querySelectorAll('.bubble-assistant .bubble-content[data-step]')];
-    stepData = all.length ? JSON.parse(all[all.length - 1].dataset.step) : null;
+    // my84: only a step written since Michael's last message counts (an old job's step is not this job's)
+    const all = [...messagesEl.querySelectorAll('.bubble-user, .bubble-assistant .bubble-content[data-step]')];
+    const last = all[all.length - 1];
+    stepData = last && !last.classList.contains('bubble-user') ? JSON.parse(last.dataset.step) : null;
     drawStep();
   }, 150);
 }
 let stepDrawn = '';   // my82: only redraw when the step changed
+let runStart = 0;   // my84
+function plainAction(t) {
+  if (!t || t.at < runStart) return '';
+  const i = t.input || {}, base = (p) => String(p || '').split('/').pop();
+  switch (t.name) {
+    case 'Bash': return i.description || 'Running a command';
+    case 'Read': return `Reading ${base(i.file_path)}`;
+    case 'Edit': case 'MultiEdit': case 'Write': case 'NotebookEdit': return `Changing ${base(i.file_path || i.notebook_path)}`;
+    case 'Grep': case 'Glob': return 'Searching the files';
+    case 'WebFetch': return 'Reading a web page';
+    case 'WebSearch': return 'Searching the web';
+    case 'Agent': case 'Task': return `Helper: ${i.description || 'working'}`;
+    case 'Skill': return `Loading my ${i.skill || ''} rules`;
+    default: return String(t.name || '').startsWith('mcp__') ? 'Using a connected service' : String(t.name || '');
+  }
+}
+const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; }
 function drawStep() {
+  if (!S.isRunning) { runStart = 0; hideStrip(); return; }
+  if (!runStart) runStart = Date.now();
   const n = Number(stepData && stepData[0]), t = Number(stepData && stepData[1]);
-  if (!stepData || !S.isRunning || !(t >= 2) || !(n >= 1)) { strip.classList.add('hidden'); stepDrawn = ''; return; }
-  const sig = JSON.stringify(stepData);
+  const hasStep = !!stepData && t >= 2 && n >= 1;
+  const took = Date.now() - runStart;
+  if (!hasStep && took < 5000) { hideStrip(); return; }
+  const act = plainAction(S.lastTool);
+  const left = hasStep && stepData[4] ? stepData[4].replace(/\s*left\s*$/i, '') + ' left' : '';
+  const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`, left].filter(Boolean).join(' · ');
+  const sig = JSON.stringify([hasStep ? stepData : null, live]);
   if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
   stepDrawn = sig;
   strip.classList.remove('hidden');
   bars.textContent = '';
-  for (let i = 1; i <= t && i <= 12; i++) bars.append(mk('i', i < n ? 'd' : i === n ? 'n' : ''));
+  bars.style.display = hasStep ? '' : 'none';
+  if (hasStep) for (let i = 1; i <= t && i <= 12; i++) bars.append(mk('i', i < n ? 'd' : i === n ? 'n' : ''));
   sNow.textContent = '';
-  sNow.append(mk('b', '', `Step ${n} of ${t}`), document.createTextNode(stepData[2] ? ` – ${stepData[2]}` : ''));
-  sNext.textContent = stepData[3] ? `Next: ${stepData[3]}` : '';
+  if (hasStep) sNow.append(mk('b', '', `Step ${n} of ${t}`), document.createTextNode(stepData[2] ? ` – ${stepData[2]}` : ''));
+  else sNow.append(mk('b', '', 'Working'));
+  sLive.textContent = live;
+  sNext.textContent = hasStep && stepData[3] ? `Next: ${stepData[3]}` : '';
 }
-setInterval(() => { if (!document.hidden) drawStep(); }, 2000);   // my82
+setInterval(() => { if (!document.hidden) drawStep(); }, 1000);   // my84: every second, for the ticking time (was 2 s)
 new MutationObserver(() => { scanSteps(); }).observe(messagesEl, { childList: true });
 
 // ── 20. Morning brief (my70, his Look E): ONE short grey line inside the chat, first open after waking;

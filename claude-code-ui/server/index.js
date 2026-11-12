@@ -28,7 +28,8 @@
  */
 import { createServer } from 'http';
 import { createHash } from 'crypto';   // my82
-import { readdirSync, readFileSync, statSync } from 'fs';   // my82
+import { readdirSync, readFileSync, statSync, existsSync } from 'fs';   // my82
+import { spawn } from 'child_process';   // my84
 import path from 'path';
 import express from 'express';
 import { WebSocketServer } from 'ws';
@@ -133,6 +134,16 @@ notifier.load();
 cleanupUploads();          // drop attachments older than a week
 refreshHaLinks();          // populate entity/automation link targets
 autoContinue.rearmOnBoot();
+
+// my84 (Michael 2026-11-12): keep the Claude Code mailbox running, so the Claude app's notes are answered
+// even after haAi restarts. The script exits at once if a copy is already running (its own pid file).
+const MAILBOX = '/config/opencode/tools/claude_mailbox.py';
+function keepMailbox() {
+  if (!existsSync(MAILBOX)) return;
+  try { spawn('python3', ['-I', MAILBOX], { detached: true, stdio: 'ignore' }).unref(); } catch (e) { console.log(`mailbox start failed: ${e?.message || e}`); }
+}
+setTimeout(keepMailbox, 20000);
+setInterval(keepMailbox, 5 * 60000);
 
 directServer.listen(deviceAuth.DIRECT_PORT, '0.0.0.0');
 server.listen(PORT, '0.0.0.0', () => {

@@ -300,6 +300,7 @@ function handleOne(msg) {
       hideThinking();
       S.lastAssistantBubble = null;
       appendToolUse(msg.id, msg.name, msg.input);
+      S.lastTool = { name: msg.name, input: msg.input || {}, at: Date.now() };   // my84 progress box
       break;
 
     case 'tool_result':

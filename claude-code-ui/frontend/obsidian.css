@@ -395,6 +395,7 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .h2-step.hidden,.h2-brief.hidden{display:none}
 .h2-bars{display:flex;gap:6px;margin-bottom:6px}.h2-bars i{flex:1;height:8px;border-radius:5px;background:#1c1d20}.h2-bars i.d{background:#46bb68}.h2-bars i.n{background:#4da3ff}
 .h2-next{color:#7d8087;font-size:13px}
+.h2-now b{color:#4da3ff}.h2-live{color:#9a9ca3;font-size:13px;margin:2px 0 1px;font-variant-numeric:tabular-nums}
 .night .h2-card,.night .h2-step{filter:brightness(.8)}
 
 /* ── my47: batch 3 ── */
