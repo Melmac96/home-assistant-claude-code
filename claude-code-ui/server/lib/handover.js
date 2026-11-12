@@ -126,7 +126,7 @@ CHAT:
 ${text}`;
 
 /** Writes the note. Returns { file, summarised }. */
-async function writeNotes(id, title, model, max) {
+export async function writeNotes(id, title, model, max) {
   const { text } = chatText(id, max);
   let parsed = null;
   if (!modeState().free) {

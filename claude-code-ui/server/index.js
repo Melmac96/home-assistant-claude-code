@@ -49,6 +49,7 @@ import { runQuery } from './lib/run-query.js';
 import * as autoContinue from './lib/auto-continue.js';
 import { setOvernightRunner } from './lib/batch4.js';   // my48
 import { setTimedRunner } from './lib/my79.js';   // my79
+import { startMy87 } from './lib/my87.js';   // my87
 import * as notifier from './lib/notify.js';
 import * as deviceAuth from './lib/device-auth.js';
 import { registerWatchRoutes } from './lib/watch.js';   // my50
@@ -126,6 +127,7 @@ attach(wss);
 autoContinue.setResumeRunner(runQuery);
 setOvernightRunner(runQuery);   // my48
 setTimedRunner(runQuery);   // my79 H17
+startMy87(runQuery);   // my87 next chat by itself
 
 sanitizeMcpState();
 loadActive();
