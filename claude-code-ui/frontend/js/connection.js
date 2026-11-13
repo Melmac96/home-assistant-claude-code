@@ -511,6 +511,10 @@ function handleOne(msg) {
       onExtrasMessage(msg);
       break;
 
+    case 'cycle_moved': case 'cycle_stop':   // my90
+      window.dispatchEvent(new CustomEvent('haai-cycle', { detail: msg }));
+      break;
+
     case 'jobcost': case 'whatsnew':   // my74
       onMy74Message(msg);
       break;

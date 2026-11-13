@@ -3,32 +3,28 @@
  *  1. Chat too long: if this chat plus one more reply would pass 150k tokens, a centre pop-up offers
  *     "Continue this in a new chat" (saves a note and opens the new chat) or "Do one more thing here"
  *     (lets exactly ONE more message through, then asks again).
- *  2. Allowance: at 75% of either the 5-hour or the weekly allowance on the Claude account in use, a centre
- *     pop-up offers switching to the other Claude account with the most allowance left (my75) (or carrying on for one more message).
- *  3. At 90% the switch happens by itself (only if the other account is under 75%), with a small bar saying so.
- * Figures come from the same per-account quota list the Accounts menu uses (live from Anthropic, about every minute).
+ *  2. my90 (Michael 2026-11-13): the 75% pop-up and the page's own 90% switch are GONE. The server now moves a chat
+ *     between the three accounts by itself (my90.js); this page only shows what happened: a small bar when a chat
+ *     moved account, and a centre pop-up with Carry on / Wait when every account is at 90% (main stops at 95%).
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
  */
 import { S } from './state.js';
 import { inputForm, promptInput } from './dom.js';
 
 const LIM = 150;          // thousand tokens
-const WARN = 75, AUTO = 90, OTHER_OK = 75;
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 let quota = {};
 let acc = { cur: null, saved: [], free: false };
-let passCtx = false, passQuota = false;
-let pendingAuto = null, lastAuto = 0, lastEmail = null;
+let passCtx = false, lastEmail = null;
 
 window.addEventListener('haai-quota', (e) => { quota = e.detail || {}; });
 window.addEventListener('haai-accounts', (e) => {
   acc = e.detail;
   const em = acc.cur && acc.cur.email;
-  if (lastEmail && em && em !== lastEmail) { passQuota = false; send({ type: 'quota_get', force: true }); }
+  if (lastEmail && em && em !== lastEmail) send({ type: 'quota_get', force: true });
   lastEmail = em || lastEmail;
-  if (pendingAuto && em && em === pendingAuto.email) { toast(pendingAuto.text); pendingAuto = null; }
 });
 window.addEventListener('haai-usage', () => setTimeout(() => send({ type: 'quota_get' }), 2500));
 setInterval(() => { if (S.isConnected && !S.isRunning && !document.hidden) send({ type: 'quota_get' }); }, 90000);   // my88: rests while not on screen
@@ -42,18 +38,6 @@ function use(email) {
   const f = winUse(q.five_hour), w = winUse(q.seven_day);
   return { f, w, max: Math.max(f, w), what: f >= w ? '5-hour' : '7-day' };
 }
-const nameOf = (a) => { const i = acc.saved.findIndex((x) => x.email === a.email); return `Claude Pro Account ${i + 1}`; };
-// my75 (Michael 2026-11-11): with more than one other account, pick the one with the MOST allowance left
-// (lowest of its 5-hour / weekly figures, then lowest weekly), not just the next in the list. Accounts with no
-// figures yet are only used when none of the others has any.
-const otherAcc = () => {
-  const others = acc.saved.filter((a) => !a.active && a.email !== (acc.cur && acc.cur.email));
-  const known = others.map((a) => ({ a, u: use(a.email) })).filter((x) => x.u);
-  if (!known.length) return others[0];
-  known.sort((x, y) => (x.u.max - y.u.max) || (x.u.w - y.u.w));
-  return known[0].a;
-};
-
 // ── pop-up and bar ───────────────────────────────────────────────────────────
 function pop(title, text, buttons) {
   const ov = mk('div', 'start-check guard-pop'); ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
@@ -92,38 +76,21 @@ inputForm.addEventListener('submit', (e) => {
     return;
   }
   passCtx = false;
-
-  const me = acc.cur && use(acc.cur.email);
-  if (me && me.max >= WARN) {
-    if (passQuota) { passQuota = false; return; }
-    block();
-    const other = otherAcc(), ou = other && use(other.email);
-    const title = `You've used ${me.max}% of your ${me.what} allowance`;
-    if (other && ou && ou.max < OTHER_OK) {
-      pop(title, `This is ${nameOf({ email: acc.cur.email })}. You should switch to ${nameOf(other)} (${ou.max}% used) before continuing. Your message is kept in the box.`, [
-        [`Switch to ${nameOf(other)}`, 'sc-switch', () => send({ type: 'account_switch', id: other.id })],
-        ['Carry on with this account', 'sc-stay', () => { passQuota = true; }],
-      ]);
-    } else {
-      pop(title, other ? (ou ? `Your best other account is also fairly used (${ou.max}%), so switching would not help right now.` : 'I do not have figures for your other account yet, so I cannot say if switching would help.') : 'There is no other saved account to switch to.', [
-        ['Carry on with this account', 'sc-switch', () => { passQuota = true; }],
-      ]);
-    }
-    return;
-  }
-  passQuota = false;
 }, true);
 
-// ── automatic switch at 90% ──────────────────────────────────────────────────
-setInterval(() => {
-  if (document.hidden || !S.isConnected || S.isRunning || acc.free || !acc.cur || pendingAuto) return;   // my88: rests while not on screen
-  if (document.querySelector('.start-check') || Date.now() - lastAuto < 10 * 60000) return;
-  const me = use(acc.cur.email);
-  if (!me || me.max < AUTO) return;
-  const other = otherAcc(), ou = other && use(other.email);
-  if (!other || !ou || ou.max >= OTHER_OK) return;
-  lastAuto = Date.now();
-  pendingAuto = { email: other.email, text: `haAi has automatically switched to ${nameOf(other)} for you, as you have hit ${me.max}% of your ${me.what} allowance on the account you were using.` };
-  send({ type: 'account_switch', id: other.id });
-  setTimeout(() => { pendingAuto = null; }, 15000);
-}, 5000);
+// ── my90: what the server did with the accounts ──────────────────────────────
+const nameByEmail = (email) => { const i = acc.saved.findIndex((x) => x.email === email); return i >= 0 ? `Claude Pro Account ${i + 1}` : 'another account'; };
+window.addEventListener('haai-cycle', (e) => {
+  const m = e.detail || {};
+  if (m.type === 'cycle_moved') {
+    toast(m.used ? `Your account reached ${m.used}% of its 5 hours, so haAi moved this chat to ${nameByEmail(m.to)} and carried on by itself.`
+      : `haAi is using ${nameByEmail(m.to)} now, as its 5 hours run out soonest.`);
+    send({ type: 'quota_get', force: true });
+  } else if (m.type === 'cycle_stop') {
+    if (document.querySelector('.guard-pop')) return;
+    pop('haAi has stopped', `${m.text || 'All your Claude accounts are at their limit.'} Carry on uses the accounts past 90%, but your main account still stops at 95%.`, [
+      ['Carry on', 'sc-switch', () => send({ type: 'cycle_carry_on', on: true })],
+      ['Wait', 'sc-stay', () => send({ type: 'cycle_carry_on', on: false })],
+    ]);
+  }
+});

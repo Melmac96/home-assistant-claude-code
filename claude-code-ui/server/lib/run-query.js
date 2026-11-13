@@ -42,6 +42,8 @@ import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
+import { checkRun, recordUsage } from './my90.js';   // my90
+import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my87Prompt } from './my87.js';   // my87
 
@@ -194,6 +196,16 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     const others = runningChats().filter((x) => x !== slot && x.account && !x.free);
     const alone = ![...chats.values()].some((x) => x !== slot && !x.free && (x.query || x.sessionId || x.opened));
     acct = pickChatAccount(others.map((x) => x.account), slot, alone);
+    // my90: every account is at its limit - stop and tell him (Carry on / Wait on the page).
+    if (acct.stop) {
+      log('WARN', `my90: not starting chat ${slot.id}: ${acct.stop}`);
+      if (runtime.activeQuery === abortController) runtime.activeQuery = null;
+      broadcast({ type: 'cycle_stop', text: acct.stop, chat: slot.id });
+      notify('stopped', { title: 'haAi stopped: accounts used up', message: acct.stop.slice(0, 200) });
+      chatHooks.changed();
+      return;
+    }
+    if (acct.moved) { broadcast({ type: 'accounts', ...listAccounts() }); broadcast({ type: 'cycle_moved', to: acct.email }); }
   }
   slot.account = acct.email;
   if (acct.free) slot.service = freeServiceText(acct.provider, acct.model);   // my78: named in its typing box
@@ -501,6 +513,18 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
         try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch {}   // my77: cost so far on the chat's tab (before the store moves on)
         try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch {}   // my40: Accounts quota, account in use; my77: this chat's own account
+        // my90: at 90% of its 5 hours (main: 95% after Carry on) stop this reply now and carry on with the next account,
+        // or stop altogether when every account is at its limit.
+        try {
+          const fw = info.unifiedWindows && info.unifiedWindows.five_hour;
+          if (!acct.free && fw && fw.utilization != null && !slot.cycleMove && !slot.cycleStop) {
+            const used = fw.utilization <= 1 ? fw.utilization * 100 : Number(fw.utilization);
+            const busy = new Set(runningChats().filter((x) => x !== slot && x.account && !x.free).map((x) => x.account));
+            const r = checkRun(acct.email, used, listAccounts().saved, busy);
+            if (r && r.move) { slot.cycleMove = { from: acct.email, to: r.move.email, used: Math.round(used) }; log('WARN', `my90: ${acct.email} at ${Math.round(used)}% - stopping this reply, carrying on with ${r.move.email}`); abortController.abort(); }
+            else if (r && r.stop) { slot.cycleStop = r.stop; log('WARN', `my90: ${r.stop}`); abortController.abort(); }
+          }
+        } catch (e) { log('WARN', `my90: check failed: ${e?.message || e}`); }
         try { noteJobUsage(event.session_id || runtime.activeSessionId, info.unifiedWindows); } catch {}   // my74: job cost
         if (info.status === 'rejected' && info.rateLimitType === 'five_hour' && info.resetsAt) {
           limitHit = { resetsAt: info.resetsAt, rateLimitType: info.rateLimitType };
@@ -618,6 +642,20 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     // linkable in the reply that announces it.
     refreshHaLinks().then(() =>
       broadcast({ type: 'ha_links', entities: runtime.haLinks.entities, automations: runtime.haLinks.automations }));
+
+    // my90: the account reached its limit mid-reply - carry on in this same chat with the next account, or say why it stopped.
+    if (slot.cycleMove) {
+      const mv = slot.cycleMove; slot.cycleMove = null;
+      broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });
+      setTimeout(() => inChat(slot, () => runQuery({ readyState: 3 }, {
+        text: `(haAi: the account in use reached ${mv.used}% of its 5 hours, so haAi stopped your last reply part-way and moved this chat to another Claude account. Carry on with the same job exactly where you stopped. First check whether the last step finished, and redo it only if it did not.)`,
+        permissionMode: permissionMode || DEFAULT_PERMISSION_MODE, model, effort,
+      })), 2000);
+    } else if (slot.cycleStop) {
+      const text = slot.cycleStop; slot.cycleStop = null;
+      broadcast({ type: 'cycle_stop', text, chat: slot.id });
+      notify('stopped', { title: 'haAi stopped: accounts used up', message: text.slice(0, 200) });
+    }
 
     if (limitHit && !abortController.signal.aborted) {
       notify('stopped', { title: 'Claude hit the usage limit', message: 'The 5-hour limit was reached.' });

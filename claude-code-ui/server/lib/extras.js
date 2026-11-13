@@ -14,6 +14,7 @@ import path from 'path';
 import { CLAUDE_CONFIG_DIR, DATA_DIR, SUPERVISOR_URL } from './config.js';
 import { currentIdentity } from './accounts.js';
 import { log } from './log.js';
+import { recordUsage, forecasts, cycleState } from './my90.js';   // my90
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const writeJson = (p, v) => { mkdirSync(path.dirname(p), { recursive: true }); writeFileSync(p + '.tmp', JSON.stringify(v)); renameSync(p + '.tmp', p); };
@@ -79,7 +80,7 @@ async function fetchUsage(token) {
 
 export async function getQuota(force = false) {
   const store = readJson(QUOTA) || {};
-  if (!force && Date.now() - lastFetch < CACHE_MS) return { accounts: store };
+  if (!force && Date.now() - lastFetch < CACHE_MS) return withForecast(store);
   lastFetch = Date.now();
   const cur = currentIdentity();
   let files = [];
@@ -100,6 +101,7 @@ export async function getQuota(force = false) {
     if (!force && restUntil[key] > Date.now()) { if (store[key]) store[key].live = false; continue; }
     try {
       store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
+      recordUsage(key, store[key].five_hour, store[key].seven_day);   // my90
       delete restUntil[key];
     } catch (e) {
       if (e?.status === 429) restUntil[key] = Date.now() + BACKOFF_MS;
@@ -108,7 +110,15 @@ export async function getQuota(force = false) {
     }
   }
   try { writeJson(QUOTA, store); } catch (e) { log('WARN', `quota save failed: ${e?.message || e}`); }
-  return { accounts: store };
+  return withForecast(store);
+}
+
+/** my90: the weekly forecast sentence for each account, and the cycle state (Carry on / stopped), go out with the figures. */
+function withForecast(store) {
+  const f = forecasts(), st = cycleState();
+  const accounts = {};
+  for (const [k, v] of Object.entries(store)) accounts[k] = { ...v, forecast: f[k] || null };
+  return { accounts, cycle: { carryOn: !!st.carryOn, stopped: st.stopped || null } };
 }
 
 /** The account in use: a usage update from the chat itself also counts as "seen". */
@@ -120,6 +130,7 @@ export function noteUsage(unified, email = null) {
   const key = cur.email.toLowerCase();
   store[key] = { five_hour: w(unified.five_hour) || store[key]?.five_hour || null, seven_day: w(unified.seven_day) || store[key]?.seven_day || null, at: Date.now(), live: true };
   try { writeJson(QUOTA, store); } catch { /* not important */ }
+  recordUsage(key, store[key].five_hour, store[key].seven_day);   // my90
 }
 
 // ── haAi phone app: newest published version ────────────────────────────────

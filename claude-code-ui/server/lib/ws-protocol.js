@@ -5,6 +5,7 @@
  * The inbound half is a dispatch table rather than a chain of `else if`s, so the
  * set of messages the client may send is a list you can read.
  */
+import { setManual, setCarryOn } from './my90.js';   // my90
 import { readFileSync } from 'fs';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
 import { log } from './log.js';
@@ -214,8 +215,15 @@ const handlers = {
     // my83 (Michael 2026-11-11): the account he picks is the one the next message uses. Without this a chat kept the
     // account it had before (my77 'keep its own account') and every switch went on hitting the old account's limit.
     if (r.ok) for (const s of chats.values()) if (!s.free) s.account = null;
+    if (r.ok) { const a = listAccounts().saved.find((x) => x.id === msg.id); setManual(a ? a.email : null); }   // my90: his pick goes first while under its limit
     send(ws, { type: 'account_result', ...r });
     broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
+  // my90: after "all accounts at 90%" he picks Carry on (main still stops at 95%) or Wait.
+  cycle_carry_on(_ws, msg) {
+    setCarryOn(!!msg.on);
+    extras.getQuota(false).then((q) => broadcast({ type: 'quota', ...q }));
   },
 
   // my17: pick another FREE model; applies to the very next message of this same chat (no new chat needed).

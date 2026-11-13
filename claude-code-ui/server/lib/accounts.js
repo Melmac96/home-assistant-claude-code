@@ -12,6 +12,7 @@ import path from 'path';
 import { spawnSync, execFile } from 'child_process';
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
+import { chooseAccount, cycleState, tidyState, SWITCH_AT } from './my90.js';   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
@@ -171,29 +172,10 @@ export function useProvider(id) {
 const CHAT_CFG = path.join(DATA_DIR, 'chat-config');
 const NOT_LINKED = new Set(['.credentials.json', '.claude.json', 'sessions', 'session-env', 'shell-snapshots', 'backups', 'cache', '.last-cleanup']);
 
-/** my77: how much of an account's allowance is used (higher of 5-hour and weekly), or null with no figures. */
-function useOf(email) {
-  const q = readJson(path.join(DATA_DIR, 'haai-quota.json')) || {};
-  const r = q[String(email || '').toLowerCase()];
-  if (!r) return null;
-  const a = r.five_hour?.used, b = r.seven_day?.used;
-  if (a == null && b == null) return null;
-  return { max: Math.max(a || 0, b || 0), week: b || 0 };
-}
-
-/** my83: has this account used ALL of its 5-hour or weekly allowance (a figure whose reset time has passed does not count)? */
-function isFull(email) {
-  const q = readJson(path.join(DATA_DIR, 'haai-quota.json')) || {};
-  const r = q[String(email || '').toLowerCase()];
-  if (!r) return false;
-  const now = Date.now() / 1000;
-  return ['five_hour', 'seven_day'].some((k) => r[k] && r[k].used >= 100 && !(r[k].resetsAt && r[k].resetsAt <= now));
-}
-
 /**
  * Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in.
- * my77 (Michael 2026-11-11): each chat KEEPS its own account while no other working chat is using it; a chat opened
- * alongside others takes the not-busy account with the MOST allowance left (accounts with no figures only when none has any).
+ * my90 (Michael 2026-11-13, replaces my77/my83): the not-busy account whose 5 hours reset soonest, under 90%
+ * (main under 95% after Carry on); see my90.js. `stop` is set when every account is at its limit.
  */
 export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   const cur = currentIdentity();
@@ -205,22 +187,17 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
     try { return { email: a.email, dir: prepareChatDir(a.id) }; }
     catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
   };
-  // Keep the account this chat already had, if nobody else is on it now.
-  // my83: ...but never one that has used all its allowance while another free account still has some left.
-  const spare = (email) => saved.some((a) => a.email !== email && !used.has(a.email) && !isFull(a.email));
-  if (slot && slot.account) {
-    const mine = saved.find((a) => a.email === slot.account);
-    if (mine && !used.has(mine.email) && !(isFull(mine.email) && spare(mine.email))) return as(mine);
+  if (saved.length < 2) return { email: cur.email, dir: null };
+  // my90 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on at 90%; every one at its limit = stop.
+  tidyState(saved);
+  const pick = chooseAccount(saved, used) || chooseAccount(saved);
+  if (!pick) return { email: cur.email, dir: null, stop: cycleState().stopped?.text || `All your Claude accounts have used ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.` };
+  // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
+  if (alone && !used.size && pick.email !== cur.email) {
+    const r = switchTo(pick.id);
+    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (5 hours reset soonest / under ${SWITCH_AT}%)`); return { email: pick.email, dir: null, moved: true }; }
   }
-  // The only chat (or no other saved accounts): the main sign-in, as before (my83: unless it is full and another is not).
-  if (saved.length < 2 || (alone && !used.size && !(isFull(cur.email) && spare(cur.email)))) return { email: cur.email, dir: null };
-  const open = saved.filter((a) => !used.has(a.email));
-  if (!open.length) return { email: cur.email, dir: null };   // every saved account is busy: share
-  const notFull = open.filter((a) => !isFull(a.email));   // my83: full accounts only when every free one is full
-  const ranked = (notFull.length ? notFull : open).map((a) => ({ a, u: useOf(a.email) }));
-  const withFig = ranked.filter((r) => r.u);
-  const pool = withFig.length ? withFig.sort((x, y) => x.u.max - y.u.max || x.u.week - y.u.week) : ranked;
-  return as(pool[0].a);
+  return as(pick);
 }
 
 // ── my77: a chat on a FREE account (grey) ───────────────────────────────────

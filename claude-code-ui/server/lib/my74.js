@@ -66,8 +66,10 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my88',
+  version: 'my90',
   items: [
+    { t: 'Your three accounts take turns by themselves', how: 'haAi uses the Claude account whose 5 hours run out soonest. When it reaches 90%, the chat moves to the next soonest account and carries on by itself, then to the last one. If all three reach 90% before the first has reset, haAi stops and asks: Carry on or Wait. Your main account never goes past 95%. The 75% pop-up is gone.' },
+    { t: 'A weekly forecast for each account', how: 'Open Accounts: under each account there is now a line like "at your current rate you will use up this week\'s allowance by Thursday at 5pm". It needs about half a day of readings first, and gets better after 2 to 3 days.' },
     { t: 'haAi comes back faster', how: 'When you go back to haAi it keeps the page you had and only fetches the messages that are new, instead of loading the whole chat again. Your place in the chat stays where it was.' },
     { t: 'A quiet check that the link is alive', how: 'Every 30 seconds while haAi is on screen it checks the link to the server. If the link has gone dead (for example after Wi-Fi changes), it makes a new one by itself.' },
     { t: 'Less work in the background', how: 'The server keeps the open chat in memory until it changes, so the watch and the chat list answer faster. A few more small checks now rest while haAi is not on screen.' },

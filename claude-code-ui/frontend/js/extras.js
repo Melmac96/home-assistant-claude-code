@@ -248,6 +248,7 @@ function drawQuota() {
         box.append(line, bar, mk('div', 'aq-sub', over ? 'Has reset since these figures were seen' : reset ? `Resets ${whenText(reset)} (UK time)` : ''));
       }
       if (!q.live && q.at) box.append(mk('div', 'aq-note', `Last seen ${whenText(q.at)} (UK time). Live figures show again once this account is used.`));
+      if (q.forecast) box.append(mk('div', 'aq-note aq-forecast', q.forecast));   // my90: weekly forecast
     }
     row.append(box);
   }
