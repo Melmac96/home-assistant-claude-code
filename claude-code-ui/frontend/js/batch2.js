@@ -107,8 +107,10 @@ const bar = mk('button', 'h6-bar hidden'); bar.type = 'button';
 const bDot = mk('span', 'h6-dot'), bStep = mk('b', ''), bNow = mk('span', 'h6-t'), bEst = mk('span', 'h6-e'), bMore = mk('span', 'h6-o');
 bar.append(bDot, bStep, bNow, bEst, bMore);
 strip.before(bar);
-S.boxOpen = localStorage.getItem('haai-box-open') === '1';
-bar.onclick = () => { S.boxOpen = !S.boxOpen; localStorage.setItem('haai-box-open', S.boxOpen ? '1' : '0'); const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
+// my92 (Michael 13 Nov: the boxes took too much room all the time): the full box always starts folded, a tap opens it
+// for THIS job only, and it folds itself again when the job ends. The open state is no longer remembered.
+S.boxOpen = false; localStorage.removeItem('haai-box-open');
+bar.onclick = () => { S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
 function drawBar(show, hasStep, n, t, now, est, took) {
   const add = addedCount();
   if (!show && !add) { bar.classList.add('hidden'); return; }
@@ -169,7 +171,10 @@ function estText(raw) {
 }
 const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; drawBar(false, false, 0, 0, '', '', 0); }
+let wasRunning = false;   // my92: fold the box again once a job has ended
+function foldIfEnded() { if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
 function drawStep() {
+  foldIfEnded();
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }
   if (!runStart) runStart = Date.now();
   const n = Number(stepData && stepData[0]), t = Number(stepData && stepData[1]);
