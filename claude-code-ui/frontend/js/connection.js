@@ -28,6 +28,7 @@ import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendE
 import { afterHistory, endsAtBottom } from './scrollmem.js';   // my73, my82
 import { afterHistory74, onMy74Message } from './my74.js';   // my74
 import { afterHistory79, onMy79Message } from './my79.js';   // my79
+import { onMy93Message } from './my93.js';   // my93
 
 // ── my82: long chats ─────────────────────────────────────────────────────
 // A long chat first draws only its newest part (about the last 120 items, starting at one of his
@@ -521,6 +522,10 @@ function handleOne(msg) {
 
     case 'timed': case 'dated_checks': case 'draft':   // my79
       onMy79Message(msg);
+      break;
+
+    case 'now_tv': case 'messages_list': case 'messages_new':   // my93
+      onMy93Message(msg);
       break;
 
     case 'home_health':   // my34

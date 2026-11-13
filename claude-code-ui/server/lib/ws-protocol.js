@@ -40,6 +40,7 @@ import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, start
 import { takeScreenshot } from './screen.js';   // my47
 import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
+import { startMy93, getMessages, getNowTv } from './my93.js';   // my93
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
@@ -66,6 +67,7 @@ startMy74();   // my74
 startOvernight();   // my48
 startQuiet();   // my49
 startMy79();   // my79
+startMy93();   // my93
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
@@ -121,6 +123,7 @@ function greetFor(ws) {
   send(ws, { type: 'overnight', ...listOvernight() });   // my48
   send(ws, { type: 'timed', list: listTimed() });   // my79 H17
   send(ws, { type: 'dated_checks', list: getDatedChecks() });   // my79 H10
+  send(ws, { type: 'now_tv', ...getNowTv() });   // my93 H19
   { const d = getDraft(); if (d) send(ws, { type: 'draft', ...d }); }   // my79 H9
   send(ws, { type: 'quiet', ...quietState() });   // my49
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
@@ -373,6 +376,7 @@ const handlers = {
   // my28: quick jobs and replies, Waiting for you, search, Continue this job
   whatsnew_seen(_ws) { whatsNewSeen(); },   // my74
   rule_broken(_ws, msg) { ruleBroken(msg.text); },   // my74
+  messages_get(ws) { send(ws, { type: 'messages_list', list: getMessages() }); },   // my93 H2
   quick_save(_ws, msg) { broadcast({ type: 'quick', ...handover.saveQuick(msg) }); },
   keep_add(ws, msg) {   // my35
     const r = keep.add(msg);

@@ -11,6 +11,7 @@ import { readFile } from 'fs/promises';   // my28
 import path from 'path';
 import { STORE_DIR, ACTIVE_FILE } from './config.js';
 import { runtime } from './state.js';
+import { packedBody, packedList, unpack } from './packed.js';   // my93 I2
 
 export function sessionFile(id) {
   return path.join(STORE_DIR, `${id}.jsonl`);
@@ -195,6 +196,7 @@ export function lineToItems(line, toolNames = new Map()) {
 const parseCache = new Map();   // id -> { key, items }
 export function parseSession(id) {
   const file = sessionFile(id);
+  if (id && !existsSync(file)) { try { unpack(id); } catch (e) { console.warn('Could not unpack chat:', e.message); } }   // my93 I2: a packed chat opens as before
   if (!id || !existsSync(file)) return [];
   let key = '';
   try { const st = statSync(file); key = `${st.size}:${st.mtimeMs}`; } catch { /* read it fresh */ }
@@ -284,11 +286,14 @@ export function listSessions() {
     if (!title) continue;   // an empty shell the CLI left behind, not a conversation
     out.push({ id, title, updatedAt: mtime });
   }
+  const have = new Set(out.map((o) => o.id));
+  for (const p of packedList()) if (!have.has(p.id) && p.title) out.push(p);   // my93 I2: packed chats stay in the list
   return out.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function deleteSession(id) {
   titleCache.delete(id);   // my82
+  if (!existsSync(sessionFile(id))) { try { unpack(id); } catch { /* nothing packed */ } }   // my93 I2: a packed chat is deleted the same way
   try { unlinkSync(sessionFile(id)); return true; }
   catch (e) { console.warn('Could not delete session:', e.message); return false; }
 }
@@ -302,11 +307,13 @@ export async function searchSessions(q) {
     let m = 0; try { m = statSync(path.join(STORE_DIR, f)).mtimeMs; } catch {}
     return { f, m };
   }).sort((a, b) => b.m - a.m);
+  for (const p of packedList()) files.push({ f: `${p.id}.jsonl`, m: p.updatedAt, packed: true, title: p.title });   // my93 I2: packed chats are searched too, after the rest
   const out = [];
-  for (const { f, m } of files) {
+  for (const { f, m, packed, title } of files) {
     if (out.length >= 30) break;
     let body;
-    try { body = await readFile(path.join(STORE_DIR, f), 'utf8'); } catch { continue; }
+    if (packed) { body = packedBody(f.slice(0, -6)); if (body == null) continue; }
+    else try { body = await readFile(path.join(STORE_DIR, f), 'utf8'); } catch { continue; }
     if (raw && !body.toLowerCase().includes(needle)) continue;
     let snippet = null;
     for (const ln of body.split('\n')) {
@@ -324,7 +331,7 @@ export async function searchSessions(q) {
     }
     if (!snippet) continue;
     const id = f.slice(0, -6);
-    out.push({ id, title: sessionTitle(id) || 'Chat', updatedAt: m, snippet });
+    out.push({ id, title: (packed ? title : sessionTitle(id)) || 'Chat', updatedAt: m, snippet });
   }
   return out;
 }

@@ -66,19 +66,12 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my90',
+  version: 'my93',
   items: [
-    { t: 'Your three accounts take turns by themselves', how: 'haAi uses the Claude account whose 5 hours run out soonest. When it reaches 90%, the chat moves to the next soonest account and carries on by itself, then to the last one. If all three reach 90% before the first has reset, haAi stops and asks: Carry on or Wait. Your main account never goes past 95%. The 75% pop-up is gone.' },
-    { t: 'A weekly forecast for each account', how: 'Open Accounts: under each account there is now a line like "at your current rate you will use up this week\'s allowance by Thursday at 5pm". It needs about half a day of readings first, and gets better after 2 to 3 days.' },
-    { t: 'haAi comes back faster', how: 'When you go back to haAi it keeps the page you had and only fetches the messages that are new, instead of loading the whole chat again. Your place in the chat stays where it was.' },
-    { t: 'A quiet check that the link is alive', how: 'Every 30 seconds while haAi is on screen it checks the link to the server. If the link has gone dead (for example after Wi-Fi changes), it makes a new one by itself.' },
-    { t: 'Less work in the background', how: 'The server keeps the open chat in memory until it changes, so the watch and the chat list answer faster. A few more small checks now rest while haAi is not on screen.' },
-    { t: 'Estimated time before I\'ll need you', how: 'The progress box above the typing box now has its own line saying how long until I will need you, and it counts down. If I have not given a guess yet it says working it out.' },
-    { t: 'haAi shows its new screen by itself', how: 'After an update, haAi used to keep showing the old screen until you closed it fully. Now it loads the new screen by itself a few seconds after the update, as soon as I am not working and your typing box is empty.' },
-    { t: 'A progress box while I work', how: 'Above the typing box you now see what I am doing this second, how long it has been, and on bigger jobs which step I am on and about how long is left (your Look A). It goes away when I finish.' },
-    { t: 'Answers to the Claude app keep running', how: 'My automatic, read-only answers to the Claude app now start again by themselves whenever haAi restarts.' },
-    { t: 'Picking an account really moves the chat', how: 'When you choose an account in the Accounts menu, your next message now goes to that account. Before, an open chat stayed on the account it had, so every account seemed to be at 100%. A chat is also moved off an account that has used all its allowance when another account still has some left.' },
-    { t: 'haAi is quicker', how: 'The chat list no longer reads every saved chat in full (it took about 2.5 seconds, and haAi stood still meanwhile). Long chats show their newest part first; scroll up and the rest appears where you are. The page is kept on your phone until the next update, and small checks rest while haAi is not on screen.' },
+    { t: 'A Messages page', click: 'msgs-btn', how: 'Open the menu and tap Messages. It shows the messages Home Assistant sent to your phone and tablet in the last 7 days, grouped into Home, Health check, TV and Claude. It starts keeping them from this update on.' },
+    { t: 'A Remember button on your messages', how: 'Under each message you send there is a small Remember button. Tap it and I file what you wrote in the right place in your notes. A green line then says where it went.' },
+    { t: 'Now on TV at the top of the chat', how: 'When something is playing, a small line at the top of the chat says what it is. Tap it to ask me about it.' },
+    { t: 'Old chats are packed at night', how: 'Every night at 3am, chats nobody has opened for 2 months are squeezed into a smaller file. They stay in History and Search, and open again as normal. The morning line says how many were packed.' },
   ],
 };
 export function getWhatsNew() {
