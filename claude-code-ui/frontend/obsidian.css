@@ -467,3 +467,10 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .hh-group{margin-top:10px;padding-top:7px;border-top:1px solid #2c2e33;color:#9cc8ff;font-weight:700;font-size:calc(14px * var(--ts,1))}
 .hh-line.hh-ok{color:#46bb68}.hh-line.hh-bad{color:#f3736c}
 .tv-view .h79-from{display:none!important}
+/* my89 (Michael's Look C): one slim bar while Claude works; the full boxes open when it is tapped */
+.h6-bar{flex:none;display:flex;align-items:center;gap:6px;width:100%;margin:0 0 5px;padding:5px 9px;border:1px solid #26282d;border-radius:10px;background:#0a0a0b;color:#cfd0d4;font:13px system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-align:left;cursor:pointer;font-variant-numeric:tabular-nums}
+.h6-bar.hidden,.h2-step.h6-shut,.h4-queue.h6-shut{display:none}
+.h6-dot{width:8px;height:8px;border-radius:50%;background:#4da3ff;flex:none}.h6-bar b{color:#4da3ff;font-weight:600;flex:none}
+.h6-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.h6-e{color:#9cc8ff;flex:none}.h6-o{color:#7d8087;flex:none}
+.tv-view .h6-bar{display:none!important}.night .h6-bar{filter:brightness(.8)}
+

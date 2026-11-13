@@ -19,15 +19,18 @@ export const undoText = (where) => `Please undo the last job. ${where ? `The und
 const queue = mk('div', 'h2-card info h4-queue hidden');
 inputForm.before(queue);
 let added = [];
+export const addedCount = () => (S.isRunning ? added.length : 0);   // my89: the one-bar look (Look C) shows '+N added'
 export function noteAdded(text) { const t = String(text || '').trim(); if (t) { added.push(t); drawQueue(); } }
 let queueDrawn = '';   // my82: only redraw when the list changed
 function drawQueue() {
   if (!S.isRunning) added = [];
   if (!added.length) { queue.classList.add('hidden'); queueDrawn = ''; return; }
   const sig = added.join('\n');
+  queue.classList.toggle('h6-shut', !S.boxOpen);   // my89
   if (sig === queueDrawn && !queue.classList.contains('hidden')) return;
   queueDrawn = sig;
   queue.classList.remove('hidden');
+  queue.classList.toggle('h6-shut', !S.boxOpen);   // my89: folded into the one bar until he taps it
   queue.textContent = '';
   queue.append(mk('div', 'h2-title', `Added while working (${added.length})`));
   added.forEach((t, i) => queue.append(mk('div', 'h2-line', `${i + 1} ● ${short(t)}`)));

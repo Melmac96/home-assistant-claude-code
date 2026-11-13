@@ -7,7 +7,7 @@
 import { S } from './state.js';
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
-import { undoText } from './batch4.js';   // my48
+import { undoText, addedCount } from './batch4.js';   // my48, my89
 import { costKey, costText, saveJobText } from './my74.js';   // my74
 import { timedCard, clashCard } from './my79.js';   // my79 H17 + H5
 
@@ -101,6 +101,25 @@ const bars = mk('div', 'h2-bars'), sNow = mk('div', 'h2-now'), sLive = mk('div',
 const sEst = mk('div', 'h2-est');   // my86: Michael's wording, own line
 strip.append(bars, sNow, sLive, sEst, sNext);
 inputForm.before(strip);
+// my89 (Michael's Look C, box-size-looks.html, 13 Nov): ONE slim bar while Claude works - step, what now, time left and
+// '+N added'; the full progress box and the 'Added while working' list stay folded away until he taps the bar.
+const bar = mk('button', 'h6-bar hidden'); bar.type = 'button';
+const bDot = mk('span', 'h6-dot'), bStep = mk('b', ''), bNow = mk('span', 'h6-t'), bEst = mk('span', 'h6-e'), bMore = mk('span', 'h6-o');
+bar.append(bDot, bStep, bNow, bEst, bMore);
+strip.before(bar);
+S.boxOpen = localStorage.getItem('haai-box-open') === '1';
+bar.onclick = () => { S.boxOpen = !S.boxOpen; localStorage.setItem('haai-box-open', S.boxOpen ? '1' : '0'); const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
+function drawBar(show, hasStep, n, t, now, est, took) {
+  const add = addedCount();
+  if (!show && !add) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  bStep.textContent = hasStep ? `${n} of ${t}` : 'Working';
+  bNow.textContent = now || '';
+  const short = est.replace(/^Estimated time before I'll need you: /, '');
+  bEst.textContent = short === 'working it out' ? `${mmss(took)} so far` : short;
+  bMore.textContent = (add ? `· +${add} added ` : '') + (S.boxOpen ? '▴' : '▾');
+  strip.classList.toggle('h6-shut', !S.boxOpen);
+}
 let stepData = null, stepTimer = null;
 let estKey = '', estAt = 0;   // my86
 export function stepFound(contentEl, fields) { contentEl.dataset.step = JSON.stringify(fields); scanSteps(); }
@@ -149,7 +168,7 @@ function estText(raw) {
   return lead + `about ${Math.round(secs / 60)} min`;
 }
 const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
-function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; }
+function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; drawBar(false, false, 0, 0, '', '', 0); }
 function drawStep() {
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }
   if (!runStart) runStart = Date.now();
@@ -160,6 +179,7 @@ function drawStep() {
   const act = plainAction(S.lastTool);
   const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`].filter(Boolean).join(' · ');
   const est = estText(hasStep ? stepData[4] : '');
+  drawBar(true, hasStep, n, t, (hasStep && stepData[2]) || act, est, took);   // my89
   const sig = JSON.stringify([hasStep ? stepData : null, live, est]);
   if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
   stepDrawn = sig;
