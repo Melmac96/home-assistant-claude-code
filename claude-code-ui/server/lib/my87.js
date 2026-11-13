@@ -9,7 +9,8 @@
  * my91 (Michael 2026-11-13): a chat that has passed 150k tokens moves to a new chat BY ITSELF as soon as Claude's
  * reply has finished (never in the middle of one): same steps as above, and the new chat first shows that last reply
  * again in full (with any question waiting), because the move takes it off his screen. One try per old chat,
- * at most 20 a day. Not in Free mode. The page's "nearly full" pop-up and warnings are gone; the colour bar stays.
+ * at most 20 a day. Not in Free mode.
+ * my94: both moves also carry every question still waiting in the old chat (handover.js openQuestionsText). The page's "nearly full" pop-up and warnings are gone; the colour bar stays.
  */
 import { readFileSync, writeFileSync, renameSync } from 'fs';
 import { log } from './log.js';
@@ -19,7 +20,7 @@ import { runtime } from './state.js';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
 import { sessionTitle, saveActive, listSessions, parseSession } from './sessions.js';
 import { modeState } from './accounts.js';   // my91
-import { writeNotes } from './handover.js';
+import { writeNotes, openQuestionsText } from './handover.js';   // my94
 
 export const NEXT_FILE = '/data/haai-nextchat.json';
 const read = () => { try { const j = JSON.parse(readFileSync(NEXT_FILE, 'utf8')); return j && typeof j === 'object' ? j : null; } catch { return null; } };
@@ -53,14 +54,15 @@ async function moveOn(slot, nextStep, why) {
     const title = ((id && sessionTitle(id)) || 'Chat').replace(/^Continue this job:\s*/, '');
     broadcast({ type: 'handover_status', text: why === 'auto' ? 'This chat has passed 150k, so haAi is moving it to a new chat by itself…' : 'Moving this job to a new chat by itself…' });
     const last = why === 'auto' && id ? lastReply(id) : '';
+    const waitingQs = openQuestionsText(id);   // my94: questions left waiting come back in the new chat
     const { file } = id ? await writeNotes(id, title, 'sonnet', 60000) : { file: '(no notes: the old chat was empty)' };
     runtime.activeSessionId = null; saveActive();
     broadcast({ type: 'cleared', chat: slot.id });
     broadcast({ type: 'sessions', sessions: listSessions(), activeId: null });
     hooks.changed();
     const text = why === 'auto'
-      ? `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi moved this chat to a new one by itself because the old chat passed 150k tokens, as Michael asked (my91): no greeting.]\n\nNEXT STEP:\nThe old chat had just finished a reply, and the move took it off Michael's screen, so he may not have read it. Read the notes, then write that last reply again IN FULL (keep its layout and any question with its markers exactly as they were, but leave out any DONE, TIMED or PIN card lines so they are not shown twice), and add one short line at the top saying haAi moved to a new chat because the old one was long. Then stop and wait for his answer. Do not start new work and do not redo anything already done.\n\nLAST REPLY IN THE OLD CHAT:\n${last || '(could not be read: use the notes)'}`
-      : `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi started this new chat by itself, as Michael asked (my87): no greeting.]\n\nNEXT STEP:\n${nextStep}`;
+      ? `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi moved this chat to a new one by itself because the old chat passed 150k tokens, as Michael asked (my91): no greeting.]\n\nNEXT STEP:\nThe old chat had just finished a reply, and the move took it off Michael's screen, so he may not have read it. Read the notes, then write that last reply again IN FULL (keep its layout and any question with its markers exactly as they were, but leave out any DONE, TIMED or PIN card lines so they are not shown twice), and add one short line at the top saying haAi moved to a new chat because the old one was long. Then stop and wait for his answer. Do not start new work and do not redo anything already done.\n\nLAST REPLY IN THE OLD CHAT:\n${last || '(could not be read: use the notes)'}` + (waitingQs ? waitingQs + '\n(The last reply above may hold one of these questions: show it once, in the same single block.)' : '')
+      : `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi started this new chat by itself, as Michael asked (my87): no greeting.]\n\nNEXT STEP:\n${nextStep}` + (waitingQs ? waitingQs + '\n(Do the next step only if it does not depend on those answers; otherwise stop and wait for them.)' : '');
     runner({ readyState: 3 }, { text, permissionMode: DEFAULT_PERMISSION_MODE });
   });
 }

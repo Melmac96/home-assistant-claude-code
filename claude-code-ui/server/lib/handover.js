@@ -103,6 +103,40 @@ function chatText(id, max) {
   return { text: lines.join('\n\n').slice(-max), you, tools };
 }
 
+/*
+ * my94 (Michael 2026-11-13, Q1 A): questions left waiting in the old chat always come back at the start of the
+ * new one, whenever a new chat is opened from an old one (New chat card, my87, my91). Each marked question block
+ * (the last one in each of Claude's replies) is paired with Michael's next message. No next message = waiting.
+ * A next message that does not start with a letter or Q1-style pick = maybe waiting; the new chat decides.
+ */
+const Q_BLOCK = /⟦QUESTION⟧[\s\S]*?⟦\/QUESTION⟧/g;
+const LOOKS_ANSWERED = /^\s*(\*\*)?(Q\d+\s*[.:)-]?\s*)?[A-Z](\*\*)?(\s*$|[\s.,:;)!-])/;
+export function openQuestions(id) {
+  const out = [];
+  let pending = null;
+  for (const it of parseSession(id)) {
+    if (it.kind === 'text') {
+      const blocks = String(it.text || '').match(Q_BLOCK);
+      if (blocks) pending = blocks[blocks.length - 1];
+    } else if (it.kind === 'user') {
+      if (pending) {
+        const reply = String(it.text || '').trim();
+        if (!LOOKS_ANSWERED.test(reply)) out.push({ q: pending, reply: reply.slice(0, 400) });
+      }
+      pending = null;
+    }
+  }
+  if (pending) out.push({ q: pending, reply: '' });
+  return out.slice(-8);
+}
+export function openQuestionsText(id) {
+  let list = [];
+  try { list = id ? openQuestions(id) : []; } catch (e) { log('WARN', `my94 open questions: ${e?.message || e}`); }
+  if (!list.length) return '';
+  const parts = list.map((x, i) => `QUESTION ${i + 1}:\n${x.q.slice(0, 3000)}\n${x.reply ? `HIS NEXT MESSAGE AFTER IT: ${x.reply}` : 'HIS NEXT MESSAGE AFTER IT: (none, it was never answered)'}`);
+  return `\n\nQUESTIONS THAT MAY STILL BE WAITING FOR MICHAEL (haAi my94, he asked that these ALWAYS come back at the start of a new chat):\nFor each one, check the old chat's notes and his next message. Leave out a question only if his next message or the notes clearly answered it, or a later question replaced it. Every other one MUST be shown again in your FIRST reply, in full, in ONE marked question block at the end of that reply (label them Q1, Q2 ... in bold, keep their options, Recommended first, last option Any other answer, no question shown twice), with one short line near the top saying these questions from the old chat were still waiting.\n\n${parts.join('\n\n')}`.slice(0, 16000);
+}
+
 async function ask(prompt, model) {
   mkdirSync(TMP, { recursive: true });
   let out = '';
@@ -189,7 +223,7 @@ export async function continueJob(ws, startNew) {
     const title = (sessionTitle(id) || 'Chat').replace(/^Continue this job:\s*/, '');
     const { file } = await writeNotes(id, title, 'sonnet', 60000);
     startNew();
-    const text = `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off.`;
+    const text = `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off.` + openQuestionsText(id);   // my94
     if (ws.readyState === 1) send(ws, { type: 'handover_ready', text });
     else runtime.pendingContinue = text;
   } catch (e) {
