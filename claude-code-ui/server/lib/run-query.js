@@ -275,6 +275,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       };
       broadcast(ctxMsg);
       runtime.lastCtx = { ...ctxMsg, sid: runtime.activeSessionId };   // my40: chat length strip after a reload
+      slot.ctx = { tokens: u.totalTokens || 0, sid: runtime.activeSessionId, at: Date.now() };   // my91: this chat's own size, for the move at 150k
       const limit = (u.isAutoCompactEnabled && u.autoCompactThreshold) || u.maxTokens;
       const pct = limit ? Math.round((u.totalTokens / limit) * 100) : 0;
       const detail = `context ${u.totalTokens}/${limit} tokens (${pct}%)` +
@@ -543,6 +544,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           runtime.credentialsExpired = false;
           broadcast({ type: 'auth_status', authenticated: true });
         }
+        slot.lastOk = event.subtype === 'success' && !limitHit;   // my91: only a reply that really finished moves the chat on
         const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
         log('INFO', `result: ${event.subtype} in ${secs}s, ${event.num_turns} turns, ` +
           `$${(event.total_cost_usd || 0).toFixed(4)}`);

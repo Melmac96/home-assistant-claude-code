@@ -48,8 +48,8 @@ function drawCtx() {
   // my41 (user, 2026-11-08): warn when the chat gets COSTLY (150,000 tokens), not only when the memory is nearly full.
   const tokens = u ? u.totalTokens : 0;
   const costly = tokens >= 150000;
-  strip.classList.toggle('hidden', !(costly || pct >= 80));
-  strip.textContent = costly ? `This chat is long (${Math.round(tokens / 1000)}k tokens) and costs more each reply. Tap to start a new chat` : `Chat is ${pct}% full. Tap to start a new chat`;
+  strip.classList.toggle('hidden', costly || pct < 80);   // my91: past 150k haAi moves to a new chat by itself, so no warning strip
+  strip.textContent = `Chat is ${pct}% full. Tap to start a new chat`;
 }
 window.addEventListener('haai-ctx', drawCtx);
 

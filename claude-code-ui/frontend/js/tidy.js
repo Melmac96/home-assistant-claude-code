@@ -89,7 +89,7 @@ const open = (el) => { closeAll(); veil.classList.remove('hidden'); el.classList
 function items() {
   const a = [['Using ' + modelLabel(), 'cb']];
   const k = tokensK();
-  if (k >= LIM) a.push(['⚠ Long chat: ' + k + 'k tokens', 'cr']);
+  if (k >= LIM) a.push(['Long chat: moves to a new chat by itself after this reply', 'cb']);   // my91: no warning, it moves by itself
   const u = S.ctxUsage;
   const limit = u ? ((u.autoCompactEnabled && u.autoCompactThreshold) || u.maxTokens) : 0;
   if (u && limit && u.totalTokens) a.push([Math.max(0, 100 - Math.min(100, Math.round(u.totalTokens / limit * 100))) + '% left before auto-compact', 'cg']);
@@ -161,7 +161,6 @@ function fillSheet() {
     const r = row(text, null, 'r', mk('span', null, '›')); r.onclick = () => { closeAll(); $('health-btn').click(); };
     sheet.append(r);
   }
-  if (k >= LIM) sheet.append(row(`⚠ Long chat (${k}k tokens): costs more each reply`, null, 'r', btn('New chat', () => { closeAll(); openNewChat(); })));
   if (!/sonnet/i.test(modelName())) {
     const r = row(`Using ${modelLabel()} for this chat`, null, 'b', btn('Back to Sonnet', () => {
       const o = [...modelSelect.options].find((x) => /sonnet/i.test(x.textContent));

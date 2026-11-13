@@ -1,23 +1,21 @@
 /*
  * my54: stops before a message is sent when it would be a bad idea (user's words, 2026-11-09).
- *  1. Chat too long: if this chat plus one more reply would pass 150k tokens, a centre pop-up offers
- *     "Continue this in a new chat" (saves a note and opens the new chat) or "Do one more thing here"
- *     (lets exactly ONE more message through, then asks again).
+ *  1. my91 (Michael 2026-11-13): the "chat nearly full" pop-up is GONE. Once a chat has passed 150k tokens, the server
+ *     moves it to a new chat by itself when the reply has finished (my87.js autoMove); the colour bar at the bottom stays.
  *  2. my90 (Michael 2026-11-13): the 75% pop-up and the page's own 90% switch are GONE. The server now moves a chat
  *     between the three accounts by itself (my90.js); this page only shows what happened: a small bar when a chat
  *     moved account, and a centre pop-up with Carry on / Wait when every account is at 90% (main stops at 95%).
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
  */
 import { S } from './state.js';
-import { inputForm, promptInput } from './dom.js';
+import { inputForm } from './dom.js';
 
-const LIM = 150;          // thousand tokens
 const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 let quota = {};
 let acc = { cur: null, saved: [], free: false };
-let passCtx = false, lastEmail = null;
+let lastEmail = null;
 
 window.addEventListener('haai-quota', (e) => { quota = e.detail || {}; });
 window.addEventListener('haai-accounts', (e) => {
@@ -60,22 +58,7 @@ function toast(text) {
 
 // ── the stop before sending ──────────────────────────────────────────────────
 inputForm.addEventListener('submit', (e) => {
-  if (document.querySelector('.start-check')) { e.preventDefault(); e.stopImmediatePropagation(); return; }
-  if (S.isRunning || acc.free) return;
-  if (promptInput.value.trim().startsWith('/')) return;     // /compact, /help and so on must always work
-  const block = () => { e.preventDefault(); e.stopImmediatePropagation(); };
-
-  const k = typeof window.haaiNextK === 'function' ? window.haaiNextK() : 0;
-  if (k >= LIM) {
-    if (passCtx) { passCtx = false; return; }
-    block();
-    pop('This chat is nearly full', `This chat is about ${Math.round(S.ctxUsage ? S.ctxUsage.totalTokens / 1000 : k)}k tokens, and one more reply would take it past ${LIM}k. Every reply in a chat this long costs a lot more. It is better to carry on in a new chat before your next message.`, [
-      ['Continue this in a new chat', 'sc-switch', () => send({ type: 'handover' })],
-      ['Do one more thing here', 'sc-stay', () => { passCtx = true; }],
-    ]);
-    return;
-  }
-  passCtx = false;
+  if (document.querySelector('.start-check')) { e.preventDefault(); e.stopImmediatePropagation(); }   // a pop-up is still open
 }, true);
 
 // ── my90: what the server did with the accounts ──────────────────────────────
