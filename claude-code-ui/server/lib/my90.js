@@ -1,8 +1,10 @@
 /*
  * my90 (Michael 2026-11-13): the three Claude Pro accounts take turns by themselves.
  *  - The account whose 5-HOUR allowance resets soonest is used first (an account with no 5 hours running counts last).
- *  - At 90% of its 5-hour allowance the chat moves to the next soonest of the others, then to the last one.
- *  - If every account is at 90% before the first has reset, haAi STOPS and tells him; he picks Carry on or Wait.
+ *  - my95 (Michael 2026-11-13): a reply is never stopped part-way just to move. Before each reply haAi checks whether
+ *    the account would go past 95% during it (estimate = the most any of the last 5 replies used, at least 3%);
+ *    if so the reply starts on the next soonest account instead. 95% is only the safety net while a reply runs.
+ *  - If no account has room for the next reply, haAi STOPS and tells him; he picks Carry on or Wait.
  *  - Carry on lets the others go up to their limit, but the MAIN account never goes past 95% of its 5 hours.
  *  - Only the 5-hour allowance counts for this (his Q3 B); the weekly one is shown and forecast, not used to skip.
  *  - A pick in the Accounts menu is used first while it is under its limit.
@@ -15,7 +17,7 @@ import path from 'path';
 import { DATA_DIR } from './config.js';
 import { log } from './log.js';
 
-export const SWITCH_AT = 90, MAIN_CAP = 95;
+export const SWITCH_AT = 95, MAIN_CAP = 95;   // my95: was 90 (stopped replies part-way)
 const MAIN_DEFAULT = 'thereades@gmail.com';
 const STATE = path.join(DATA_DIR, 'haai-cycle.json');
 const QUOTA = path.join(DATA_DIR, 'haai-quota.json');
@@ -24,7 +26,7 @@ const readJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } ca
 const saveJson = (p, v) => { writeFileSync(p + '.tmp', JSON.stringify(v)); renameSync(p + '.tmp', p); };
 const lc = (e) => String(e || '').toLowerCase();
 
-// ── state: { carryOn, manual: {email, at}, stopped: {at, text} } ─────────────
+// ── state: { carryOn, manual: {email, at}, stopped: {at, text}, costs: [% of 5 hours per reply] } ─────────────
 export const cycleState = () => readJson(STATE) || {};
 function setState(patch) {
   const s = { ...cycleState(), ...patch };
@@ -42,6 +44,18 @@ export function five(email, q = readJson(QUOTA) || {}) {
   return { used: Number(w.used), resetsAt: w.resetsAt || null };
 }
 
+/** my95: how much of the 5 hours the next reply may use: the most of the last 5 replies, at least 3%, at most 20%. */
+export function nextReplyCost(st = cycleState()) {
+  const c = (st.costs || []).slice(-5);
+  return Math.min(20, Math.max(3, ...c));
+}
+/** my95: a reply finished; remember how much of the 5 hours it used. */
+export function recordReplyCost(pct) {
+  if (!(pct >= 0) || pct > 60) return;
+  const st = cycleState();
+  setState({ costs: [...(st.costs || []), Math.round(pct * 10) / 10].slice(-10) });
+}
+
 /** The most of its 5 hours an account may use right now. */
 export function limitFor(email, st = cycleState()) {
   if (isMain(email)) return st.carryOn ? MAIN_CAP : SWITCH_AT;
@@ -53,9 +67,10 @@ export function limitFor(email, st = cycleState()) {
  * Order: his Accounts-menu pick (while under its limit), then the 5 hours that reset soonest, then the least used.
  */
 export function chooseAccount(saved, exclude = new Set()) {
-  const st = cycleState(), q = readJson(QUOTA) || {};
+  const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st);
+  // my95: only an account with room for the whole next reply before its limit
   const open = saved.filter((a) => !exclude.has(a.email)).map((a) => ({ a, f: five(a.email, q) }))
-    .filter((x) => (x.f.used ?? 0) < limitFor(x.a.email, st));
+    .filter((x) => (x.f.used ?? 0) + est < limitFor(x.a.email, st));
   if (!open.length) return null;
   if (st.manual?.email) { const m = open.find((x) => lc(x.a.email) === lc(st.manual.email)); if (m) return m.a; }
   open.sort((x, y) => (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity) || (x.f.used ?? 0) - (y.f.used ?? 0));
@@ -75,8 +90,9 @@ export function setCarryOn(on) {
 export function tidyState(saved) {
   const st = cycleState(), q = readJson(QUOTA) || {};
   const patch = {};
-  if ((st.carryOn || st.stopped) && saved.some((a) => (five(a.email, q).used ?? 0) < SWITCH_AT)) { patch.carryOn = false; patch.stopped = null; }
-  if (st.manual?.email && (five(st.manual.email, q).used ?? 0) >= limitFor(st.manual.email, { ...st, ...patch })) patch.manual = null;
+  const est = nextReplyCost(st);
+  if ((st.carryOn || st.stopped) && saved.some((a) => (five(a.email, q).used ?? 0) + est < SWITCH_AT)) { patch.carryOn = false; patch.stopped = null; }
+  if (st.manual?.email && (five(st.manual.email, q).used ?? 0) + est >= limitFor(st.manual.email, { ...st, ...patch })) patch.manual = null;
   if (Object.keys(patch).length) setState(patch);
 }
 
@@ -91,7 +107,7 @@ export function checkRun(email, used, saved, busy = new Set()) {
   const st = cycleState();
   const text = isMain(email) && st.carryOn
     ? `Your main account has reached ${Math.round(used)}% of its 5 hours. haAi stopped here so you always keep some of it. Wait for an account to reset.`
-    : `All your Claude accounts have used ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.`;
+    : `All your Claude accounts are close to ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.`;
   setState({ stopped: { at: Date.now(), text } });
   return { stop: text };
 }

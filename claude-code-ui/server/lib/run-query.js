@@ -42,7 +42,7 @@ import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
-import { checkRun, recordUsage } from './my90.js';   // my90
+import { checkRun, recordUsage, recordReplyCost } from './my90.js';   // my90, my95
 import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
@@ -168,6 +168,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // Set if a 5-hour usage-limit rejection stops this run. Trusted over anything
   // that follows it — see the note by the 'result' handler.
   let limitHit = null;
+  let my95From = null, my95To = null;   // my95: this reply's first and last 5-hour figure, to learn what a reply costs
   // tool_use id → tool name for this run: a tool_result carries only the id, and
   // an answered question has to be told apart from a real failure.
   const liveToolNames = new Map();
@@ -515,10 +516,15 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
         try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch {}   // my77: cost so far on the chat's tab (before the store moves on)
         try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch {}   // my40: Accounts quota, account in use; my77: this chat's own account
-        // my90: at 90% of its 5 hours (main: 95% after Carry on) stop this reply now and carry on with the next account,
-        // or stop altogether when every account is at its limit.
+        // my90/my95: the account is chosen BEFORE each reply so the reply fits under 95%; only if a reply still reaches
+        // 95% of its 5 hours (the safety net) is it stopped and carried on with the next account,
+        // or stopped altogether when every account is at its limit.
         try {
           const fw = info.unifiedWindows && info.unifiedWindows.five_hour;
+          if (!acct.free && fw && fw.utilization != null) {
+            const u = fw.utilization <= 1 ? fw.utilization * 100 : Number(fw.utilization);
+            if (my95From == null) my95From = u; my95To = u;
+          }
           if (!acct.free && fw && fw.utilization != null && !slot.cycleMove && !slot.cycleStop) {
             const used = fw.utilization <= 1 ? fw.utilization * 100 : Number(fw.utilization);
             const busy = new Set(runningChats().filter((x) => x !== slot && x.account && !x.free).map((x) => x.account));
@@ -647,6 +653,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       broadcast({ type: 'ha_links', entities: runtime.haLinks.entities, automations: runtime.haLinks.automations }));
 
     // my90: the account reached its limit mid-reply - carry on in this same chat with the next account, or say why it stopped.
+    // my95: remember what a finished reply cost (not one stopped part-way; a reset in between gives a fall, ignored)
+    try { if (!acct.free && !slot.cycleMove && my95From != null && my95To >= my95From) recordReplyCost(my95To - my95From); } catch {}
     if (slot.cycleMove) {
       const mv = slot.cycleMove; slot.cycleMove = null;
       broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });

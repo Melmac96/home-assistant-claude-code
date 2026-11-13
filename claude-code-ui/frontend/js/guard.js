@@ -71,7 +71,7 @@ window.addEventListener('haai-cycle', (e) => {
     send({ type: 'quota_get', force: true });
   } else if (m.type === 'cycle_stop') {
     if (document.querySelector('.guard-pop')) return;
-    pop('haAi has stopped', `${m.text || 'All your Claude accounts are at their limit.'} Carry on uses the accounts past 90%, but your main account still stops at 95%.`, [
+    pop('haAi has stopped', `${m.text || 'All your Claude accounts are at their limit.'} Carry on uses the other accounts up to their limit, but your main account still stops at 95%.`, [
       ['Carry on', 'sc-switch', () => send({ type: 'cycle_carry_on', on: true })],
       ['Wait', 'sc-stay', () => send({ type: 'cycle_carry_on', on: false })],
     ]);

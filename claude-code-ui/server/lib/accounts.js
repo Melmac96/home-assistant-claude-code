@@ -174,7 +174,7 @@ const NOT_LINKED = new Set(['.credentials.json', '.claude.json', 'sessions', 'se
 
 /**
  * Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in.
- * my90 (Michael 2026-11-13, replaces my77/my83): the not-busy account whose 5 hours reset soonest, under 90%
+ * my90 (Michael 2026-11-13, replaces my77/my83): the not-busy account whose 5 hours reset soonest, with room for the next reply under 95% (my95)
  * (main under 95% after Carry on); see my90.js. `stop` is set when every account is at its limit.
  */
 export function pickChatAccount(otherAccounts, slot = null, alone = true) {
@@ -188,14 +188,14 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
     catch (e) { log('WARN', `my58: could not prepare a separate sign-in (${e?.message || e}); sharing the main one`); return { email: cur.email, dir: null }; }
   };
   if (saved.length < 2) return { email: cur.email, dir: null };
-  // my90 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on at 90%; every one at its limit = stop.
+  // my90/my95 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on BEFORE a reply that would pass 95%; none with room = stop.
   tidyState(saved);
   const pick = chooseAccount(saved, used) || chooseAccount(saved);
-  if (!pick) return { email: cur.email, dir: null, stop: cycleState().stopped?.text || `All your Claude accounts have used ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.` };
+  if (!pick) return { email: cur.email, dir: null, stop: cycleState().stopped?.text || `All your Claude accounts are close to ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.` };
   // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
   if (alone && !used.size && pick.email !== cur.email) {
     const r = switchTo(pick.id);
-    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (5 hours reset soonest / under ${SWITCH_AT}%)`); return { email: pick.email, dir: null, moved: true }; }
+    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (5 hours reset soonest / room for the next reply under ${SWITCH_AT}%)`); return { email: pick.email, dir: null, moved: true }; }
   }
   return as(pick);
 }
