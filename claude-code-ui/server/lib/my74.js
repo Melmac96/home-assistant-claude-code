@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my100',
+  version: 'my101',
   items: [
+    { t: 'No more lost reports when you send a message mid-job', how: 'If you send a message while I am still working, haAi now tells me privately to start my next reply with a full report of what I had done and any question waiting, so you never get only "No response requested".' },
     { t: 'Long chats always move by themselves', how: 'A chat that grows past 150k now always moves to a fresh chat by itself, with no daily limit (before, it stopped after 20 moves a day). It also moves when the last reply was cut short. If a move ever fails, haAi tells you instead of keeping the long chat quietly.' },
     { t: 'Accounts never run out while another has room', how: 'haAi now checks each account\'s real figure before moving to it, allows for the bigger first reply after a move, and if an account ever hits its 5-hour limit it moves straight to an account with room and carries on there. It only waits for a reset when every account is full.' },
     { t: 'U decide left the menu', how: 'U decide is no longer in the menu. Use the waving hand just after the … button under the typing box instead. The blue I\'m back button still shows while you are away.' },

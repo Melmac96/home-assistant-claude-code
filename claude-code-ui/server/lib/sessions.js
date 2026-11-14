@@ -131,6 +131,10 @@ export function isNoResponsePlaceholder(ev) {
   return text === 'No response requested.' && m.content.every((b) => b && b.type === 'text');
 }
 
+// my101: the note haAi adds to a message sent while Claude is still working (run-query.js ADD_NOTE) is for Claude only
+export const ADD_NOTE = '\n\n[haAi note: Michael sent this while you were still working. The program may cut your turn short now and show him nothing. So in your NEXT reply, FIRST tell him in full what you had done so far and any question still waiting (his marker layout), THEN answer this message.]';
+const dropNote = (t) => (typeof t === 'string' && t.endsWith(ADD_NOTE) ? t.slice(0, -ADD_NOTE.length) : t);
+
 export function lineToItems(line, toolNames = new Map()) {
   const items = [];
   const msg = line.message;
@@ -165,11 +169,11 @@ export function lineToItems(line, toolNames = new Map()) {
     if (NON_HUMAN_ORIGIN_KINDS.has(originKind)) return items;
 
     if (typeof content === 'string') {
-      if (content.trim() && !isHarnessEcho(content)) push({ kind: 'user', text: content });
+      if (content.trim() && !isHarnessEcho(content)) push({ kind: 'user', text: dropNote(content) });
     } else if (Array.isArray(content)) {
       for (const b of content) {
         if (b.type === 'text' && b.text) {
-          if (!isHarnessEcho(b.text)) push({ kind: 'user', text: b.text });
+          if (!isHarnessEcho(b.text)) push({ kind: 'user', text: dropNote(b.text) });
         } else if (b.type === 'tool_result') {
           const raw = blockText(b.content);
           const answered = isQuestionAnswer(toolNames.get(b.tool_use_id), !!b.is_error, raw);

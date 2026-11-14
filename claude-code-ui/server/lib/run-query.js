@@ -28,7 +28,7 @@ import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
 import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText } from './accounts.js';
 import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
-import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder } from './sessions.js';
+import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder, ADD_NOTE } from './sessions.js';   // my101 ADD_NOTE
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
 import { refreshHaLinks } from './ha-links.js';
@@ -123,7 +123,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // my26: the Add button. A message sent WHILE a turn is running goes into that same
   // running chat instead of stopping it (the old way aborted the turn). If the run has
   // just ended (channel closed), it falls through and is sent as a normal new message.
-  if (autoAttempts === 0 && add && runtime.activeRun?.phase === 'turn' && runtime.activeRun.channel.push(text)) {
+  if (autoAttempts === 0 && add && runtime.activeRun?.phase === 'turn' && runtime.activeRun.channel.push(text + ADD_NOTE)) {   // my101: Claude must report first if cut short
     runtime.activeRun.pendingAdds = (runtime.activeRun.pendingAdds || 0) + 1;
     slotNow().asks = false;   // my77
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
