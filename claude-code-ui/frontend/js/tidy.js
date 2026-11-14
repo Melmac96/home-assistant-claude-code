@@ -12,6 +12,7 @@
 import { S } from './state.js';
 import { openNewChat } from './quick.js';
 import { messagesEl, promptInput, modelSelect, effortSelect, statusDot } from './dom.js';
+import { isAway } from './my96.js';   // my96
 
 const $ = (id) => document.getElementById(id);
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -202,6 +203,7 @@ function fillMenu() {
   go('◷ History', 'sessions-btn');
   go('📺 TV view', 'tv-view-btn');
   go('✉ Messages', 'msgs-btn');   // my93 H2 (Look C)
+  if (!isAway()) go("🤝 U decide (I'm going away)", 'udecide-btn');   // my96
   if (!document.documentElement.classList.contains('haai-tablet')) { go('⚙ Settings', 'settings-btn'); go('👤 Accounts', 'accounts-btn'); }   // my76: phone only, they left the top bar
   const big = mk('button', 'tidy-row'); big.type = 'button'; big.textContent = 'Aa Bigger text';
   big.onclick = () => {

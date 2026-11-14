@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my93',
+  version: 'my96',
   items: [
+    { t: 'U decide and I\'m back', how: 'When you are going away from haAi for a while, open the menu and tap U decide. I then get on by myself, but only with jobs you have already said yes to, plus checks and tidy-ups. A blue I\'m back button shows above the typing box until you return. Tap it and I finish what I am on, then tell you what I did and what is waiting for you.' },
     { t: 'A Messages page', click: 'msgs-btn', how: 'Open the menu and tap Messages. It shows the messages Home Assistant sent to your phone and tablet in the last 7 days, grouped into Home, Health check, TV and Claude. It starts keeping them from this update on.' },
     { t: 'A Remember button on your messages', how: 'Under each message you send there is a small Remember button. Tap it and I file what you wrote in the right place in your notes. A green line then says where it went.' },
     { t: 'Now on TV at the top of the chat', how: 'When something is playing, a small line at the top of the chat says what it is. Tap it to ask me about it.' },

@@ -46,6 +46,7 @@ import { checkRun, recordUsage, recordReplyCost } from './my90.js';   // my90, m
 import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
+import { my96Prompt } from './my96.js';   // my96
 import { my87Prompt } from './my87.js';   // my87
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
@@ -227,7 +228,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // model default applies.
   if (effort && EFFORT_LEVELS.has(effort)) opts.effort = effort;
 
-  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt(), batch2Prompt(), my74Prompt(), my79Prompt(), my87Prompt(), my93Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
+  const advice = [advisorPrompt(model, effort), jobsPrompt(), batch1Prompt(), batch2Prompt(), my74Prompt(), my79Prompt(), my87Prompt(), my93Prompt(), my96Prompt()].filter(Boolean).join(' ');   // my42 + my44 + my45
   if (advice) opts.systemPrompt = { type: 'preset', preset: 'claude_code', append: advice };
 
   runtime.activePermMode = permissionMode || DEFAULT_PERMISSION_MODE;
