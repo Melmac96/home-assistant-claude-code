@@ -650,6 +650,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       notify('reply', { title: 'Claude finished', message: 'Your reply is ready.' });
     }
 
+    // my100: a reply cut short (error or no proper finish), not his own Stop and not a limit haAi resumes itself
+    if (failed || !resultSeen) slot.lastOk = false;   // a reply with no proper finish is never 'ok' (not the one before it)
+    slot.lastCut = !abortController.signal.aborted && !limitHit && !slot.cycleMove && !slot.lastOk && (failed || resultSeen || !!slot.turnText);
     slot.finishedUnseen = !abortController.signal.aborted && !failed;   // my58
     slot.finishedAt = Date.now();   // my77: folds into Previous chats 30 minutes after this
     slot.asks = !abortController.signal.aborted && /⟦QUESTION⟧/.test(slot.turnText || '');   // my77: "Chat 2 needs your answer"

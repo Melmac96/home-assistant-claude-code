@@ -13,7 +13,7 @@ const text = String(cmd || '').trim().slice(0, 4000);
 if (!text) { console.error('FAILED: use  node nextchat-cli.js "what the next chat must do"'); process.exit(1); }
 if (cur && (cur.status === 'wait' || cur.status === 'running')) { console.error('FAILED: a move to a new chat is already waiting (status, or cancel it first)'); process.exit(1); }
 const day = Date.now() - 86400000, log = read(LOG, []).filter((t) => t > day);
-if (log.length >= 12) { console.error('FAILED: 12 new chats were already started by themselves today; ask Michael'); process.exit(1); }
+// my100: no daily cap (Michael's rule: moves by itself, no daily limit); the count is kept only for the log
 log.push(Date.now()); save(LOG, log);
 save(FILE, { id: randomBytes(4).toString('hex'), text, at: Date.now(), status: 'wait', slot: null });
 console.log('OK the next part starts in a fresh chat as soon as this reply is finished');

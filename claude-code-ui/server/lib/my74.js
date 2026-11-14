@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my99',
+  version: 'my100',
   items: [
+    { t: 'Long chats always move by themselves', how: 'A chat that grows past 150k now always moves to a fresh chat by itself, with no daily limit (before, it stopped after 20 moves a day). It also moves when the last reply was cut short. If a move ever fails, haAi tells you instead of keeping the long chat quietly.' },
     { t: 'Accounts never run out while another has room', how: 'haAi now checks each account\'s real figure before moving to it, allows for the bigger first reply after a move, and if an account ever hits its 5-hour limit it moves straight to an account with room and carries on there. It only waits for a reset when every account is full.' },
     { t: 'U decide left the menu', how: 'U decide is no longer in the menu. Use the waving hand just after the … button under the typing box instead. The blue I\'m back button still shows while you are away.' },
     { t: 'Lots to send, and a waving hand', how: 'Two new buttons just after the … button under the typing box. The stack is Lots to send: press it before you send lots of changes, and I work on each one quietly with no questions. It turns into a green Done; press Done and I ask all my questions at once. The waving hand is U decide, for when you are going away for a while.' },

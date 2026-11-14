@@ -10,6 +10,10 @@
  * reply has finished (never in the middle of one): same steps as above, and the new chat first shows that last reply
  * again in full (with any question waiting), because the move takes it off his screen. One try per old chat,
  * at most 20 a day. Not in Free mode.
+ * my100 (Michael 14 Nov, his rule 'LONG CHATS MOVE BY THEMSELVES, ALWAYS, NO DAILY LIMIT'): no daily cap on either
+ *   move (the 20-a-day cap silently kept long chats from 18:48 UK). Only the one-try-per-chat loop guard stays, and
+ *   when it (or a failed move) keeps a long chat, haAi TELLS him instead of keeping it quietly. A long chat whose
+ *   last reply was cut short (an error, not his own Stop and not an account limit that haAi resumes) moves too.
  * my94: both moves also carry every question still waiting in the old chat (handover.js openQuestionsText). The page's "nearly full" pop-up and warnings are gone; the colour bar stays.
  */
 import { readFileSync, writeFileSync, renameSync } from 'fs';
@@ -67,16 +71,25 @@ async function moveOn(slot, nextStep, why) {
   });
 }
 
+// my100: the loop guard kept a long chat (its one move already failed): say so once, never silently
+const warned = new Set();
+function warnKept(s) {
+  if (warned.has(s.sessionId)) return;
+  warned.add(s.sessionId);
+  log('WARN', `my100: chat ${s.id} is still over ${Math.round(AUTO_TOKENS / 1000)}k after its one move try`);
+  broadcast({ type: 'handover_status', text: 'This long chat could not move to a new one by itself (it was tried once). Please tap New chat, or ask me to move it.' });
+}
+
 // my91: a chat past 150k whose reply has finished, not yet tried, not busy with anything else
 function autoCandidate(waitingSlot) {
   if (modeState().free) return null;
   const tried = new Set(readAuto().tried);
   for (const s of chats.values()) {
     if (s.free || s.query || !s.sessionId || s.id === waitingSlot) continue;
-    if (!s.ctx || s.ctx.sid !== s.sessionId || s.ctx.tokens < AUTO_TOKENS || !s.lastOk) continue;
+    if (!s.ctx || s.ctx.sid !== s.sessionId || s.ctx.tokens < AUTO_TOKENS || !(s.lastOk || s.lastCut)) continue;   // my100: cut short moves too
     if (s.bgTasks && s.bgTasks.size) continue;              // a background job of this chat is still running
     if (Date.now() - s.ctx.at < 5000) continue;             // let the reply settle on screen first
-    if (tried.has(s.sessionId)) continue;
+    if (tried.has(s.sessionId)) { warnKept(s); continue; }   // my100: never kept quietly
     return s;
   }
   return null;
@@ -89,7 +102,7 @@ async function autoTick(waitingSlot) {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/London' });
   a.log = (a.log || []).filter((x) => x.day === today);
   a.tried = [s.sessionId, ...a.tried].slice(0, 100);        // one try per old chat, even if it fails
-  if (a.log.length >= 20) { saveAuto(a); log('WARN', 'my91: 20 moves today already, this long chat stays'); return; }
+  // my100: no daily cap any more (his rule beats any limit)
   a.log.push({ day: today, at: Date.now(), from: s.sessionId, k: Math.round(s.ctx.tokens / 1000) });
   saveAuto(a);
   busy = true;
