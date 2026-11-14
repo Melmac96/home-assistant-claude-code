@@ -132,7 +132,7 @@ export function isNoResponsePlaceholder(ev) {
 }
 
 // my101: the note haAi adds to a message sent while Claude is still working (run-query.js ADD_NOTE) is for Claude only
-export const ADD_NOTE = '\n\n[haAi note: Michael sent this while you were still working. The program may cut your turn short now and show him nothing. So in your NEXT reply, FIRST tell him in full what you had done so far and any question still waiting (his marker layout), THEN answer this message.]';
+export const ADD_NOTE = '\n\n[haAi note: Michael sent this while you were still working. Do NOT stop or drop the job you are doing: carry on with it to the end. Read this message at once in case it is relevant to that job (it may change it), and use it if so; anything else in it you answer after the job. The program may also cut your turn short now and show him nothing: if it does, your NEXT reply FIRST tells him in full what you had done so far and any question still waiting (his marker layout), THEN carries on with the unfinished job without waiting to be told, THEN answers this message.]';
 const dropNote = (t) => (typeof t === 'string' && t.endsWith(ADD_NOTE) ? t.slice(0, -ADD_NOTE.length) : t);
 
 export function lineToItems(line, toolNames = new Map()) {
