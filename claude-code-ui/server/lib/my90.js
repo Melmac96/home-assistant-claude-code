@@ -25,6 +25,10 @@ const HIST = path.join(DATA_DIR, 'haai-usage-history.jsonl');
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const saveJson = (p, v) => { writeFileSync(p + '.tmp', JSON.stringify(v)); renameSync(p + '.tmp', p); };
 const lc = (e) => String(e || '').toLowerCase();
+/** my99: Claude always sends usage as a fraction (0.86 = 86%, 1.04 = 104%). The old "<= 1 ? x100 : as is" read 104% as 1.04%. */
+export const pctOf = (u) => Number(u) * 100;
+export const STALE_MS = 10 * 60 * 1000;   // my99: a figure older than this is never trusted for a move
+export const MOVE_COST_DEFAULT = 20;      // my99: moving a long chat re-reads it all on the new account (86% -> 104% on 14 Nov)
 
 // ── state: { carryOn, manual: {email, at}, stopped: {at, text}, costs: [% of 5 hours per reply] } ─────────────
 export const cycleState = () => readJson(STATE) || {};
@@ -49,11 +53,23 @@ export function nextReplyCost(st = cycleState()) {
   const c = (st.costs || []).slice(-5);
   return Math.min(20, Math.max(3, ...c));
 }
-/** my95: a reply finished; remember how much of the 5 hours it used. */
-export function recordReplyCost(pct) {
+/** my95: a reply finished; remember how much of the 5 hours it used. my99: a reply that was the first one after a move counts separately. */
+export function recordReplyCost(pct, moved = false) {
   if (!(pct >= 0) || pct > 60) return;
   const st = cycleState();
-  setState({ costs: [...(st.costs || []), Math.round(pct * 10) / 10].slice(-10) });
+  const v = Math.round(pct * 10) / 10;
+  if (moved) setState({ moveCosts: [...(st.moveCosts || []), v].slice(-10) });
+  else setState({ costs: [...(st.costs || []), v].slice(-10) });
+}
+/** my99: how much the FIRST reply after moving the chat to another account may use: the most of the last 5 moves, at least 20%, at most 40%. */
+export function moveCost(st = cycleState()) {
+  const c = (st.moveCosts || []).slice(-5);
+  return Math.min(40, Math.max(MOVE_COST_DEFAULT, ...c));
+}
+/** my99: is this account's saved figure recent enough to decide on? */
+export function isFresh(email, q = readJson(QUOTA) || {}) {
+  const r = q[lc(email)];
+  return !!(r && r.at && Date.now() - r.at < STALE_MS && r.five_hour && r.five_hour.used != null);
 }
 
 /** The most of its 5 hours an account may use right now. */
@@ -66,11 +82,17 @@ export function limitFor(email, st = cycleState()) {
  * Which saved account to use, or null when every one is at its limit. `exclude` = emails busy in other chats.
  * Order: his Accounts-menu pick (while under its limit), then the 5 hours that reset soonest, then the least used.
  */
-export function chooseAccount(saved, exclude = new Set()) {
-  const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st);
-  // my95: only an account with room for the whole next reply before its limit
-  const open = saved.filter((a) => !exclude.has(a.email)).map((a) => ({ a, f: five(a.email, q) }))
-    .filter((x) => (x.f.used ?? 0) + est < limitFor(x.a.email, st));
+export function chooseAccount(saved, exclude = new Set(), current = null) {
+  const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st), mv = Math.max(est, moveCost(st));
+  // my95: only an account with room for the whole next reply before its limit.
+  // my99: an account the chat is not on yet must have room for the costly first reply after a move,
+  // its figure must be fresh (checked live just before, see extras.freshenQuota), and an unknown figure is never "0% used".
+  const need = (a) => (current && lc(a.email) === lc(current) ? est : mv);
+  const all = saved.filter((a) => !exclude.has(a.email)).map((a) => ({ a, f: five(a.email, q), fresh: isFresh(a.email, q) || !!(current && lc(a.email) === lc(current)) }))
+    .map((x) => (x.f.used == null ? { ...x, fresh: false } : x))   // never seen: only used when nothing better
+    .filter((x) => (x.f.used ?? 0) + need(x.a) < limitFor(x.a.email, st));
+  // my99: never move on a stale figure while an account with a fresh one has room
+  const open = all.some((x) => x.fresh) ? all.filter((x) => x.fresh) : all;
   if (!open.length) return null;
   if (st.manual?.email) { const m = open.find((x) => lc(x.a.email) === lc(st.manual.email)); if (m) return m.a; }
   open.sort((x, y) => (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity) || (x.f.used ?? 0) - (y.f.used ?? 0));
@@ -100,9 +122,10 @@ export function tidyState(saved) {
  * A usage figure arrived for the account a running chat is on. Returns null (carry on),
  * { move: account } (stop this reply now and carry on with that account) or { stop: text }.
  */
-export function checkRun(email, used, saved, busy = new Set()) {
+export function checkRun(email, used, saved, busy = new Set(), rejected = false) {
+  if (rejected) used = Math.max(used ?? 0, 100);   // my99: Claude refused the reply = this account is full, whatever the figure says
   if (used == null || used < limitFor(email)) return null;
-  const next = chooseAccount(saved, new Set([...busy, email])) || chooseAccount(saved.filter((a) => a.email !== email));
+  const next = chooseAccount(saved, new Set([...busy, email])) || chooseAccount(saved.filter((a) => a.email !== email), new Set([email]));
   if (next) return { move: next };
   const st = cycleState();
   const text = isMain(email) && st.carryOn

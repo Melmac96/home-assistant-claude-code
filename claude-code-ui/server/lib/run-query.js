@@ -42,7 +42,8 @@ import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
-import { checkRun, recordUsage, recordReplyCost } from './my90.js';   // my90, my95
+import { checkRun, recordUsage, recordReplyCost, pctOf, five } from './my90.js';   // my90, my95, my99
+import { freshenQuota } from './extras.js';   // my99
 import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
@@ -86,7 +87,7 @@ function noteTouch(slot, tool, input) {
 function addChatCost(slot, email, unified) {
   const w = unified && unified.five_hour;
   if (!w || w.utilization == null) return;
-  const used = w.utilization <= 1 ? w.utilization * 100 : Number(w.utilization);
+  const used = pctOf(w.utilization);
   const key = String(email || 'main');
   let last = slot.costLast[key];
   if (!last) {   // first figure on this account: start from the last one seen for it, so the first message counts too
@@ -171,6 +172,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // that follows it — see the note by the 'result' handler.
   let limitHit = null;
   let my95From = null, my95To = null;   // my95: this reply's first and last 5-hour figure, to learn what a reply costs
+  let my99Start = null, my99Moved = false;   // my99: figure before the reply, and whether it is the first reply after a move
   // tool_use id → tool name for this run: a tool_result carries only the id, and
   // an answered question has to be told apart from a real failure.
   const liveToolNames = new Map();
@@ -199,7 +201,12 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   } else {
     const others = runningChats().filter((x) => x !== slot && x.account && !x.free);
     const alone = ![...chats.values()].some((x) => x !== slot && !x.free && (x.query || x.sessionId || x.opened));
+    try { await freshenQuota(); } catch (e) { log('WARN', `my99: live check failed: ${e?.message || e}`); }   // my99: never decide on an old figure
+    const wasOn = slot.account || null;
     acct = pickChatAccount(others.map((x) => x.account), slot, alone);
+    // my99: what the account stood at before this reply, and whether the chat just moved (that first reply costs more)
+    try { const f0 = five(acct.email); if (f0.used != null) my99Start = f0.used; } catch {}
+    my99Moved = !!(acct.moved || (wasOn && acct.email && wasOn !== acct.email));
     // my90: every account is at its limit - stop and tell him (Carry on / Wait on the page).
     if (acct.stop) {
       log('WARN', `my90: not starting chat ${slot.id}: ${acct.stop}`);
@@ -524,15 +531,16 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         try {
           const fw = info.unifiedWindows && info.unifiedWindows.five_hour;
           if (!acct.free && fw && fw.utilization != null) {
-            const u = fw.utilization <= 1 ? fw.utilization * 100 : Number(fw.utilization);
+            const u = pctOf(fw.utilization);
             if (my95From == null) my95From = u; my95To = u;
           }
           if (!acct.free && fw && fw.utilization != null && !slot.cycleMove && !slot.cycleStop) {
-            const used = fw.utilization <= 1 ? fw.utilization * 100 : Number(fw.utilization);
+            const used = pctOf(fw.utilization);
             const busy = new Set(runningChats().filter((x) => x !== slot && x.account && !x.free).map((x) => x.account));
-            const r = checkRun(acct.email, used, listAccounts().saved, busy);
-            if (r && r.move) { slot.cycleMove = { from: acct.email, to: r.move.email, used: Math.round(used) }; log('WARN', `my90: ${acct.email} at ${Math.round(used)}% - stopping this reply, carrying on with ${r.move.email}`); abortController.abort(); }
-            else if (r && r.stop) { slot.cycleStop = r.stop; log('WARN', `my90: ${r.stop}`); abortController.abort(); }
+            const refused = info.status === 'rejected' && info.rateLimitType === 'five_hour';   // my99: a refusal always moves on
+            const r = checkRun(acct.email, used, listAccounts().saved, busy, refused);
+            if (r && r.move) { slot.cycleMove = { from: acct.email, to: r.move.email, used: Math.round(refused ? Math.max(used, 100) : used) }; log('WARN', `my90: ${acct.email} at ${Math.round(used)}%${refused ? ' (limit reached)' : ''} - stopping this reply, carrying on with ${r.move.email}`); abortController.abort(); }
+            else if (r && r.stop) { slot.cycleStop = r.stop; log('WARN', `my90: ${r.stop}`); if (!refused) abortController.abort(); }   // my99: all full + refused = auto-continue waits for the reset
           }
         } catch (e) { log('WARN', `my90: check failed: ${e?.message || e}`); }
         try { noteJobUsage(event.session_id || runtime.activeSessionId, info.unifiedWindows); } catch {}   // my74: job cost
@@ -656,7 +664,10 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
 
     // my90: the account reached its limit mid-reply - carry on in this same chat with the next account, or say why it stopped.
     // my95: remember what a finished reply cost (not one stopped part-way; a reset in between gives a fall, ignored)
-    try { if (!acct.free && !slot.cycleMove && my95From != null && my95To >= my95From) recordReplyCost(my95To - my95From); } catch {}
+    try {
+      const from = my99Start != null && my95From != null && my99Start <= my95From ? my99Start : my95From;   // my99: count the first call too
+      if (!acct.free && from != null && my95To >= from && (!slot.cycleMove || my99Moved)) recordReplyCost(my95To - from, my99Moved);
+    } catch {}
     if (slot.cycleMove) {
       const mv = slot.cycleMove; slot.cycleMove = null;
       broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });

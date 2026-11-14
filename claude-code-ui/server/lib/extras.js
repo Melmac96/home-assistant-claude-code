@@ -14,7 +14,7 @@ import path from 'path';
 import { CLAUDE_CONFIG_DIR, DATA_DIR, SUPERVISOR_URL } from './config.js';
 import { currentIdentity } from './accounts.js';
 import { log } from './log.js';
-import { recordUsage, forecasts, cycleState } from './my90.js';   // my90
+import { recordUsage, forecasts, cycleState, pctOf, STALE_MS } from './my90.js';   // my90, my99
 
 const readJson = (p) => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const writeJson = (p, v) => { mkdirSync(path.dirname(p), { recursive: true }); writeFileSync(p + '.tmp', JSON.stringify(v)); renameSync(p + '.tmp', p); };
@@ -113,6 +113,45 @@ export async function getQuota(force = false) {
   return withForecast(store);
 }
 
+/**
+ * my99 (Michael 14 Nov: "never break it, ever"): before haAi decides which account a reply runs on, every account
+ * whose figure is older than 10 minutes is checked live with Anthropic, so a move is never made on an old figure.
+ */
+export async function freshenQuota() {
+  const store = readJson(QUOTA) || {};
+  const cur = currentIdentity();
+  let files = [];
+  try { files = readdirSync(ACC_DIR).filter((f) => f.endsWith('.json')); } catch { return; }
+  let changed = false;
+  for (const f of files) {
+    const a = readJson(path.join(ACC_DIR, f));
+    if (!a || !a.email) continue;
+    const key = a.email.toLowerCase();
+    if (store[key]?.at && Date.now() - store[key].at < STALE_MS) continue;
+    if (restUntil[key] > Date.now()) continue;
+    const active = !!cur && cur.email === a.email;
+    const credText = active ? (() => { try { return readFileSync(path.join(CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8'); } catch { return a.credentials; } })() : a.credentials;
+    let oauth = null;
+    try { oauth = JSON.parse(credText).claudeAiOauth; } catch { /* unreadable */ }
+    if (!oauth || !oauth.accessToken || !(Number(oauth.expiresAt) > Date.now() + 60000)) continue;
+    try {
+      store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
+      recordUsage(key, store[key].five_hour, store[key].seven_day);
+      changed = true;
+      log('INFO', `my99: fresh figure for ${key.split('@')[0]}: ${store[key].five_hour?.used ?? '?'}% of 5 hours`);
+    } catch (e) {
+      if (e?.status === 429) restUntil[key] = Date.now() + BACKOFF_MS;
+      log('WARN', `my99: could not check ${key.split('@')[0]} live: ${e?.message || e}`);
+    }
+  }
+  if (changed) try { writeJson(QUOTA, store); } catch { /* not important */ }
+}
+
+/** my99: keep every account's figure fresh in the background (every 5 minutes, the rate Anthropic allows). */
+export function startQuotaKeeper() {
+  setInterval(() => { getQuota(false).catch(() => {}); }, CACHE_MS + 5000).unref?.();
+}
+
 /** my90: the weekly forecast sentence for each account, and the cycle state (Carry on / stopped), go out with the figures. */
 function withForecast(store) {
   const f = forecasts(), st = cycleState();
@@ -125,7 +164,7 @@ function withForecast(store) {
 export function noteUsage(unified, email = null) {
   const cur = email ? { email } : currentIdentity();   // my77: a chat on another account reports for THAT account
   if (!cur || !cur.email || !unified) return;
-  const w = (x) => (x && x.utilization != null ? { used: Math.round(x.utilization <= 1 ? x.utilization * 100 : x.utilization), resetsAt: x.resetsAt || null } : null);
+  const w = (x) => (x && x.utilization != null ? { used: Math.round(pctOf(x.utilization)), resetsAt: x.resetsAt || null } : null);
   const store = readJson(QUOTA) || {};
   const key = cur.email.toLowerCase();
   store[key] = { five_hour: w(unified.five_hour) || store[key]?.five_hour || null, seven_day: w(unified.seven_day) || store[key]?.seven_day || null, at: Date.now(), live: true };

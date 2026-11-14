@@ -47,6 +47,7 @@ import { registerDiagRoutes } from './lib/diag.js';
 import { attach } from './lib/ws-protocol.js';
 import { runQuery } from './lib/run-query.js';
 import * as autoContinue from './lib/auto-continue.js';
+import * as extras99 from './lib/extras.js';   // my99
 import { setOvernightRunner } from './lib/batch4.js';   // my48
 import { setTimedRunner } from './lib/my79.js';   // my79
 import { startMy87 } from './lib/my87.js';   // my87
@@ -136,6 +137,7 @@ notifier.load();
 cleanupUploads();          // drop attachments older than a week
 refreshHaLinks();          // populate entity/automation link targets
 autoContinue.rearmOnBoot();
+extras99.startQuotaKeeper();   // my99: every account's figure kept fresh
 
 // my84 (Michael 2026-11-12): keep the Claude Code mailbox running, so the Claude app's notes are answered
 // even after haAi restarts. The script exits at once if a copy is already running (its own pid file).

@@ -190,7 +190,8 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   if (saved.length < 2) return { email: cur.email, dir: null };
   // my90/my95 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on BEFORE a reply that would pass 95%; none with room = stop.
   tidyState(saved);
-  const pick = chooseAccount(saved, used) || chooseAccount(saved);
+  const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
+  const pick = chooseAccount(saved, used, on) || chooseAccount(saved, new Set(), on);
   if (!pick) return { email: cur.email, dir: null, stop: cycleState().stopped?.text || `All your Claude accounts are close to ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.` };
   // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
   if (alone && !used.size && pick.email !== cur.email) {

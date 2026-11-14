@@ -32,7 +32,7 @@ const saveCost = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => {
 export function noteJobUsage(sid, unified) {
   const w = unified && unified.five_hour;
   if (!sid || !w || w.utilization == null) return;
-  const used = w.utilization <= 1 ? w.utilization * 100 : Number(w.utilization);
+  const used = Number(w.utilization) * 100;   // my99: always a fraction (1.04 = 104%)
   const now = { used, resetsAt: w.resetsAt || null };
   const last = cost.last;
   let step = 0;
@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my98',
+  version: 'my99',
   items: [
+    { t: 'Accounts never run out while another has room', how: 'haAi now checks each account\'s real figure before moving to it, allows for the bigger first reply after a move, and if an account ever hits its 5-hour limit it moves straight to an account with room and carries on there. It only waits for a reset when every account is full.' },
     { t: 'U decide left the menu', how: 'U decide is no longer in the menu. Use the waving hand just after the … button under the typing box instead. The blue I\'m back button still shows while you are away.' },
     { t: 'Lots to send, and a waving hand', how: 'Two new buttons just after the … button under the typing box. The stack is Lots to send: press it before you send lots of changes, and I work on each one quietly with no questions. It turns into a green Done; press Done and I ask all my questions at once. The waving hand is U decide, for when you are going away for a while.' },
     { t: 'U decide and I\'m back', how: 'When you are going away from haAi for a while, tap the waving hand. I then get on by myself, but only with jobs you have already said yes to, plus checks and tidy-ups. A blue I\'m back button shows above the typing box until you return. Tap it and I finish what I am on, then tell you what I did and what is waiting for you.' },
