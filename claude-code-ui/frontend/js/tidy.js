@@ -203,7 +203,7 @@ function fillMenu() {
   go('◷ History', 'sessions-btn');
   go('📺 TV view', 'tv-view-btn');
   go('✉ Messages', 'msgs-btn');   // my93 H2 (Look C)
-  if (!isAway()) go("🤝 U decide (I'm going away)", 'udecide-btn');   // my96
+  // my98 (Michael 14 Nov): U decide row removed from the menu; the waving hand button after the … button does it now
   if (!document.documentElement.classList.contains('haai-tablet')) { go('⚙ Settings', 'settings-btn'); go('👤 Accounts', 'accounts-btn'); }   // my76: phone only, they left the top bar
   const big = mk('button', 'tidy-row'); big.type = 'button'; big.textContent = 'Aa Bigger text';
   big.onclick = () => {
