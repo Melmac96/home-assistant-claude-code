@@ -41,7 +41,7 @@ import { takeScreenshot } from './screen.js';   // my47
 import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
 import { startMy93, getMessages, getNowTv } from './my93.js';   // my93
-import { awayState, setAway } from './my96.js';   // my96
+import { awayState, setAway, startMy96 } from './my96.js';   // my96
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
@@ -69,6 +69,7 @@ startOvernight();   // my48
 startQuiet();   // my49
 startMy79();   // my79
 startMy93();   // my93
+startMy96();   // my96 AP40
 
 /** Everything a newly connected (or reconnected) tab needs to render the app. */
 function greet(ws) {
