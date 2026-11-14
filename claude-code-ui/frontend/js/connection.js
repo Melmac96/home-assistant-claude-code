@@ -30,6 +30,7 @@ import { afterHistory74, onMy74Message } from './my74.js';   // my74
 import { afterHistory79, onMy79Message } from './my79.js';   // my79
 import { onMy93Message } from './my93.js';   // my93
 import { onMy96Message } from './my96.js';   // my96
+import { onMy97Message } from './my97.js';   // my97
 
 // ── my82: long chats ─────────────────────────────────────────────────────
 // A long chat first draws only its newest part (about the last 120 items, starting at one of his
@@ -531,6 +532,10 @@ function handleOne(msg) {
 
     case 'away_state':   // my96
       onMy96Message(msg);
+      break;
+
+    case 'lots_state':   // my97
+      onMy97Message(msg);
       break;
 
     case 'home_health':   // my34

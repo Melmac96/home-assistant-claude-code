@@ -42,6 +42,7 @@ import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
 import { startMy93, getMessages, getNowTv } from './my93.js';   // my93
 import { awayState, setAway, startMy96 } from './my96.js';   // my96
+import { lotsState, setLots } from './my97.js';   // my97
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
@@ -127,6 +128,7 @@ function greetFor(ws) {
   send(ws, { type: 'dated_checks', list: getDatedChecks() });   // my79 H10
   send(ws, { type: 'now_tv', ...getNowTv() });   // my93 H19
   send(ws, { type: 'away_state', ...awayState() });   // my96
+  send(ws, { type: 'lots_state', ...lotsState() });   // my97
   { const d = getDraft(); if (d) send(ws, { type: 'draft', ...d }); }   // my79 H9
   send(ws, { type: 'quiet', ...quietState() });   // my49
   send(ws, { type: 'app_latest', latest: extras.appLatest() });   // my40
@@ -380,6 +382,7 @@ const handlers = {
   whatsnew_seen(_ws) { whatsNewSeen(); },   // my74
   rule_broken(_ws, msg) { ruleBroken(msg.text); },   // my74
   away_set(_ws, msg) { setAway(!!msg.on); },   // my96
+  lots_set(_ws, msg) { setLots(!!msg.on); },   // my97
   messages_get(ws) { send(ws, { type: 'messages_list', list: getMessages() }); },   // my93 H2
   quick_save(_ws, msg) { broadcast({ type: 'quick', ...handover.saveQuick(msg) }); },
   keep_add(ws, msg) {   // my35
