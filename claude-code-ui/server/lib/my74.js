@@ -70,6 +70,7 @@ const WHATS_NEW = {
   items: [
     { t: 'The real model by the typing box', how: 'Next to the typing box (and on the top line) haAi now shows the model and effort the chat is really on, for example Opus 5.5 · High, never Default (recommended).' },
     { t: 'Typing stays private until you send', how: 'On the TV your words no longer appear while you type on the phone or tablet. The TV just says Typing on the Phone (or Tablet), and your message shows once you press send.' },
+    { t: 'Working bar lined up', how: 'The working bar above the typing box is now the same width as everything else.' },
     { t: 'No in-between lines while I work', how: 'While I am still working, the short lines I write part-way are hidden on every device. You see the progress bar and my steps, then only my final reply.' },
     { t: 'A short line when haAi moves you on', how: 'When a chat gets long and haAi moves you to a new one, you no longer see the long note it sends me. You just see one line: haAi moved to a new chat because the old one was long.' },
     { t: 'My working shows on the TV again', how: 'On the TV you can see my steps, my thinking and the progress bar all the time again, like on the phone and tablet.' },

@@ -475,3 +475,5 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 .h6-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}.h6-e{color:#9cc8ff;flex:none}.h6-o{color:#7d8087;flex:none}
 .tv-view .h6-bar{display:none!important}.night .h6-bar{filter:brightness(.8)}
 
+/* my108 (Michael 15 Nov): the working bar and its box line up with the typing box and messages (12px in each side), not wider */
+.h6-bar,.h2-step{box-sizing:border-box;width:calc(100% - 24px)!important;margin-left:12px!important;margin-right:12px!important}
