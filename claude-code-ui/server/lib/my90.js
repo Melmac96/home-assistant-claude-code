@@ -37,6 +37,22 @@ function setState(patch) {
   try { saveJson(STATE, s); } catch (e) { log('WARN', `my90: state save failed: ${e?.message || e}`); }
   return s;
 }
+// ── my102 (Michael 2026-11-15): REST an account for a length of time. { "<email>": untilEpochMs } in /data/haai-rest.json.
+// A rested account is never picked for a new reply (a reply already running finishes first). It ends by itself at the time; no setting beats it.
+const REST = path.join(DATA_DIR, 'haai-rest.json');
+export function restedMap() {
+  const m = readJson(REST) || {}, now = Date.now(), out = {};
+  for (const [e, t] of Object.entries(m)) if (Number(t) > now) out[lc(e)] = Number(t);
+  return out;
+}
+export const isRested = (email) => !!restedMap()[lc(email)];
+export function setRest(email, untilMs) {
+  const m = restedMap();
+  if (untilMs) m[lc(email)] = untilMs; else delete m[lc(email)];
+  saveJson(REST, m);
+  log('INFO', `my102: ${email} ${untilMs ? 'rested until ' + new Date(untilMs).toISOString() : 'rest cleared'}`);
+  return m;
+}
 export const mainEmail = () => lc(readJson('/data/haai-prefs.json')?.mainAccount || MAIN_DEFAULT);
 export const isMain = (email) => lc(email) === mainEmail();
 
@@ -88,7 +104,8 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
   // my99: an account the chat is not on yet must have room for the costly first reply after a move,
   // its figure must be fresh (checked live just before, see extras.freshenQuota), and an unknown figure is never "0% used".
   const need = (a) => (current && lc(a.email) === lc(current) ? est : mv);
-  const all = saved.filter((a) => !exclude.has(a.email)).map((a) => ({ a, f: five(a.email, q), fresh: isFresh(a.email, q) || !!(current && lc(a.email) === lc(current)) }))
+  const rested = restedMap();
+  const all = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)]).map((a) => ({ a, f: five(a.email, q), fresh: isFresh(a.email, q) || !!(current && lc(a.email) === lc(current)) }))
     .map((x) => (x.f.used == null ? { ...x, fresh: false } : x))   // never seen: only used when nothing better
     .filter((x) => (x.f.used ?? 0) + need(x.a) < limitFor(x.a.email, st));
   // my99: never move on a stale figure while an account with a fresh one has room
