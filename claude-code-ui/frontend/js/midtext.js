@@ -11,7 +11,11 @@ const css = document.createElement('style');
 css.textContent = '#messages > .bubble-assistant.mid-text{display:none!important}';
 document.head.append(css);
 
-const keep = (b) => b.querySelector('.answer-card, .q-tv, .h2-card');
+// my112 (Michael 15 Nov: 'why do the questions keep vanishing?'): a message holding a question is NEVER hidden, even
+// before its answer buttons are drawn and even while haAi still thinks I am working (it was hidden then).
+const QRX = /⟦\/?QUESTION⟧|\[\[\/?QUESTION\]\]/;
+const keep = (b) => b.querySelector('.answer-card, .q-tv, .h2-card') || QRX.test(b.textContent || '') ||
+  [...b.querySelectorAll('.bubble-content')].some((c) => QRX.test(c._rawMd || ''));
 function mark() {
   const last = new Map();   // chat id -> the newest assistant message so far in this turn
   for (const n of messagesEl.children) {

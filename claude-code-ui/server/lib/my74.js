@@ -80,6 +80,7 @@ export const jobCosts = () => cost.costs;
 const WHATS_NEW = {
   version: 'my112',
   items: [
+    { t: 'Questions stay on screen', how: 'A reply of mine with a question in it is never hidden now, even while haAi still thinks I am working. Before, it could vanish before you answered.' },
     { t: 'Finished bar fixed', how: 'The Finished bar now always shows how long my last reply took and how much of your 5-hour allowance it used, also after haAi reloads and on every device.' },
     { t: 'Tidier top', how: 'The job number box and the Now on TV line are gone from the top of the chat on every device. My tool blocks fold back into the working bar each time I start a new job.' },
     { t: 'My tools inside the working bar', how: 'The separate command and file blocks are gone from the chat. The working bar now has 2 lines: the step and time left, then what I am doing now and how many tools so far. When I finish it lists them in one line, for example 9 tools: 5 commands, 3 files read, 1 file changed. Tap the bar to see them all in the chat.' },
