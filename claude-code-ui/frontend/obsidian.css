@@ -491,3 +491,5 @@ body.h111-tools .tool-group,body.h111-tools .tool-result{display:none!important}
 /* my112 (Michael 15 Nov): on every device the background-job number row and the 'Now on TV' line are gone
    (the top line already says '1 job running'); the tool blocks stay folded into the working bar */
 .jobs-row,.h93-tv,.h93-tv.on{display:none!important}
+/* my121 (Michael 15 Nov): the three dots + "Working…" line is gone from the chat; the working bar is the only Working indicator */
+.thinking{display:none !important}
