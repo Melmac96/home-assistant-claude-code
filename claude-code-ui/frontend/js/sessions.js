@@ -4,6 +4,7 @@
 import { S } from './state.js';
 import { sessionsBtn, sessionsListEl, sessionsPanel } from './dom.js';
 import { confirmAction, confirmInterrupt } from './confirm.js';
+import { appendInfoLine } from './transcript.js';   // my115
 
 // ── Sessions ─────────────────────────────────────────────────────────────────
 export function relTime(ms) {
@@ -131,9 +132,8 @@ export function renderSessions() {
         });
         if (!ok) return;   // stay put, panel still open, nothing sent
       }
-      if (S.ws && S.isConnected) {
-        S.ws.send(JSON.stringify({ type: 'session_switch', id: s.id }));
-      }
+      if (!(S.ws && S.isConnected)) { appendInfoLine('No connection, so the chat was not opened. Try again when haAi is back.'); return; }   // my115: panel stays open
+      S.ws.send(JSON.stringify({ type: 'session_switch', id: s.id }));
       closeSessions();
     };
 

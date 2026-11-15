@@ -10,6 +10,7 @@ import { S } from './state.js';
 import { messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { appendInfoLine } from './transcript.js';
+import { sendForButton, newCid } from './send.js';   // my115
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
@@ -48,7 +49,8 @@ export function saveJobText(what) {
 // ── H8 send when back ────────────────────────────────────────────────────────
 const OUT = 'haai-outbox';
 const readOut = () => { try { const l = JSON.parse(localStorage.getItem(OUT) || '[]'); return Array.isArray(l) ? l : []; } catch { return []; } };
-const writeOut = (l) => { try { localStorage.setItem(OUT, JSON.stringify(l)); } catch { /* full */ } };
+// my115: says whether it was really kept (a full phone store used to lose the message without a word)
+const writeOut = (l) => { try { localStorage.setItem(OUT, JSON.stringify(l)); return true; } catch { return false; } };
 function drawOutbox() {
   messagesEl.querySelectorAll('.h74-wait').forEach((e) => e.remove());
   let last = null;
@@ -63,12 +65,18 @@ function drawOutbox() {
   }
   if (last) last.scrollIntoView({ block: 'end' });
 }
-export function queueOffline(text) {
-  const l = readOut(); l.push({ id: Date.now().toString(36), text, at: Date.now() }); writeOut(l);
+/** my115: returns true when the message is safely kept. `cid` = the receipt number it was first sent with, if any
+ *  (the server ignores a copy it already has, so a message that did arrive is never sent twice). */
+export function queueOffline(text, cid) {
+  const l = readOut();
+  if (cid && l.some((m) => m.id === cid)) return true;
+  l.push({ id: cid || newCid(), text, at: Date.now() });
+  const ok = writeOut(l);
   drawOutbox();
+  return ok;
 }
 let flushTimer = null;
-function flushOutbox() {
+export function flushOutbox() {   // my115: also called after a reconnect that brought nothing new (it never went before)
   clearTimeout(flushTimer);
   flushTimer = setTimeout(() => {
     const l = readOut();
@@ -76,7 +84,8 @@ function flushOutbox() {
     if (!S.isConnected) { drawOutbox(); return; }
     writeOut([]);
     messagesEl.querySelectorAll('.h74-wait').forEach((e) => e.remove());
-    sendText(l.map((m) => m.text).join('\n\n'));   // all waiting messages go as one, in the order typed
+    // my115: each waiting message goes on its own, in the order typed, with its own receipt number
+    for (const m of l) sendForButton(m.text, { cid: m.id });
   }, 900);   // let the greeting burst (history, sessions, chats) settle first
 }
 setTimeout(() => { if (!S.isConnected && readOut().length) drawOutbox(); }, 3000);   // page opened while still offline

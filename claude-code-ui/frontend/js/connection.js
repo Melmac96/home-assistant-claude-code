@@ -16,7 +16,9 @@ import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } fr
 import { clearScreen } from './commands.js';
 import { setStatus, updateSendBtn } from './composer.js';
 import { closePermission, dropDialog, showPermissionPrompt, showUserDialog } from './dialogs.js';
-import { messagesEl, promptInput } from './dom.js';   // my82, my85
+import { messagesEl, promptInput, dialogOverlay, permOverlay } from './dom.js';   // my82, my85, my115
+import { attachments } from './attachments.js';   // my115
+import { keepItems } from './keep.js';   // my115
 import { autoContinueToggle, loginBtn, loginCodeForm, loginCodeInput, loginDesc, loginScreen, loginTitle, loginUrlEl, loginUrlSect, loginWaiting, modelSelect, permModeSelect, sessionsPanel, wsUrl } from './dom.js';
 import { relinkRenderedBubbles } from './links.js';
 import { announcePresence, applyNotifyState, attentionCue, showNotifyTestResult } from './notify.js';
@@ -26,7 +28,8 @@ import { setAutoContinueSupported } from './settings.js';
 import { hideThinking, showThinking } from './thinking.js';
 import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
 import { afterHistory, endsAtBottom } from './scrollmem.js';   // my73, my82
-import { afterHistory74, onMy74Message } from './my74.js';   // my74
+import { afterHistory74, onMy74Message, flushOutbox } from './my74.js';   // my74, my115 flushOutbox
+import { promptAcked, runStateAnswer, linkDropped } from './send.js';   // my115
 import { afterHistory79, onMy79Message } from './my79.js';   // my79
 import { onMy93Message } from './my93.js';   // my93
 import { onMy96Message } from './my96.js';   // my96
@@ -102,10 +105,18 @@ export function connect() {
   const ws = new WebSocket(h && one && h.items.length ? `${wsUrl}?sid=${encodeURIComponent(h.sid)}&n=${h.items.length}&h=${encodeURIComponent(h.h || '')}` : wsUrl);
   S.ws = ws;
 
-  ws.onopen    = () => { if (S.ws !== ws) return; reconnectTries = 0; lastHeard = Date.now(); S.isConnected = true;  setStatus('connected'); announcePresence(); };
-  ws.onclose   = () => { if (S.ws !== ws) return; S.isConnected = false; S.isRunning = false; setStatus('disconnected'); updateSendBtn(); scheduleReconnect(); };
+  // my115: a link that hangs while connecting is given 10 s, then closed and tried again (it could stay red for ever)
+  const openTimer = setTimeout(() => { if (S.ws === ws && ws.readyState === WebSocket.CONNECTING) { try { ws.close(); } catch { /* below */ } if (S.ws === ws) { S.ws = null; scheduleReconnect(); } } }, 10000);
+  ws.onopen    = () => { clearTimeout(openTimer); if (S.ws !== ws) return; reconnectTries = 0; lastHeard = Date.now(); S.isConnected = true;  setStatus('connected'); announcePresence(); };
+  ws.onclose   = () => { clearTimeout(openTimer); if (S.ws !== ws) return; S.isConnected = false; S.isRunning = false; setStatus('disconnected'); updateSendBtn(); linkDropped(); scheduleReconnect(); };
   ws.onerror   = () => ws.close();
-  ws.onmessage = (e) => { if (S.ws === ws) { lastHeard = Date.now(); handleServerMessage(JSON.parse(e.data)); } };
+  ws.onmessage = (e) => {
+    if (S.ws !== ws) return;
+    lastHeard = Date.now();
+    let msg;
+    try { msg = JSON.parse(e.data); } catch { console.warn('haAi sent something this page could not read'); return; }   // my115
+    try { handleServerMessage(msg); } catch (err) { console.error(`showing a ${msg && msg.type} message failed`, err); }   // my115: one bad message never stops the rest
+  };
 }
 
 function replaceSocket() {
@@ -204,7 +215,10 @@ function checkNewPage() {
     .then(html => {
       if (!html || !/\bv\/[0-9a-f]{10}\//.test(html) || html.includes(`v/${MY_VER}/`)) return;
       const tryReload = () => {
+        // my115: never while photos, kept items, a pop-up or a question card are waiting on screen (they were lost)
         if (S.isRunning || promptInput.value.trim() || document.querySelector('.answer-own textarea:focus, textarea:focus')) return;
+        if (attachments.length || keepItems.length || document.querySelector('.start-check, .h74-wait')) return;
+        if (!dialogOverlay.classList.contains('hidden') || !permOverlay.classList.contains('hidden')) return;
         clearInterval(newPageTimer);
         location.reload();
       };
@@ -284,6 +298,15 @@ function handleOne(msg) {
       break;
 
     case 'pong': break;   // my88: heartbeat answer (lastHeard is set for every message)
+    case 'prompt_ack': promptAcked(msg.cid); break;   // my115: the server has his message
+    case 'run_state': runStateAnswer(msg); break;     // my115: is that chat really still working?
+    case 'draft_back':                                // my115: a message that could not go comes back into the box
+      if (msg.text && !promptInput.value.includes(msg.text)) {
+        promptInput.value = promptInput.value.trim() ? `${promptInput.value.trim()}\n\n${msg.text}` : msg.text;
+        try { localStorage.setItem('draft', promptInput.value); } catch { /* storage full: the box still has it */ }
+        appendInfoLine('Your message did not go, so it is back in the typing box. Send it again when you are ready.');
+      }
+      break;
 
     case 'history':
       // my88: only what is new since the page last had the chat. Nothing new = the page stays exactly as it is.
@@ -299,6 +322,7 @@ function handleOne(msg) {
           if (S.isRunning) showThinking(); else hideThinking();
           if (!msg.background) { S.backgroundTasks = []; refreshBgTasksStrip(); }
           updateSendBtn();
+          flushOutbox();   // my115: messages waiting to send go now (they sat there when nothing new came back)
           break;
         }
         msg = { ...msg, items: h.items.concat(msg.items) };

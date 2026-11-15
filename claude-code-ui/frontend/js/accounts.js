@@ -24,7 +24,13 @@ const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.c
 const rank = (e) => { const i = ORDER.indexOf(String(e).toLowerCase()); return i < 0 ? 99 : i; };
 export const shortName = (email) => SHORT[String(email).toLowerCase()] || String(email).split('@')[0];   // my78: also used by the chat tabs
 
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+// my115: says whether it went; with no link he is told and the button is not left greyed out
+const send = (o) => {
+  if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
+  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when haAi is back.';
+  t.onclick = () => t.remove(); document.body.append(t); setTimeout(() => t.remove(), 6000);
+  return false;
+};
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 
 
@@ -91,7 +97,7 @@ export function showAccounts(msg) {
         const sel = document.createElement('select'); sel.className = 'settings-btn acc-model';
         for (const o of m.pool) { const op = mk('option', '', o.id.replace(':free', '') + (o.context ? '  ' + Math.round(o.context / 1000) + 'k' : '')); op.value = o.id; if (o.id === m.model) op.selected = true; sel.appendChild(op); }
         const go = mk('button', 'settings-btn', 'Use this model'); go.type = 'button';
-        go.onclick = () => { go.disabled = true; send({ type: 'model_set', model: sel.value }); };
+        go.onclick = () => { go.disabled = send({ type: 'model_set', model: sel.value }); };
         const r2 = mk('div', 'acc-confirm-row'); r2.append(sel, go); freeList.appendChild(row); freeList.appendChild(r2); return;
       }
     } else if (m.hasKey) {
@@ -113,7 +119,7 @@ function askMode(free) {
   const no = mk('button', 'settings-btn', 'Cancel'); no.type = 'button';
   const yes = mk('button', 'settings-btn acc-yes', 'Switch'); yes.type = 'button';
   no.onclick = () => confirmBox.classList.add('hidden');
-  yes.onclick = () => { yes.disabled = true; send({ type: 'mode_switch', free }); };
+  yes.onclick = () => { yes.disabled = send({ type: 'mode_switch', free }); };
   row.append(no, yes);
   confirmBox.appendChild(row);
   confirmBox.classList.remove('hidden');
@@ -128,7 +134,7 @@ function askSwitch(a) {
   const no = mk('button', 'settings-btn', 'Cancel'); no.type = 'button';
   const yes = mk('button', 'settings-btn acc-yes', 'Switch'); yes.type = 'button';
   no.onclick = () => confirmBox.classList.add('hidden');
-  yes.onclick = () => { yes.disabled = true; send({ type: 'account_switch', id: a.id }); };
+  yes.onclick = () => { yes.disabled = send({ type: 'account_switch', id: a.id }); };
   row.append(no, yes);
   confirmBox.appendChild(row);
   confirmBox.classList.remove('hidden');
@@ -232,7 +238,7 @@ export function showStats(msg) {
     if (p.model) nm.appendChild(mk('small', '', p.model.replace(/^[^/]+\//, '')));
     top.appendChild(nm);
     if (p.active) top.appendChild(mk('span', 'acc-tag', 'In use'));
-    else if (p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = true; send({ type: 'provider_use', id: p.id }); }; top.appendChild(b); }
+    else if (p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = send({ type: 'provider_use', id: p.id }); }; top.appendChild(b); }
     else top.appendChild(mk('span', 'acc-tag acc-tag-off', p.ready ? 'Ready' : 'Not ready'));
     row.appendChild(top);
     for (const l of p.lines || []) row.appendChild(mk('div', 'acc-stat', l));

@@ -34,7 +34,9 @@ function btn(label, cls, onTap, card) {
     e.stopPropagation();
     card.querySelectorAll('.h2-btn').forEach((x) => { x.disabled = true; });
     b.classList.add('chosen');
-    onTap();
+    // my115: if nothing could be sent, the card stays usable (it looked chosen while Claude never got it)
+    if (onTap() === false) { card.querySelectorAll('.h2-btn').forEach((x) => { x.disabled = false; }); b.classList.remove('chosen'); }
+    else if (!card.classList.contains('plain')) markAnswered(card.dataset.ckey, label);
   };
   return b;
 }
@@ -92,8 +94,24 @@ export function buildCards(el) {
       line(c, f[0] && `${f[0]} jobs done`); line(c, f[1] && `${f[1]} waiting for you`);
       const p = mk('div', 'h2-line green'); p.textContent = f[2] === '0' ? '0 problems found' : `${f[2] || '?'} problems found`; if (f[2] && f[2] !== '0') p.className = 'h2-line red'; c.append(p);
     }
-    if (c) n.replaceWith(c);
+    if (c) {
+      // my115: a card he has already answered stays answered when the reply is drawn again (it came back live)
+      c.dataset.ckey = `${S.activeSessionId || ''}|${k}|${n.dataset.f || ''}`.slice(0, 300);
+      const was = answeredCards()[c.dataset.ckey];
+      if (was && k !== 'MEM') {
+        c.querySelectorAll('.h2-btn').forEach((x) => { x.disabled = true; if (x.textContent === was) x.classList.add('chosen'); });
+      }
+      n.replaceWith(c);
+    }
   });
+}
+const CARDS = 'haai-cards-answered';
+function answeredCards() { try { const o = JSON.parse(localStorage.getItem(CARDS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } }
+function markAnswered(key, label) {
+  if (!key) return;
+  const o = answeredCards(); delete o[key]; o[key] = label;
+  const ks = Object.keys(o); for (const x of ks.slice(0, Math.max(0, ks.length - 200))) delete o[x];
+  try { localStorage.setItem(CARDS, JSON.stringify(o)); } catch { /* storage full: only this visit remembers */ }
 }
 
 // ── 13. Job progress strip: only while Claude is working ─────────────────────
@@ -199,7 +217,7 @@ function scanSteps() {
     // my84: only a step written since Michael's last message counts (an old job's step is not this job's)
     const all = [...messagesEl.querySelectorAll('.bubble-user, .bubble-assistant .bubble-content[data-step]')];
     const last = all[all.length - 1];
-    stepData = last && !last.classList.contains('bubble-user') ? JSON.parse(last.dataset.step) : null;
+    stepData = null; try { stepData = last && !last.classList.contains('bubble-user') ? JSON.parse(last.dataset.step) : null; } catch { /* my115: a damaged step line is skipped */ }
     // my86: remember when this time-left guess first appeared, so it can count down
     const key = stepData ? JSON.stringify(stepData) : '';
     if (key !== estKey) { estKey = key; estAt = Date.now(); }

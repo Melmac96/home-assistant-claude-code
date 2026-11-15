@@ -57,8 +57,13 @@ function toast(text) {
 }
 
 // ── the stop before sending ──────────────────────────────────────────────────
+// my115: never a silent nothing - the message stays in the box and he is told why
+let toldAt = 0;
 inputForm.addEventListener('submit', (e) => {
-  if (document.querySelector('.start-check')) { e.preventDefault(); e.stopImmediatePropagation(); }   // a pop-up is still open
+  if (document.querySelector('.start-check')) {   // a pop-up is still open
+    e.preventDefault(); e.stopImmediatePropagation();
+    if (Date.now() - toldAt > 3000) { toldAt = Date.now(); toast('Close the pop-up first. Your message is still in the box: press Send again after.'); }
+  }
 }, true);
 
 // ── my90: what the server did with the accounts ──────────────────────────────

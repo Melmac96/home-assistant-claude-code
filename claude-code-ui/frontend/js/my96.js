@@ -6,6 +6,7 @@
 import { S } from './state.js';
 import { inputForm } from './dom.js';
 import { sendText } from './quick.js';
+import { appendInfoLine } from './transcript.js';   // my115
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
@@ -28,18 +29,20 @@ inputForm.before(bar);
 
 const hm = (ms) => new Date(ms).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' });
 function draw() {
+  window.dispatchEvent(new Event('haai-away'));   // my115: the Lots to send row follows without polling
   bar.classList.toggle('hidden', !away);
   txt.textContent = since ? `You're away since ${hm(since)}. I'm getting on with jobs you already agreed, plus checks and tidy-ups.` : "You're away. I'm getting on with jobs you already agreed.";
 }
 
 export function goAway() {
-  if (!S.isConnected || away) return;
+  if (away) return;
+  if (!S.isConnected) { appendInfoLine('No connection, so U decide was not sent. Try again when haAi is back.'); return; }   // my115
   away = true; since = Date.now(); draw();
   wsSend({ type: 'away_set', on: true });
   sendText("U decide: I'm going away from haAi for a while. Get on by yourself with jobs I have already said yes to, plus checks and tidy-ups (back up first). Anything new waits for me: list it in the I'm back report.");
 }
 back.onclick = () => {
-  if (!S.isConnected) return;
+  if (!S.isConnected) { appendInfoLine("No connection, so I'm back was not sent. Try again when haAi is back."); return; }   // my115
   away = false; draw();
   wsSend({ type: 'away_set', on: false });
   sendText("I'm back. Finish the step you are on, then tell me what you did while I was away, what is waiting for me, and that you are ready for me.");

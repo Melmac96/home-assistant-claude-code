@@ -7,6 +7,7 @@
  */
 import { S } from './state.js';
 import { scrollBottom } from './scroll.js';
+import { appendInfoLine } from './transcript.js';   // my115
 import { dialogBack, dialogBody, dialogLater, dialogOverlay, dialogProgress, dialogSkip, dialogSubmit, dialogTitle, permAllow, permAlways, permAlwaysHint, permDeny, permInputEl, permLater, permOverlay, messagesEl, permTitle, permToolChip, questionStrip, questionStripOpen, questionStripText } from './dom.js';
 
 // ── Things waiting on you ────────────────────────────────────────────────────
@@ -17,14 +18,22 @@ import { dialogBack, dialogBody, dialogLater, dialogOverlay, dialogProgress, dia
 // strip above the composer is the way back to it. Nothing is lost and nothing
 // pops up again on its own.
 
+// my115: an answer only leaves the screen once it has really gone; with no link he is told and the card stays
+function wsOut(o) {
+  if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
+  appendInfoLine('No connection, so your answer was not sent. It is still on screen: press it again when haAi is back.');
+  return false;
+}
+
 export const pendingDialogs = new Map();    // id → payload, still waiting on the server
 export const dismissedDialogs = new Set();  // ids closed with ✕, re-openable from the strip
 
 export function refreshQuestionStrip() {
   const dialogs = pendingDialogs.size;
   const perms = pendingPerms.size;
-  const overlayUp = !dialogOverlay.classList.contains('hidden') ||
-                    !permOverlay.classList.contains('hidden');
+  // my115: a card only counts as on screen when it is really on the page (a chat redraw could take it off)
+  const overlayUp = (dialogOverlay.isConnected && !dialogOverlay.classList.contains('hidden')) ||
+                    (permOverlay.isConnected && !permOverlay.classList.contains('hidden'));
   if (!(dialogs + perms) || overlayUp) { questionStrip.classList.add('hidden'); return; }
   questionStripText.textContent =
     dialogs && perms ? `${dialogs + perms} things need you`
@@ -88,7 +97,7 @@ export function openPermission() {
 
 export function resolvePermission(decision) {
   if (!pendingPerm) return;
-  S.ws.send(JSON.stringify({ type: 'permission_response', id: pendingPerm.id, decision }));
+  if (!wsOut({ type: 'permission_response', id: pendingPerm.id, decision })) return;   // my115: the card stays until it really went
   closePermission(pendingPerm.id);
 }
 
@@ -140,7 +149,7 @@ export function showUserDialog({ id, payload }) {
     : (payload && Array.isArray(payload.options)) ? [payload] : [];
   // A shape we don't understand can't be rendered, and leaving the turn paused
   // on a dialog nobody can answer is worse than declining it.
-  if (!questions.length) { S.ws.send(JSON.stringify({ type: 'user_dialog_response', id })); return; }
+  if (!questions.length) { wsOut({ type: 'user_dialog_response', id }); return; }
   pendingDialogs.set(id, { questions });
   // Don't barge in over a question already on screen — finish that one first —
   // and don't reopen one that was deliberately set aside. (The server replays
@@ -298,7 +307,7 @@ export function submitDialog() {
     renderDialogPage();
     return;
   }
-  S.ws.send(JSON.stringify({ type: 'user_dialog_response', id: dialogBuild.id, result: collectDialogAnswers() }));
+  if (!wsOut({ type: 'user_dialog_response', id: dialogBuild.id, result: collectDialogAnswers() })) return;   // my115
   dropDialog(dialogBuild.id);
 }
 
@@ -313,7 +322,7 @@ export function laterDialog() {
 // Let Claude get on with it without an answer.
 export function skipDialog() {
   if (!dialogBuild) return;
-  S.ws.send(JSON.stringify({ type: 'user_dialog_response', id: dialogBuild.id }));   // no result
+  if (!wsOut({ type: 'user_dialog_response', id: dialogBuild.id })) return;   // no result (my115: only once it went)
   dropDialog(dialogBuild.id);
 }
 

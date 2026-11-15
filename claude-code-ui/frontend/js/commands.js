@@ -4,7 +4,7 @@
  */
 import { S } from './state.js';
 import { resizeTextarea, runUiCommand, updateSendBtn } from './composer.js';
-import { cmdMenu, messagesEl, newSessionBtn, promptInput, sessionsBtn, sessionsPanel } from './dom.js';
+import { cmdMenu, messagesEl, newSessionBtn, promptInput, sessionsBtn, sessionsPanel, dialogOverlay } from './dom.js';   // my115 dialogOverlay
 import { updateCtxHint } from './model.js';
 import { openNewChat, showQuickJobs } from './quick.js';   // my28
 
@@ -136,7 +136,11 @@ export function completeFromMenu(i) {
 }
 
 export function clearScreen() {
+  // my115: a question card shown inside the chat survives a redraw (it vanished, leaving the turn paused on a
+  // question nobody could see); it is put back at the end once the chat is drawn again
+  const card = messagesEl.contains(dialogOverlay) && !dialogOverlay.classList.contains('hidden') ? dialogOverlay : null;
   messagesEl.innerHTML = '';
+  if (card) { messagesEl.appendChild(card); setTimeout(() => { if (!card.classList.contains('hidden')) messagesEl.appendChild(card); }, 60); }
   S.hist = null;   // my88: what is on screen no longer matches a saved chat
   toolCallEls.clear();
   S.lastAssistantBubble = null;

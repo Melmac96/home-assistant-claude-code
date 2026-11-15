@@ -197,6 +197,8 @@ function startFresh() {
   broadcastSessions();
 }
 
+const seenCids = new Set();   // my115: receipt numbers of the last few hundred messages
+
 /** my115: which chat is busy and what he can do about it (was only 'Claude is busy'). */
 function busyText() {
   const busy = runningChats();
@@ -298,6 +300,12 @@ const handlers = {
 
   abort() {
     abortActive();
+  },
+
+  // my115: the page asks whether a chat it shows as "Working" really still is (so Working can never stick)
+  run_check(ws, msg) {
+    const s = (msg.chat && chats.get(msg.chat)) || chats.get(ws.chat) || chats.get(view.last);
+    if (s) send(ws, { type: 'run_state', chat: s.id, running: !!s.query || !!s.moving || [...pendingPermissions.values()].some((p) => p.chat === s.id) });
   },
 
   new_session(ws, msg) {
@@ -561,7 +569,14 @@ export function attach(wss) {
       // my115: a prompt names the chat it was typed in, so it can never land in another chat after a quick switch
       if (msg.type === 'prompt' && msg.chat && chats.has(msg.chat)) ws.chat = msg.chat;
       // my115: tell the sending screen at once that the message arrived (it resends or keeps it if no word comes)
-      if (msg.type === 'prompt' && msg.cid) send(ws, { type: 'prompt_ack', cid: String(msg.cid).slice(0, 40), chat: ws.chat || null });
+      if (msg.type === 'prompt' && msg.cid) {
+        const cid = String(msg.cid).slice(0, 40);
+        send(ws, { type: 'prompt_ack', cid, chat: ws.chat || null });
+        // my115: a message sent again because its receipt was lost is not run twice
+        if (seenCids.has(cid)) { log('INFO', 'my115: a message that already arrived was sent again; ignored the copy'); return; }
+        seenCids.add(cid);
+        if (seenCids.size > 300) seenCids.delete(seenCids.values().next().value);
+      }
       const failed = (e) => {
         log('ERROR', `handling ${msg.type} failed: ${e?.message || e}`);
         if (msg.type === 'prompt') { send(ws, { type: 'error', message: `haAi could not take that message: ${e?.message || e}. Send it again.` }); send(ws, { type: 'run_idle', chat: ws.chat || null }); }

@@ -156,6 +156,13 @@ function latestSonnet() {
   opts.sort((x, y) => cmpVer(verOf(x.dataset.resolvedModel || x.value), verOf(y.dataset.resolvedModel || y.value)));
   return opts[0].value;
 }
+// my115: his standing choice is Opus on High effort all the time (his rule, 12 Nov), so that is "normal" here
+function latestOpus() {
+  const opts = [...modelSelect.options].filter((o) => /opus/i.test(o.value + ' ' + (o.dataset.resolvedModel || '')));
+  if (!opts.length) return 'claude-opus-5-5';
+  opts.sort((x, y) => cmpVer(verOf(x.dataset.resolvedModel || x.value), verOf(y.dataset.resolvedModel || y.value)));
+  return opts[0].value;
+}
 function applyPrefs() {
   if (!prefs) return;
   const id = prefs.model === 'latest-sonnet' ? latestSonnet() : prefs.model;
@@ -174,21 +181,26 @@ window.addEventListener('haai-models', applyPrefs);
 function startCheck() {
   if (!prefs || sessionStorage.getItem('haai-start-checked')) return;
   sessionStorage.setItem('haai-start-checked', '1');
-  const sonnetId = latestSonnet();
-  if ((prefs.model === 'latest-sonnet' || prefs.model === sonnetId) && prefs.effort === 'medium') return;
+  // my115 (Michael C, 15 Nov): his normal setting is Opus on High (it used to offer Sonnet on Medium, the opposite of
+  // his rule, and covered the screen on every start). Now it only asks when he is NOT on Opus · High.
+  const opusId = latestOpus();
+  if ((/opus/i.test(String(prefs.model)) || prefs.model === opusId) && prefs.effort === 'high') return;
   const label = (id) => { const o = [...modelSelect.options].find((x) => x.value === id); return (o && o.textContent) || MODEL_LABELS[id] || id; };
-  const now = prefs.model === 'latest-sonnet' ? label(sonnetId) : label(prefs.model);
+  const now = prefs.model === 'latest-sonnet' ? label(latestSonnet()) : label(prefs.model);
   const eff = String(prefs.effort || 'medium'); const effName = eff[0].toUpperCase() + eff.slice(1);
   const ov = document.createElement('div'); ov.className = 'start-check';
   ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
   const card = document.createElement('div'); card.className = 'sc-card';
   const t = document.createElement('div'); t.className = 'sc-title'; t.textContent = `You are currently set to ${now} on ${effName} effort`;
-  const q = document.createElement('div'); q.className = 'sc-q'; q.textContent = `Do you want to stay on this setting or switch to your normal Sonnet model (${label(sonnetId)}) on Medium effort?`;
+  const q = document.createElement('div'); q.className = 'sc-q'; q.textContent = `Do you want to stay on this setting or go back to your normal ${label(opusId)} on High effort?`;
+  const sw = document.createElement('button'); sw.type = 'button'; sw.className = 'sc-switch'; sw.textContent = `Go back to ${label(opusId)} · High`;
   const stay = document.createElement('button'); stay.type = 'button'; stay.className = 'sc-stay'; stay.textContent = 'Stay on this setting';
-  const sw = document.createElement('button'); sw.type = 'button'; sw.className = 'sc-switch'; sw.textContent = `Switch to ${label(sonnetId)} · Medium`;
   stay.onclick = () => ov.remove();
-  sw.onclick = () => { send({ type: 'prefs_set', model: 'latest-sonnet', effort: 'medium' }); send({ type: 'advisor_set', advised: false }); ov.remove(); };
-  card.append(t, q, stay, sw); ov.append(card);
+  sw.onclick = () => {
+    if (!S.isConnected) { q.textContent = 'No connection yet, so the setting could not be changed. Try again in a moment.'; return; }   // my115: never closes on a change that did not go
+    send({ type: 'prefs_set', model: opusId, effort: 'high' }); ov.remove();
+  };
+  card.append(t, q, sw, stay); ov.append(card);
   ov.addEventListener('click', (e) => e.stopPropagation());
   document.body.append(ov);
 }

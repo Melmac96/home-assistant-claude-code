@@ -44,6 +44,8 @@ const label = (c) => (c ? `Chat ${c.n}${c.colourName ? ` (${c.colourName})` : ''
 /** True when this message is about another chat and must not touch the screen (only while there is ONE chat listed). */
 export function isOtherChat(msg) {
   if (merged()) return false;
+  if (msg.type === 'error') return false;   // my115: an error is always shown, whichever chat it is about
+  if (S.chatList.length && !byId(S.chat)) return false;   // my115: this page's chat is out of date (it moved): show it
   return !!(msg.chat && S.chat && msg.chat !== S.chat && PER_CHAT.has(msg.type));
 }
 
@@ -63,6 +65,17 @@ function swapTo(id) {
 /** Tag every untagged top-level item with its chat and time. inherit = history (take the time of the item before). */
 function sweep(id, inherit = false) {
   if (!id) return;
+  // my115: with one chat on screen only the new items at the end are tagged (it walked the whole chat for every
+  // streamed piece of a reply before)
+  if (!inherit && !merged()) {
+    for (let n = messagesEl.lastElementChild; n; n = n.previousElementSibling) {
+      if (n.id === 'quick-tiles') continue;
+      if (n.dataset.chat && n.dataset.t) break;
+      if (!n.dataset.chat) n.dataset.chat = id;
+      if (!n.dataset.t) n.dataset.t = String(Date.now());
+    }
+    return;
+  }
   let lastT = 0;
   for (const n of messagesEl.children) {
     if (n.id === 'quick-tiles') continue;
@@ -109,7 +122,7 @@ function reorder() {
 export function dispatch(msg, handleOne) {
   if (!merged()) {
     handleOne(msg);
-    try { sweep(S.chat, msg.type === 'history'); } catch { /* tagging is only a help */ }
+    try { sweep(S.chat, msg.type === 'history'); } catch (e) { console.warn('chat tagging failed', e); }
     return;
   }
   const id = (PER_CHAT.has(msg.type) && (msg.chat || S.chat)) || null;
@@ -184,7 +197,7 @@ function applyOnly() {
 }
 
 /** Choose which chat the next message goes to (the screen is not reloaded). */
-export function setTarget(id) {
+export function setTarget(id) {   // my115: every message also names its chat, so an offline switch can no longer misroute it
   if (!id || id === S.chat || !byId(id)) return;
   swapTo(id);
   S.chat = id;

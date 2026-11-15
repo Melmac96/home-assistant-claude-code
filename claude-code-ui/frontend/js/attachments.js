@@ -8,7 +8,7 @@
 import { updateSendBtn } from './composer.js';
 import { flushKeep } from './keep.js';   // my35
 import { attachBtn, attachInput, attachPreview, inputForm, promptInput } from './dom.js';
-import { appendErrorBubble } from './transcript.js';
+import { appendErrorBubble, appendInfoLine } from './transcript.js';   // my115 appendInfoLine
 
 // ── Attachments ───────────────────────────────────────────────────────────────
 // Files/photos the user attaches to the next prompt. Each: { file, name,
@@ -65,7 +65,7 @@ export async function persistAttachments() {
     const db = await idb();
     const tx = db.transaction(ST, 'readwrite');
     tx.objectStore(ST).put(attachments.map((a) => ({ name: a.name, type: a.mediaType, blob: a.file })), 'list');
-  } catch {}
+  } catch (e) { console.warn('photos not kept for a reload', e); if (attachments.length) appendInfoLine('Your photos could not be kept on this device, so send them before closing haAi.'); }   // my115
 }
 async function restoreAttachments() {
   try {
@@ -77,7 +77,8 @@ async function restoreAttachments() {
     if (!list.length || attachments.length) return;
     restoring = true;
     addFiles(list.map((x) => new File([x.blob], x.name || 'file', { type: x.type || x.blob.type || '' })));
-  } catch {} finally { restoring = false; }
+  } catch (e) { console.warn('photos could not be brought back', e); appendInfoLine('Photos you had chosen before could not be brought back. Please choose them again.'); }   // my115
+  finally { restoring = false; }
 }
 
 export function removeAttachment(i) {

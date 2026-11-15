@@ -35,8 +35,8 @@ const LOG = 'reply-log';
 export function noteReply() {
   let l = []; try { l = JSON.parse(localStorage.getItem(LOG) || '[]'); } catch { /* start again */ }
   l.push(Date.now());
-  localStorage.setItem(LOG, JSON.stringify(l.slice(-500)));
-  draw();
+  try { localStorage.setItem(LOG, JSON.stringify(l.slice(-500))); } catch { /* my115: storage full must never leave "Working" stuck */ }
+  try { draw(); } catch (e) { console.warn('allowance card', e); }
 }
 function forecast() {
   const w = windows && windows.five_hour;

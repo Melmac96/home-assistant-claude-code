@@ -6,6 +6,7 @@ import { S } from './state.js';
 import { inputForm, messagesEl, promptInput } from './dom.js';
 import { requestNewSession } from './composer.js';
 import { appendInfoLine } from './transcript.js';
+import { sendForButton } from './send.js';   // my115
 
 let quick = { jobs: [], replies: [] };
 let editing = false;
@@ -13,11 +14,21 @@ const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o));
 const saveQuick = () => wsSend({ type: 'quick_save', jobs: quick.jobs, replies: quick.replies });
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
-export function sendText(t) {
-  if (!S.isConnected) return;
-  promptInput.value = t;
-  promptInput.dispatchEvent(new Event('input'));
-  inputForm.dispatchEvent(new Event('submit'));
+/**
+ * my115 (Michael C, 15 Nov): a button's message. It never overwrites what he is typing, and with no link (or a pop-up
+ * open) it waits and goes by itself instead of vanishing. Returns true when it went or will go by itself.
+ * { withPhotos: true } = send the photos waiting in the box too (the photo-circle tool): that one borrows the typing
+ * box, and his own words are put back straight after.
+ */
+export function sendText(t, opts = {}) {
+  if (opts.withPhotos) {
+    if (!S.isConnected) { appendInfoLine('No connection, so the photo was not sent. It is still attached: press Send when haAi is back.'); return false; }
+    S.keepDraft = promptInput.value;
+    promptInput.value = t;
+    inputForm.dispatchEvent(new Event('submit'));
+    return true;
+  }
+  return sendForButton(t) !== 'failed';
 }
 
 function addForm(parent, withName, onSave) {
@@ -143,7 +154,8 @@ function drawWaiting(list) {
     yes.type = no.type = 'button';
     yes.setAttribute('aria-label', 'Works');
     no.setAttribute('aria-label', 'Not right');
-    yes.onclick = () => { wsSend({ type: 'waiting_done', id: w.id }); sendText(`Works: ${w.text}. Please record that I have confirmed it.`); };
+    // my115: the line is only ticked off once the "Works" message has gone (or will go by itself)
+    yes.onclick = () => { if (sendText(`Works: ${w.text}. Please record that I have confirmed it.`)) wsSend({ type: 'waiting_done', id: w.id }); };
     no.onclick = () => {
       promptInput.value = `Not right: ${w.text}. What went wrong: `;
       promptInput.dispatchEvent(new Event('input'));

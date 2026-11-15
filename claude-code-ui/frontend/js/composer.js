@@ -18,6 +18,23 @@ import { openNewChat } from './quick.js';   // my28
 import { appendErrorBubble, appendInfoLine, appendUserBubble } from './transcript.js';
 import { joinKept, keepItems, keepSettled, updateKeepBtn } from './keep.js';   // my35
 import { queueOffline } from './my74.js';   // my74
+import { sendPromptFrame, setSendHooks } from './send.js';   // my115
+
+// my115: the send path (send.js) draws the bubble and the Working state through these, for button messages too
+setSendHooks({
+  queueOffline: (t, cid) => queueOffline(t, cid),
+  info: (t) => appendInfoLine(t),
+  bubble: (t, adding) => { if (adding) noteAdded(t); appendUserBubble(t); scrollBottom(true); },
+  started: () => { S.isRunning = true; S.usage.messages++; updateSendBtn(); showThinking(); },
+  ended: (quiet) => { hideThinking(); S.isRunning = false; updateSendBtn(); if (quiet) S.lastAssistantBubble = null; },
+});
+// my115: a button that sends with photos borrows the typing box; what he had typed is put back afterwards
+const takeKeptDraft = () => { const d = S.keepDraft; S.keepDraft = null; return d || ''; };
+const restoreBox = () => {
+  const d = takeKeptDraft();
+  promptInput.value = d;
+  if (d) localStorage.setItem('draft', d); else localStorage.removeItem('draft');
+};
 
 // ── Input form ─────────────────────────────────────────────────────────────
 
@@ -51,9 +68,9 @@ inputForm.onsubmit = async (e) => {
   if (!text && !hasAtt && !kept.length) return;
   if (!S.isConnected) {   // my74 H8: no connection: the words wait and go by themselves when haAi is back
     if (hasAtt || kept.length || !text || text.startsWith('/')) { appendInfoLine('No connection. Photos and commands cannot wait, so nothing was sent. Press Send again when haAi is back.'); return; }
-    queueOffline(text);
-    promptInput.value = '';
-    localStorage.removeItem('draft');
+    // my115: the box is only cleared once the message is safely in the waiting list
+    if (!queueOffline(text)) { appendInfoLine('No connection, and this phone has no room left to keep the message, so it is still in the box. Press Send again when haAi is back.'); return; }
+    restoreBox();
     resizeTextarea();
     updateSendBtn();
     return;
@@ -63,8 +80,7 @@ inputForm.onsubmit = async (e) => {
   const ui = !hasAtt && !kept.length && UI_COMMANDS.find((c) => '/' + c.name === text);
   if (ui) {
     runUiCommand(ui.name);
-    promptInput.value = '';
-    localStorage.removeItem('draft');
+    restoreBox();
     resizeTextarea();
     updateSendBtn();
     return;
@@ -91,21 +107,10 @@ inputForm.onsubmit = async (e) => {
   if (readFailed) appendErrorBubble(`${readFailed} attachment${readFailed > 1 ? 's' : ''} could not be read and ${readFailed > 1 ? 'were' : 'was'} skipped.`);
   if (!payload.length && !text && !kept.length) { updateSendBtn(); return; }   // nothing usable to send
 
-  if (adding) noteAdded(text);   // my48
-  appendUserBubble(text, undefined, bubbleAtts);
-  scrollBottom(true);   // sending a prompt re-pins to the bottom
-  promptInput.value = '';
-  localStorage.removeItem('draft');
-  clearAttachments();
-  resizeTextarea();
-  S.isRunning = true;
-  S.usage.messages++;
-  updateSendBtn();
-  showThinking();
-
   // Only send a model override if the user explicitly picked one; otherwise let
   // the SDK use its default (which it reports back via the 'model' event).
-  S.ws.send(JSON.stringify({
+  // my115: sent with a receipt number (send.js); if it cannot go, the words stay in the box and nothing is drawn
+  const cid = sendPromptFrame({
     type: 'prompt',
     text: contextLine() + text,
     attachments: payload.length ? payload : undefined,
@@ -114,13 +119,26 @@ inputForm.onsubmit = async (e) => {
     model: localStorage.getItem('model') || undefined,
     effort: localStorage.getItem('effort') || undefined,
     add: adding || undefined,
-  }));
+  }, text);
+  if (!cid) { appendInfoLine('The link to haAi dropped just as you pressed Send, so nothing went. Your message is still in the box: press Send again in a moment.'); updateSendBtn(); return; }
+
+  if (adding) noteAdded(text);   // my48
+  appendUserBubble(text, undefined, bubbleAtts);
+  scrollBottom(true);   // sending a prompt re-pins to the bottom
+  restoreBox();
+  clearAttachments();
+  resizeTextarea();
+  S.isRunning = true;
+  S.usage.messages++;
+  updateSendBtn();
+  showThinking();
+  window.dispatchEvent(new CustomEvent('haai-sent', { detail: { text, button: !e.isTrusted } }));   // my115: Lots to send count, rest nudge
 };
 
 // my26: "What were you doing?" button: one tap asks Claude to repeat its last full report.
 const repeatBtn = document.getElementById('repeat-btn');
 if (repeatBtn) repeatBtn.onclick = () => {
-  if (!S.isConnected) return;
+  if (!S.isConnected) { appendInfoLine('No connection, so nothing was sent. Try again when haAi is back.'); return; }   // my115: never a silent nothing
   const ask = 'What were you doing? Please repeat your last full report: what you did, and any question still waiting.';
   promptInput.value = promptInput.value.trim() ? promptInput.value.trim() + '\n\n' + ask : ask;
   promptInput.dispatchEvent(new Event('input'));

@@ -14,8 +14,11 @@ const PARTIAL = /⟦ADVISE[^⟧]*$/;
 
 let adv = { enabled: true, advised: false };
 let card = null;           // { to, effort, kind, reason } or null
-const handled = new Set(JSON.parse(localStorage.getItem('adv-handled') || '[]'));
-const markHandled = (k) => { handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); try { send({ type: 'advisor_set', handledKey: String(k) }); } catch { /* not connected yet */ } };   // my104: tell the other devices
+// my115: one damaged saved value can no longer stop the whole app from loading (blank page)
+const readHandled = () => { try { const l = JSON.parse(localStorage.getItem('adv-handled') || '[]'); return Array.isArray(l) ? l : []; } catch { return []; } };
+const saveHandled = () => { try { localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); } catch { /* storage full: kept for this visit */ } };
+const handled = new Set(readHandled());
+const markHandled = (k) => { handled.add(k); saveHandled(); send({ type: 'advisor_set', handledKey: String(k) }); };   // my104: tell the other devices
 
 // my114 (Michael 15 Nov): the card also offers the other PAID account with the most room, and a FREE chat, and says
 // whether the free one would do the job just as well (Claude's verdict: same / worse / private).
@@ -139,7 +142,7 @@ function draw(note) {
 
 export function onAdvisorMessage(msg) {
   adv = { enabled: msg.enabled !== false, advised: !!msg.advised, slimGone: !!msg.slimGone };   // my104: slimGone shared
-  if (Array.isArray(msg.handled)) { for (const k of msg.handled) handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); }
+  if (Array.isArray(msg.handled)) { for (const k of msg.handled) handled.add(k); saveHandled(); }
   if (card && handled.has(card.key)) card = null;   // my104: answered on another device
   if (!adv.enabled) card = null;
   const t = document.getElementById('advisor-toggle');

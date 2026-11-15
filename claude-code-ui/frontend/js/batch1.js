@@ -47,8 +47,9 @@ messagesEl.addEventListener('click', (e) => {
   const r = h.getBoundingClientRect(), w = pop.offsetWidth, ph = pop.offsetHeight;
   pop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
   pop.style.top = (r.top - ph - 8 >= 8 ? r.top - ph - 8 : r.bottom + 8) + 'px';
-  setTimeout(closePop, 8000);
+  clearTimeout(popTimer); popTimer = setTimeout(closePop, 8000);   // my115: an older note's timer no longer closes this one early
 });
+let popTimer = 0;
 document.addEventListener('click', closePop);
 window.addEventListener('scroll', closePop, true);
 
@@ -104,9 +105,10 @@ function scanPins() {
   clearTimeout(pinTimer);
   pinTimer = setTimeout(() => {
     const all = [...messagesEl.querySelectorAll('.bubble-assistant .bubble-content[data-pin]')];
-    sumData = all.length ? JSON.parse(all[all.length - 1].dataset.pin) : null;
+    const pinOf = (e) => { try { return JSON.parse(e.dataset.pin); } catch { return null; } };   // my115: a damaged pin is skipped
+    sumData = all.length ? pinOf(all[all.length - 1]) : null;
     drawSum();
-    window.haaiPins = all.map((e) => JSON.parse(e.dataset.pin));   // my52: the pin button on the top bar lists these
+    window.haaiPins = all.map(pinOf).filter(Boolean);   // my52: the pin button on the top bar lists these
     window.dispatchEvent(new Event('haai-pins'));
   }, 150);
 }
@@ -143,7 +145,13 @@ remPill.onclick = (e) => { e.preventDefault(); remList.classList.toggle('hidden'
 const nudge = mk('div', 'rest-card hidden');
 inputForm.prepend(nudge);
 let chatSid = null, chatStart = Date.now(), talked = false, snoozeUntil = 0;
-inputForm.addEventListener('submit', () => { talked = true; });
+window.addEventListener('haai-sent', () => { talked = true; });   // my115: only a message that really went
+function questionWaiting() {
+  const all = [...messagesEl.children].filter((n) => n.classList.contains('bubble-user') || n.classList.contains('bubble-assistant'));
+  const last = all[all.length - 1];
+  if (!last || !last.classList.contains('bubble-assistant')) return false;
+  return !!last.querySelector('.answer-card') || [...last.querySelectorAll('.bubble-content')].some((c) => /⟦QUESTION⟧/.test(c._rawMd || c.textContent || ''));
+}
 function checkRest() {
   const sid = S.activeSessionId || 'new';
   if (sid !== chatSid) { chatSid = sid; chatStart = Date.now(); talked = false; nudge.classList.add('hidden'); }
@@ -156,7 +164,12 @@ function checkRest() {
   const row = mk('div', 'rest-row');
   const save = mk('button', 'rest-save', 'Save and rest'); save.type = 'button';
   const keep = mk('button', 'rest-keep', 'Keep going'); keep.type = 'button';
-  save.onclick = (e) => { e.preventDefault(); nudge.classList.add('hidden'); snoozeUntil = Date.now() + 3600000; requestNewSession(); toast('Saved. Rest well.'); };
+  save.onclick = (e) => {
+    e.preventDefault(); nudge.classList.add('hidden'); snoozeUntil = Date.now() + 3600000;
+    // my115: his rule - never move to a new chat while a question waits for his answer
+    if (questionWaiting()) { toast('A question is waiting for your answer, so this chat stays. Answer it first, then rest.'); return; }
+    requestNewSession(); toast('Saved. Rest well.');
+  };
   keep.onclick = (e) => { e.preventDefault(); nudge.classList.add('hidden'); snoozeUntil = Date.now() + 3600000; };
   row.append(save, keep); nudge.append(row);
   nudge.classList.remove('hidden');

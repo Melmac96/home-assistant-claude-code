@@ -8,7 +8,13 @@ if (location.port === '7682') sec.classList.add('hidden');
 const btn = document.getElementById('pair-btn');
 const box = document.getElementById('pair-code');
 const list = document.getElementById('devices-list');
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+// my115: says whether it went; with no link he is told and the button is not left greyed out
+const send = (o) => {
+  if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
+  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when haAi is back.';
+  t.onclick = () => t.remove(); document.body.append(t); setTimeout(() => t.remove(), 6000);
+  return false;
+};
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
 let timer = null;
 
@@ -40,7 +46,7 @@ export function showDevices(msg) {
     who.appendChild(mk('small', 'acc-paid', d.lastSeen ? 'Last used ' + new Date(d.lastSeen).toLocaleString('en-GB') : 'Paired'));
     row.appendChild(who);
     const b = mk('button', 'settings-btn', 'Remove'); b.type = 'button';
-    b.onclick = () => { b.disabled = true; send({ type: 'device_remove', id: d.id }); };
+    b.onclick = () => { b.disabled = send({ type: 'device_remove', id: d.id }); };
     row.appendChild(b);
     list.appendChild(row);
   }

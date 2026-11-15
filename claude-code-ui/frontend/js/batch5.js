@@ -59,6 +59,13 @@ function setTv(on) {
 tvBtn.onclick = () => setTv(true);
 tvExit.onclick = () => setTv(false);
 document.addEventListener('keydown', (e) => { if (document.body.classList.contains('tv-view') && (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'GoBack')) setTv(false); });
-new MutationObserver(() => { if (document.body.classList.contains('tv-view')) markLast(); }).observe(messagesEl, { childList: true, subtree: true });
-if (localStorage.getItem('tv-view') === '1' || /[?&]tv=1/.test(location.search)) setTv(true);
+// my115: only re-marked when the chat's own list of messages changes, a moment later (it ran on every streamed piece)
+let tvT = 0;
+new MutationObserver(() => { if (!document.body.classList.contains('tv-view')) return; clearTimeout(tvT); tvT = setTimeout(markLast, 200); }).observe(messagesEl, { childList: true });
+// my115: TV view only comes back by itself on a TV-sized screen; on a phone or tablet it never hides the typing box
+// after a reload (the only way out was a faint button)
+const bigScreen = () => /\b(Android TV|SHIELD|AFT\w*|GoogleTV|BRAVIA)\b|\bTV\b/i.test(navigator.userAgent) ||
+  (Math.min(screen.width, screen.height) >= 700 && !matchMedia('(pointer: coarse)').matches);
+if (/[?&]tv=1/.test(location.search) || (localStorage.getItem('tv-view') === '1' && bigScreen())) setTv(true);
+else if (localStorage.getItem('tv-view') === '1') { try { localStorage.setItem('tv-view', ''); } catch { /* ignore */ } }
 bar.append(tvBtn);

@@ -7,6 +7,7 @@
 import { S } from './state.js';
 import { inputForm } from './dom.js';
 import { sendText } from './quick.js';
+import { appendInfoLine } from './transcript.js';   // my115
 import { goAway, isAway } from './my96.js';
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -45,11 +46,10 @@ function draw() {
   hand.style.display = isAway() ? 'none' : '';
 }
 lots.onclick = () => {
-  if (!S.isConnected) return;
+  if (!S.isConnected) { appendInfoLine('No connection, so Lots to send was not changed. Try again when haAi is back.'); return; }   // my115
   if (!on) {
     on = true; count = 0; draw(); wsSend({ type: 'lots_set', on: true });
     sendText("Lots to send: I'm listing changes. Work on each one quietly in the background, ask me no questions, and keep your questions until I press Done.");
-    setTimeout(() => { count = 0; draw(); }, 20);   // the first message is the button's own, not one of his
     setTimeout(() => { count = 0; draw(); }, 20);   // the first message is the button's own, not one of his
   } else {
     on = false; draw(); wsSend({ type: 'lots_set', on: false });
@@ -57,15 +57,17 @@ lots.onclick = () => {
   }
 };
 hand.onclick = () => { goAway(); setTimeout(draw, 50); };
-inputForm.addEventListener('submit', () => { if (on) setTimeout(() => { if (on) { count++; draw(); } }, 0); });
+// my115: counts every message that really went (typed or from a button), not every press of Send
+window.addEventListener('haai-sent', () => { if (on) setTimeout(() => { if (on) { count++; draw(); } }, 0); });
 
+let placeTries = 0;
 function place() {   // after the … button (made by tidy.js), before the token text
   const more = document.querySelector('.tidy-morebtn');
-  if (!more) return setTimeout(place, 200);
+  if (!more) { if (++placeTries < 150) setTimeout(place, 200); else inputForm.before(box); return; }   // my115: gives up after 30 s
   more.after(box); draw();
 }
 place();
-setInterval(() => { const a = isAway(); if ((hand.style.display === 'none') !== a) draw(); }, 2000);
+window.addEventListener('haai-away', () => draw());   // my115: told when U decide / I'm back changes (was asked every 2 s)
 
 export function onMy97Message(msg) {
   if (msg.type === 'lots_state') { const was = on; on = !!msg.on; if (on && !was) count = 0; draw(); }

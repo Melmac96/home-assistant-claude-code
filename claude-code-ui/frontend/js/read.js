@@ -55,7 +55,15 @@ function canSpeak() { return !!native() || ('speechSynthesis' in window); }
 export function speakOne(text) {
   return new Promise((resolve) => {
     const n = native();
-    if (n) { speakDone = resolve; try { n.speak(text); } catch { speakDone = null; resolve(false); } return; }
+    if (n) {
+      // my115: the phone app may never say it has finished; each piece then ends by itself after a generous time
+      if (speakDone) { const f = speakDone; speakDone = null; f(false); }   // a piece still waiting is released first
+      const limit = setTimeout(() => { if (speakDone === done) { speakDone = null; resolve(false); } }, 20000 + String(text).length * 120);
+      const done = (ok) => { clearTimeout(limit); resolve(ok); };
+      speakDone = done;
+      try { n.speak(text); } catch { clearTimeout(limit); speakDone = null; resolve(false); }
+      return;
+    }
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'en-GB';
     const v = (speechSynthesis.getVoices() || []).find((x) => /en[-_]GB/i.test(x.lang));

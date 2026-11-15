@@ -49,6 +49,7 @@ function lastReply() {
   return c ? stripMarks(c._rawMd || '') : '';
 }
 async function answerAloud(g) {
+  clearTimeout(idleTimer);   // my115: a long job is not "nothing heard": the 2-minute timer starts again after the answer
   phase = 'wait'; show('⏳ Claude is working…', '');
   // wait until the run starts, then until it is finished
   for (let i = 0; i < 40 && !S.isRunning && on && g === gen; i++) await new Promise((r) => setTimeout(r, 250));
@@ -112,7 +113,7 @@ window.haaiPhoto = (b64) => {
         ov.remove();
         if (!blob) { toast('Could not make the picture.'); return; }
         addFiles([new File([blob], 'photo.jpg', { type: 'image/jpeg' })]);
-        sendText(circle ? 'This photo has a red circle around the part I mean. What can you tell me about it?' : 'Here is a photo. What can you tell me about it?');
+        sendText(circle ? 'This photo has a red circle around the part I mean. What can you tell me about it?' : 'Here is a photo. What can you tell me about it?', { withPhotos: true });   // my115
       }, 'image/jpeg', 0.85);
     };
     draw();
@@ -142,11 +143,12 @@ export function onScreenShot(msg) {
 
 // ── Shared from Android's Share menu: text and files arrive from the app ─────
 window.haaiShared = (json) => {
-  let d; try { d = typeof json === 'string' ? JSON.parse(json) : json; } catch { return; }
-  const n = native(); let count = 0;
+  let d; try { d = typeof json === 'string' ? JSON.parse(json) : json; } catch { toast('Something was shared with haAi but could not be read. Please share it again.'); return; }   // my115
+  const n = native(); let count = 0, lost = 0;
   if (d.text) { promptInput.value = (promptInput.value ? promptInput.value + '\n' : '') + d.text; promptInput.dispatchEvent(new Event('input', { bubbles: true })); count++; }
-  (d.files || []).forEach((f, i) => { try { addFiles([b64ToFile(n.sharedFile(i), f.name || `shared-${i}`, f.mime || 'application/octet-stream')]); count++; } catch { /* skip */ } });
-  if (count) toast(`Added ${count} shared item${count > 1 ? 's' : ''} to your message.`);
+  (d.files || []).forEach((f, i) => { try { addFiles([b64ToFile(n.sharedFile(i), f.name || `shared-${i}`, f.mime || 'application/octet-stream')]); count++; } catch { lost++; } });
+  if (count) toast(`Added ${count} shared item${count > 1 ? 's' : ''} to your message.${lost ? ` ${lost} could not be added: please share ${lost > 1 ? 'them' : 'it'} again.` : ''}`);
+  else if (lost) toast(`${lost} shared item${lost > 1 ? 's' : ''} could not be added. Please share again.`);   // my115: never lost without a word
 };
 // Tell the app the page is ready to receive anything shared or a Talk request.
 window.addEventListener('load', () => { try { native() && native().pageReady(); } catch { /* older app */ } });

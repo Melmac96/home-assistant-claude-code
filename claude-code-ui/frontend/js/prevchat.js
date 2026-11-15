@@ -6,8 +6,9 @@ import { S } from './state.js';
 
 const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const KEY = 'haai-chat-pair';
-let pair = JSON.parse(localStorage.getItem(KEY) || '{"cur":null,"prev":null}');
-const save = () => localStorage.setItem(KEY, JSON.stringify(pair));
+let pair = { cur: null, prev: null };   // my115: a damaged saved value can no longer stop the app loading
+try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p && typeof p === 'object') pair = { cur: p.cur ?? null, prev: p.prev ?? null }; } catch { /* start again */ }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(pair)); } catch { /* storage full */ } };   // my115
 
 const btn = mk('button', 'icon-btn'); btn.type = 'button'; btn.id = 'prev-chat-btn'; btn.title = 'Previous chat'; btn.setAttribute('aria-label', 'Previous chat');
 btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>';

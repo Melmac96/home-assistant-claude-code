@@ -38,6 +38,7 @@ function bar(prev) {
 }
 
 inputForm.addEventListener('submit', (e) => {
+  if (!e.isTrusted) return;   // my115: only a message he typed himself, never a button's canned text
   if (e.defaultPrevented || document.querySelector('.start-check')) return;
   if (S.isRunning || free || !advisorOn()) return;
   const text = promptInput.value.trim();

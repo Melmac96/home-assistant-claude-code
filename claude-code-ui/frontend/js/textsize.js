@@ -44,19 +44,31 @@
   // my11: two-finger pinch changes the text size (same setting as the slider), remembered per device
   var pd = 0, p0 = 100, raf = 0, pt = 0;
   function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
-  document.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 2) { pd = dist(e.touches); p0 = ts; clearTimeout(pt); window.ccuiPinching = true; } else pd = 0;
-  }, { passive: true });
-  document.addEventListener('touchmove', function (e) {
+  // my115: the blocking move listener is only on while two fingers are down, so normal one-finger scrolling never
+  // waits for the page script (it juddered on the phone and tablet); a cancelled pinch is tidied up too
+  function onMove(e) {
     if (e.touches.length !== 2 || !pd) return;
     e.preventDefault();
     var n = Math.max(80, Math.min(250, Math.round(p0 * dist(e.touches) / pd / 5) * 5));
     if (n === ts || raf) return;
     raf = requestAnimationFrame(function () { raf = 0; ts = n; apply(ts, font); });
-  }, { passive: false });
-  document.addEventListener('touchend', function () {
+  }
+  var moveOn = false;
+  function watchMove(on) {
+    if (on === moveOn) return;
+    moveOn = on;
+    if (on) document.addEventListener('touchmove', onMove, { passive: false });
+    else document.removeEventListener('touchmove', onMove, { passive: false });
+  }
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) { pd = dist(e.touches); p0 = ts; clearTimeout(pt); window.ccuiPinching = true; watchMove(true); } else pd = 0;
+  }, { passive: true });
+  function endPinch() {
+    watchMove(false);
     if (!pd) return;
     pd = 0; put(K1, ts); if (window.ccuiShowTs) window.ccuiShowTs();
     pt = setTimeout(function () { window.ccuiPinching = false; }, 500);   // my39: lets the chat settle first
-  }, { passive: true });
+  }
+  document.addEventListener('touchend', endPinch, { passive: true });
+  document.addEventListener('touchcancel', endPinch, { passive: true });
 })();
