@@ -27,7 +27,7 @@ if (isTv) {
 .haai-tv{--text:#7d8087}
 .haai-tv body,.haai-tv .bubble-content,.haai-tv .bubble-user .bubble-content,.haai-tv .svc-badge .sb-a,.haai-tv strong,.haai-tv b,.haai-tv h1,.haai-tv h2,.haai-tv h3,.haai-tv h4,.haai-tv #prompt-input,.haai-tv .way-chip,.haai-tv .tv-acct{color:#7d8087}
 .haai-tv #app{max-width:none!important;width:100%}
-.haai-tv .icon-group,.haai-tv #tidy-menu-btn,.haai-tv #tidy-sbar,.haai-tv .h93-tv,.haai-tv .tidy-eb,.haai-tv .header-left>.svc-badge{display:none!important}
+.haai-tv .icon-group,.haai-tv #tidy-menu-btn,.haai-tv #tidy-sbar,.haai-tv .h93-tv,.haai-tv .header-left>.svc-badge{display:none!important}
 .haai-tv .header{min-height:0!important;height:34px;padding:0 8px!important;border-bottom:1px solid var(--border)}
 .haai-tv .header-left{flex:1;min-width:0;gap:10px;display:flex;align-items:center}
 .haai-tv .tidy-star{flex:none}
@@ -37,6 +37,7 @@ if (isTv) {
 .tv-grp .tv-dot{color:var(--border-2)}
 .tv-grp .tv-badge{display:inline-flex;align-items:center;justify-content:center;background:#f3736c;color:#000;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700}
 .tv-acct{border:1px solid var(--accent);border-radius:8px;padding:1px 8px;font-weight:600}
+.tv-qbox{border:1px solid;border-radius:8px;padding:1px 8px}
 .tv-acct small{color:var(--text-muted);font-weight:400;margin-left:5px;font-size:1em}
 .tv-grp .cy{color:#e8b84a}.tv-grp .cr{color:#f3736c}
 @keyframes tv-tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
@@ -66,8 +67,10 @@ if (isTv) {
     if (!w || !w.resetsAt) return '';
     const o = { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false };
     if (day) o.weekday = 'short';
-    return ' (resets ' + new Date(w.resetsAt * 1000).toLocaleString('en-GB', o).replace(',', '') + ')';
+    return ' (' + new Date(w.resetsAt * 1000).toLocaleString('en-GB', o).replace(',', '') + ')';
   };
+  // my128 (Michael 15 Nov): each account's box takes the colour of its fuller bar, the same colours as the usage bars (extras.js colour())
+  const boxCol = (v) => { const u = (w) => (w && w.used != null ? Math.round(w.used) : 0), f = Math.max(u(v.five_hour), u(v.seven_day)); return f >= 95 ? '#e87777' : f >= 80 ? '#e0a93b' : u(v.seven_day) > u(v.five_hour) ? '#6b9fd4' : '#6bbf8a'; };
   const tone = (p) => (p == null ? '' : p <= 15 ? 'cr' : p <= 40 ? 'cy' : '');
 
   function parts() {
@@ -86,7 +89,7 @@ if (isTv) {
     for (const e of emails) {
       const v = quota[e] || {}, f = left(v.five_hour), k = left(v.seven_day);
       const name = SHORT[e] || e.split('@')[0];
-      a.push({ text: `${name} 5h ${f == null ? '?' : f + '%'} left${at(v.five_hour)} · Week ${k == null ? '?' : k + '%'} left${at(v.seven_day, true)}`, cls: tone(Math.min(f ?? 100, k ?? 100)) });
+      a.push({ text: `${name} 5h ${f == null ? '?' : f + '%'} left${at(v.five_hour)} · Week ${k == null ? '?' : k + '%'} left${at(v.seven_day, true)}`, cls: tone(Math.min(f ?? 100, k ?? 100)), box: boxCol(v) });
     }
     const tv = document.querySelector('.h93-tv')?.textContent.trim();
     if (tv) a.push({ text: tv });
@@ -97,7 +100,7 @@ if (isTv) {
     const g = mk('span', 'tv-grp');
     for (const p of list) {
       if (p.acct) { const b = mk('span', 'tv-acct', p.acct[0]); if (p.acct[1]) b.append(mk('small', null, p.acct[1])); g.append(b); }
-      else { if (p.badge) g.append(mk('span', 'tv-badge', p.badge)); g.append(mk('span', p.cls || '', p.text)); }
+      else { if (p.badge) g.append(mk('span', 'tv-badge', p.badge)); const t = mk('span', p.box ? 'tv-qbox ' + (p.cls || '') : p.cls || '', p.text); if (p.box) t.style.borderColor = p.box; g.append(t); }
       g.append(mk('span', 'tv-dot', '·'));
     }
     return g;

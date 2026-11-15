@@ -493,3 +493,6 @@ body.h111-tools .tool-group,body.h111-tools .tool-result{display:none!important}
 .jobs-row,.h93-tv,.h93-tv.on{display:none!important}
 /* my121 (Michael 15 Nov): the three dots + "Working…" line is gone from the chat; the working bar is the only Working indicator */
 .thinking{display:none !important}
+/* my128 (Michael 15 Nov): no blue diamond row above replies on screen (the text still carries it for the reply check); a purple line above each reply, the same as his blue line above his own messages. Colour from the 10-colour palette. */
+.diamond-row{display:none!important}
+.bubble-assistant{border-top:2px solid #a78bfa;border-radius:0;padding-top:8px;margin-top:6px}
