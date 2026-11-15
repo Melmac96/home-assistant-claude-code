@@ -61,6 +61,13 @@ if (isTv) {
   window.addEventListener('haai-quota', (e) => { quota = e.detail || {}; draw(); });
 
   const left = (w) => (w && w.used != null ? Math.max(0, 100 - Math.round(w.used)) : null);
+  // my106 (Michael 15 Nov): when each allowance starts again, UK time (5h = time, Week = day and time)
+  const at = (w, day) => {
+    if (!w || !w.resetsAt) return '';
+    const o = { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false };
+    if (day) o.weekday = 'short';
+    return ' (resets ' + new Date(w.resetsAt * 1000).toLocaleString('en-GB', o).replace(',', '') + ')';
+  };
   const tone = (p) => (p == null ? '' : p <= 15 ? 'cr' : p <= 40 ? 'cy' : '');
 
   function parts() {
@@ -79,7 +86,7 @@ if (isTv) {
     for (const e of emails) {
       const v = quota[e] || {}, f = left(v.five_hour), k = left(v.seven_day);
       const name = SHORT[e] || e.split('@')[0];
-      a.push({ text: `${name} 5h ${f == null ? '?' : f + '%'} left · Week ${k == null ? '?' : k + '%'} left`, cls: tone(Math.min(f ?? 100, k ?? 100)) });
+      a.push({ text: `${name} 5h ${f == null ? '?' : f + '%'} left${at(v.five_hour)} · Week ${k == null ? '?' : k + '%'} left${at(v.seven_day, true)}`, cls: tone(Math.min(f ?? 100, k ?? 100)) });
     }
     const tv = document.querySelector('.h93-tv')?.textContent.trim();
     if (tv) a.push({ text: tv });
