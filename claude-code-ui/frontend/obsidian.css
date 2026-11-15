@@ -287,6 +287,8 @@ textarea.answer-other{resize:none;overflow:hidden;min-height:38px;margin-top:6px
 
 /* my38: text size (pinch or slider) changes the chat only; top bar, typing box and menus stay normal */
 .chat-scroll,.ts-preview{--ts:var(--chat-ts,1);font-size:calc(15px * var(--ts,1))}
+/* my110: Claude's replies use their own size from Settings (pinch only changes the rest of the chat); the TV keeps the chat size */
+html:not(.haai-tv) .chat-scroll .bubble-assistant{--ts:var(--reply-ts,var(--chat-ts,1));font-size:calc(15px * var(--ts,1))}
 
 /* my39: everything outside the chat is locked to normal size, whatever an older page copy has set */
 body{--ts:1}

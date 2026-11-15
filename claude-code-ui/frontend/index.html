@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>haAi</title>
   <link rel="stylesheet" href="styles.css?v=my81">
-  <link rel="stylesheet" href="obsidian.css?v=my79">
+  <link rel="stylesheet" href="obsidian.css?v=my110">
   <link rel="stylesheet" href="tidy.css?v=my77">
-  <script src="js/textsize.js?v=my39"></script>
+  <script src="js/textsize.js?v=my110"></script>
 </head>
 <body>
   <div id="app">
@@ -93,6 +93,11 @@
           <input type="range" id="ts-range" min="80" max="250" step="5" value="100">
           <button type="button" class="ts-btn" id="ts-up" aria-label="Bigger">A+</button>
           <span class="ts-val" id="ts-val">100%</span></div>
+        <div class="settings-row"><label for="rts-range">My replies' text size (pinching never changes it)</label></div>
+        <div class="ts-controls"><button type="button" class="ts-btn" id="rts-down" aria-label="Replies smaller">A-</button>
+          <input type="range" id="rts-range" min="80" max="250" step="5" value="100">
+          <button type="button" class="ts-btn" id="rts-up" aria-label="Replies bigger">A+</button>
+          <span class="ts-val" id="rts-val">100%</span></div>
         <p class="ts-preview" id="ts-preview">This is how your text will look. Change the size and style above.</p>
       </div>
       <div class="blue-rule" role="separator"></div>

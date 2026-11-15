@@ -1,6 +1,6 @@
 /* my10: text size + font, remembered per device (localStorage). Runs in <head> so there is no flash. */
 (function () {
-  var K1 = 'ccui-ts', K2 = 'ccui-font', root = document.documentElement;
+  var K1 = 'ccui-ts', K2 = 'ccui-font', K3 = 'ccui-reply-ts', root = document.documentElement;
   function get(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function apply(ts, font) {
@@ -10,6 +10,12 @@
   }
   var ts = parseInt(get(K1, '100'), 10) || 100, font = get(K2, '');
   apply(ts, font);
+  // my110 (Michael 15 Nov, Q1 C): Claude's replies keep ONE size he picks in Settings; pinching never changes it.
+  // First run: starts at the size the chat has on this device now, so nothing jumps.
+  var rts = parseInt(get(K3, ''), 10);
+  if (!rts) { rts = ts; put(K3, rts); }
+  function applyReply() { root.style.setProperty('--reply-ts', String(rts / 100)); }
+  applyReply();
   document.addEventListener('DOMContentLoaded', function () {
     var r = document.getElementById('ts-range'), v = document.getElementById('ts-val'),
         s = document.getElementById('font-select'), p = document.getElementById('ts-preview');
@@ -22,6 +28,15 @@
     r.addEventListener('input', function () { set(parseInt(r.value, 10)); });
     document.getElementById('ts-down').addEventListener('click', function () { set(ts - 10); });
     document.getElementById('ts-up').addEventListener('click', function () { set(ts + 10); });
+    var rr = document.getElementById('rts-range'), rv = document.getElementById('rts-val');
+    function showReply() { if (rr) { rr.value = rts; rv.textContent = rts + '%'; } }
+    function setReply(n) { rts = Math.max(80, Math.min(250, n)); put(K3, rts); applyReply(); showReply(); }
+    if (rr) {
+      rr.addEventListener('input', function () { setReply(parseInt(rr.value, 10)); });
+      document.getElementById('rts-down').addEventListener('click', function () { setReply(rts - 10); });
+      document.getElementById('rts-up').addEventListener('click', function () { setReply(rts + 10); });
+      showReply();
+    }
     s.addEventListener('change', function () { font = s.value; put(K2, font); apply(ts, font); show(); });
     show();
     window.ccuiShowTs = show;
