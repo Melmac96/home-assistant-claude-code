@@ -357,7 +357,8 @@ export function modeWatcherAlive() {
     const pid = Number(String(readFileSync(WATCH_PID, 'utf8')).trim());
     if (!Number.isInteger(pid) || pid <= 1) return false;
     process.kill(pid, 0);
-    return true;
+    // my118: after a restart the old number can belong to another program (haAi itself) - only the real watcher counts
+    return readFileSync(`/proc/${pid}/cmdline`, 'utf8').includes('openrouter_switch');
   } catch { return false; }
 }
 export function startModeWatcher() {
