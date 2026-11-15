@@ -206,15 +206,41 @@ export function parseSession(id) {
   try { const st = statSync(file); key = `${st.size}:${st.mtimeMs}`; } catch { /* read it fresh */ }
   const c = parseCache.get(id);
   if (key && c && c.key === key) { parseCache.delete(id); parseCache.set(id, c); return c.items; }
+  // my115: a chat that has only grown (a reply being written) has just its new lines read and added, instead of the
+  // whole file being read and parsed again for every look (watch, chat list, reconnect)
+  const size = Number(key.split(':')[0]) || 0;
+  if (c && c.end && size > c.end && c.toolNames) {
+    try {
+      const fd = openSync(file, 'r');
+      let tail;
+      try { const b = Buffer.alloc(size - c.end); const n = readSync(fd, b, 0, b.length, c.end); tail = b.toString('utf8', 0, n); } finally { closeSync(fd); }
+      const cut = tail.lastIndexOf('\n');
+      if (cut >= 0) {
+        const more = [];
+        for (const ln of tail.slice(0, cut).split('\n')) {
+          if (!ln.trim()) continue;
+          let obj; try { obj = JSON.parse(ln); } catch { continue; }
+          more.push(...lineToItems(obj, c.toolNames));
+        }
+        const items = c.items.concat(more);   // a new list: anyone holding the old one keeps it unchanged
+        parseCache.delete(id);
+        parseCache.set(id, { key, items, end: c.end + Buffer.byteLength(tail.slice(0, cut + 1), 'utf8'), toolNames: c.toolNames });
+        return items;
+      }
+    } catch { /* read it fresh below */ }
+  }
   const items = [];
   const toolNames = new Map();
-  for (const ln of readFileSync(file, 'utf8').split('\n')) {
+  const body = readFileSync(file, 'utf8');
+  for (const ln of body.split('\n')) {
     if (!ln.trim()) continue;
     let obj; try { obj = JSON.parse(ln); } catch { continue; }
     items.push(...lineToItems(obj, toolNames));
   }
   if (key) {
-    parseCache.set(id, { key, items });
+    // my115: where the last complete line ends, so the next read can start there
+    // (a file whose last line is still being written is read in full again next time)
+    parseCache.set(id, { key, items, end: body.endsWith('\n') ? Buffer.byteLength(body, 'utf8') : null, toolNames });
     while (parseCache.size > 4) parseCache.delete(parseCache.keys().next().value);   // the 4 chats used last
   }
   return items;
@@ -247,7 +273,9 @@ export function sessionTitle(id) {
   const c = titleCache.get(id);
   if (c && (c.final || c.key === key)) return c.title;
   let r = findTitle(st.size <= HEAD_BYTES ? readFileSync(file, 'utf8') : readHead(file, HEAD_BYTES), st.size <= HEAD_BYTES);
-  if (!r.final && st.size > HEAD_BYTES) r = findTitle(readFileSync(file, 'utf8'), true);
+  // my115: a long chat with only a greeting near the top is read in full ONCE; its title is then kept (it was read in
+  // full, synchronously, every time the chat changed)
+  if (!r.final && st.size > HEAD_BYTES) r = { ...findTitle(readFileSync(file, 'utf8'), true), final: true };
   titleCache.set(id, { key, ...r });
   return r.title;
 }

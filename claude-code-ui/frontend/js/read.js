@@ -6,9 +6,9 @@
  * Voices: the haAi phone app (v11+) provides them natively (window.HaAiNative); a normal browser uses its own speech.
  */
 import { S } from './state.js';
+import { mk } from './util.js';   // my115: shared helpers
 import { promptInput } from './dom.js';
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const native = () => (typeof window.HaAiNative !== 'undefined' ? window.HaAiNative : null);
 const SVG = (d) => `<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const SPEAKER = SVG('<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/>');

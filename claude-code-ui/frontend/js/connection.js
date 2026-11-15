@@ -26,7 +26,7 @@ import { applyModelCatalog, ensureModelOption, updateCtxHint } from './model.js'
 import { renderSessions } from './sessions.js';
 import { setAutoContinueSupported } from './settings.js';
 import { hideThinking, showThinking } from './thinking.js';
-import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory } from './transcript.js';
+import { appendAgentReport, appendAssistantText, appendCompactedDivider, appendErrorBubble, appendInfoLine, appendResultLine, appendTaskNotice, appendToolResult, appendToolUse, appendUserBubble, endToolGroup, renderHistory, countBubbles } from './transcript.js';   // my115 countBubbles
 import { afterHistory, endsAtBottom } from './scrollmem.js';   // my73, my82
 import { afterHistory74, onMy74Message, flushOutbox } from './my74.js';   // my74, my115 flushOutbox
 import { promptAcked, runStateAnswer, linkDropped } from './send.js';   // my115
@@ -51,6 +51,7 @@ olderLine.onclick = () => expandOlder();
 function drawHistory(msg) {
   const items = msg.items || [];
   olderItems = null;
+  S.olderBubbles = 0;
   olderLine.remove();
   let cut = 0;
   if (items.length > TAIL + 30 && !messagesEl.classList.contains('mc-on') && !(S.chatList && S.chatList.length > 1) && endsAtBottom(msg)) {
@@ -59,12 +60,14 @@ function drawHistory(msg) {
   if (!cut) { renderHistory(items); return; }
   renderHistory(items.slice(cut), items.slice(0, cut));
   olderItems = items;
+  S.olderBubbles = countBubbles(items.slice(0, cut));   // my115: counted, not drawn
   messagesEl.prepend(olderLine);
 }
 
 function expandOlder() {
   const items = olderItems;
   olderItems = null;
+  S.olderBubbles = 0;
   const shown = olderLine.isConnected;
   olderLine.remove();
   if (!items || !shown || messagesEl.classList.contains('mc-on')) return;
@@ -385,7 +388,7 @@ function handleOne(msg) {
 
     case 'text':
       hideThinking();
-      appendAssistantText(msg.text);
+      appendAssistantText(msg.text, undefined, true);   // my115: drawn once per screen refresh
       break;
 
     case 'tool_use':

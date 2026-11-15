@@ -3,6 +3,7 @@
  * results, and rebuilding the whole thing from stored history on reconnect.
  */
 import { S } from './state.js';
+import { fmtTokens } from './model.js';   // my115: was used here but never brought in (the 'compacted' line threw an error)
 import { clearScreen } from './commands.js';
 import { messagesEl } from './dom.js';
 import { addCopyButton, renderMarkdown } from './links.js';
@@ -68,7 +69,7 @@ export function appendUserBubble(text, ts, atts) {
   scrollBottom();
 }
 
-export function appendAssistantText(text, ts) {
+export function appendAssistantText(text, ts, live = false) {   // my115: live = a piece of a reply being written now
   if (!S.lastAssistantBubble) {
     endToolGroup();
     S.lastAssistantBubble = mkBubble('assistant');
@@ -77,7 +78,17 @@ export function appendAssistantText(text, ts) {
   }
   const content = S.lastAssistantBubble.querySelector('.bubble-content');
   content._rawMd = (content._rawMd || '') + text;
-  renderMarkdown(content, content._rawMd);
+  // my115 (Michael C, 15 Nov): live pieces arriving close together are drawn once per screen refresh instead of the
+  // whole reply being redrawn for every piece; history (with a time) and a page in the background draw at once
+  if (!live || document.hidden || !content.childNodes.length) { renderMarkdown(content, content._rawMd); scrollBottom(); return; }
+  pendingRender.add(content);
+  if (pendingRender.size === 1) requestAnimationFrame(flushRenders);
+}
+const pendingRender = new Set();
+function flushRenders() {
+  const all = [...pendingRender];
+  pendingRender.clear();
+  for (const c of all) { try { renderMarkdown(c, c._rawMd); } catch (e) { console.warn('drawing a reply failed', e); } }
   scrollBottom();
 }
 
@@ -419,6 +430,19 @@ export function appendAgentReport({ from, text, ts }) {
 // every re-appended bubble then calls scrollBottom() and the view jumps back
 // to the bottom while the user is reading. So: suppress the per-item
 // auto-scroll, rebuild, then restore where they were in one silent move.
+/** my115: how many chat bubbles these history items would draw (same rules as renderHistory below), so a place in the
+ *  chat can be counted from the very first message without drawing the older part. */
+export function countBubbles(items) {
+  let n = 0, open = false;
+  for (const it of items || []) {
+    if (it.kind === 'user') { n++; open = false; }
+    else if (it.kind === 'text') { if (!open) { n++; open = true; } }
+    else if (it.kind === 'agent_report') { n++; open = false; }
+    else if (it.kind === 'tool_use' || it.kind === 'result' || it.kind === 'error' || it.kind === 'task_notice') open = false;
+  }
+  return n;
+}
+
 export function renderHistory(items, hidden = []) {   // my82: hidden = older items not drawn yet
   const wasPinned = S.stickToBottom;
   const prevTop   = messagesEl.scrollTop;

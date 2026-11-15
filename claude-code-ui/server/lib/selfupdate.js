@@ -3,6 +3,7 @@
  * and tells the page, which shows the Update button only while one is waiting.
  */
 import { SUPERVISOR_URL } from './config.js';
+import { fetchT } from './util.js';   // my115: every call to Home Assistant has a time limit
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
 
@@ -14,7 +15,7 @@ export const getSelfUpdate = () => state;
 export async function checkSelfUpdate() {
   if (!process.env.SUPERVISOR_TOKEN) return;
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/addons/self/info`, {
+    const res = await fetchT(`${SUPERVISOR_URL}/addons/self/info`, {
       headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` },
     });
     if (!res.ok) { log('WARN', `update check: Supervisor answered ${res.status}`); return; }

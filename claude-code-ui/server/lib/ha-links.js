@@ -10,6 +10,7 @@
  *    wants — the entity_id will not work there.
  */
 import { SUPERVISOR_URL } from './config.js';
+import { fetchT } from './util.js';   // my115: every call to Home Assistant has a time limit
 import { vlog } from './log.js';
 import { runtime } from './state.js';
 
@@ -17,7 +18,7 @@ export async function refreshHaLinks() {
   const tok = process.env.SUPERVISOR_TOKEN;
   if (!tok) return;
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/core/api/states`, {
+    const res = await fetchT(`${SUPERVISOR_URL}/core/api/states`, {
       headers: { Authorization: `Bearer ${tok}` },
     });
     if (!res.ok) { vlog(`ha links: /states returned ${res.status}`); return; }

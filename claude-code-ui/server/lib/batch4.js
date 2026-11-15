@@ -10,7 +10,7 @@ import { broadcast } from './broadcast.js';
 import { runtime } from './state.js';
 
 const FILE = '/data/haai-overnight.json';
-const SLEEP = 'binary_sensor.sleeping_bedroom_sleep_as_android';
+import { getSleep } from './sleep-state.js';   // my115
 const WAIT_MS = 30 * 60 * 1000;
 const read = () => { try { const d = JSON.parse(readFileSync(FILE, 'utf8')); return { jobs: d.jobs || [], done: d.done || [] }; } catch { return { jobs: [], done: [] }; } };
 const save = (o) => { writeFileSync(FILE + '.tmp', JSON.stringify(o)); renameSync(FILE + '.tmp', FILE); };
@@ -33,9 +33,8 @@ async function tick() {
   try {
     const d = read();
     if (!d.jobs.length || !runner || runtime.activeQuery) return;
-    const res = await fetch(`${SUPERVISOR_URL}/core/api/states/${SLEEP}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
-    if (!res.ok) return;
-    const st = await res.json();
+    const st = getSleep();   // my115: the one shared sleep check
+    if (!st) return;
     if (st.state !== 'on' || Date.now() - new Date(st.last_changed).getTime() < WAIT_MS) return;
     const job = d.jobs[0];
     log('INFO', `my48: starting overnight job ${job.id} (${job.text.length} chars)`);

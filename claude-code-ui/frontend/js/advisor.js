@@ -5,10 +5,11 @@
  * Settings has an on/off switch (kept on the server, shared by every device).
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm, messagesEl, modelSelect } from './dom.js';
 
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const send = wsSend;   // my115: shared helper (util.js)
+
 const MARK = /⟦ADVISE\|([^⟧\n]*)⟧[ \t]*\n?/;
 const PARTIAL = /⟦ADVISE[^⟧]*$/;
 

@@ -5,6 +5,7 @@
  * Claude writes hidden lines such as ⟦DONE|a|b|c⟧; prepareCards turns them into placeholders and buildCards into real cards.
  */
 import { S } from './state.js';
+import { every, mk } from './util.js';   // my115
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { undoText, addedCount } from './batch4.js';   // my48, my89
@@ -12,7 +13,6 @@ import { costKey, costText, saveJobText } from './my74.js';   // my74
 import { timedCard, clashCard } from './my79.js';   // my79 H17 + H5
 import { filedLine } from './my93.js';   // my93 H3
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|FILED)\|([^⟧\n]*)⟧/g;
 const STEP = /⟦STEP\|([^⟧\n]*)⟧[ \t]*\n?/;
@@ -132,12 +132,19 @@ const r1 = mk('span', 'h6-r1'), r2 = mk('span', 'h6-r2'), r2i = mk('span', 'h6-i
 r1.append(bDot, bStep, bNow, bEst, bMore); r2.append(r2i, r2t, r2o);
 bar.append(r1, r2);
 document.body.classList.add('h111-tools');   // tool blocks folded into the bar
+// my115 (Michael C, 15 Nov): live lists (their length costs nothing) and a cached answer, so the once-a-second bar no
+// longer walks the whole chat when nothing has changed (it did, forever, growing with the chat)
+const usersLive = messagesEl.getElementsByClassName('bubble-user');
+const toolsLive = messagesEl.getElementsByClassName('tool-call-name');
+let toolsKey = '', toolsCache = null;
 function turnTools() {   // the tools of the last turn: everything after Michael's last message
-  const users = messagesEl.querySelectorAll('.bubble-user');
-  const lastU = users[users.length - 1];
-  const names = [...messagesEl.querySelectorAll('.tool-call-name')]
+  const key = `${usersLive.length}:${toolsLive.length}:${messagesEl.childElementCount}`;
+  if (toolsCache && key === toolsKey) return toolsCache;
+  const lastU = usersLive[usersLive.length - 1];
+  const names = [...toolsLive]
     .filter((n) => !lastU || (lastU.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)).map((n) => n.textContent || '');
   const c = { all: names.length, cmd: 0, read: 0, changed: 0 };
+  toolsKey = key; toolsCache = c;
   for (const n of names) {
     if (n === 'Bash') c.cmd++;
     else if (n === 'Read' || n === 'Grep' || n === 'Glob') c.read++;
@@ -164,12 +171,12 @@ bar.onclick = () => { document.body.classList.toggle('h111-tools');   // my111: 
 let lastTook = 0;
 // my111 (Michael 15 Nov): and how much of the 5-hour allowance that last turn used (figure from the server, per chat)
 function lastTookMs() {
-  let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { return 0; }
+  const m = turnCosts(); if (!m) return 0;
   const r = S.activeSessionId != null ? m[S.activeSessionId] : null;
   return r && typeof r === 'object' ? Number(r.ms) || 0 : 0;
 }
 function turnCostText() {
-  let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { return ''; }
+  const m = turnCosts(); if (!m) return '';
   const r = S.activeSessionId != null ? m[S.activeSessionId] : undefined;
   if (r == null) return '';
   const p = typeof r === 'object' ? r.pct : r;   // my112: {pct, ms} from the server (older pages kept a number)
@@ -178,7 +185,14 @@ function turnCostText() {
   const tk = typeof r === 'object' && r.tok != null ? ` · ${r.tok >= 1000 ? Math.round(r.tok / 1000) + 'k' : r.tok} tokens` : '';
   return `used ${Math.round(p)}% of 5h${now}${tk}`;
 }
-window.addEventListener('haai-turncost', () => { if (!S.isRunning) drawFinished(); });
+// my115: the saved turn costs are read once and kept until they change (they were parsed twice a second)
+let costsCache;
+function turnCosts() {
+  if (costsCache !== undefined) return costsCache;
+  try { costsCache = JSON.parse(localStorage.getItem('haai-turncost') || '{}') || {}; } catch { costsCache = null; }
+  return costsCache;
+}
+window.addEventListener('haai-turncost', () => { costsCache = undefined; if (!S.isRunning) drawFinished(); });
 function drawFinished() {
   const add = addedCount();
   bar.classList.remove('hidden'); bar.classList.add('h6-done');
@@ -307,7 +321,7 @@ function drawStep() {
   sEst.textContent = est;
   sNext.textContent = hasStep && stepData[3] ? `Next: ${stepData[3]}` : '';
 }
-setInterval(() => { if (!document.hidden) drawStep(); }, 1000);   // my84: every second, for the ticking time (was 2 s)
+every(1000, drawStep);   // my115: the one shared page timer   // my84: every second, for the ticking time (was 2 s)
 new MutationObserver(() => { scanSteps(); }).observe(messagesEl, { childList: true });
 
 // ── 20. Morning brief (my70, his Look E): ONE short grey line inside the chat, first open after waking;

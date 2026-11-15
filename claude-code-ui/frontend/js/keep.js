@@ -3,6 +3,7 @@
  * all go to Claude together when Send is pressed.
  */
 import { S } from './state.js';
+import { wsSend } from './util.js';   // my115: shared helpers
 import { attachments, fileToDataURL, removeAttachment } from './attachments.js';
 import { updateSendBtn } from './composer.js';
 import { promptInput } from './dom.js';
@@ -25,7 +26,7 @@ let pendingText = null;   // { cid, text }: stays in the typing box until haAi s
 const tray = document.getElementById('keep-tray');
 const keepBtn = document.getElementById('keep-btn');
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
+
 const newCid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 
 export function updateKeepBtn() {

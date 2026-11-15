@@ -10,7 +10,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from 'fs';
 import * as fsSync from 'fs';   // my115
 import path from 'path';
-import { spawnSync, execFile, spawn } from 'child_process';   // my114 spawn
+import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
 import { chooseAccount, cycleState, tidyState, SWITCH_AT } from './my90.js';   // my90
@@ -55,9 +55,28 @@ export function saveCurrent() {
   return who;
 }
 
+// my115 (Michael C, 15 Nov): Python helpers run WITHOUT freezing haAi (spawnSync held up every chat, socket and watch
+// request, up to 60 s on each free-chat turn). Resolves { status, stdout, stderr } like spawnSync did.
+function runPy(args, timeout) {
+  return new Promise((resolve) => {
+    execFile('python3', ['-I', SWITCH, ...args], { encoding: 'utf8', timeout, env: process.env, maxBuffer: 4 << 20 }, (err, stdout, stderr) => {
+      resolve({ status: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout: stdout || '', stderr: stderr || (err && !stdout ? String(err.message || err) : '') });
+    });
+  });
+}
+
+// my115: one unreadable moment of settings.json (being rewritten) no longer flips Free/Paid: the last good read is used
+let lastEnv = null;
+function settingsEnv() {
+  const j = readJson(SETTINGS());
+  if (j && typeof j === 'object') { lastEnv = j.env || {}; return lastEnv; }
+  if (existsSync(SETTINGS()) && lastEnv) return lastEnv;
+  return {};
+}
+
 /** Which mode the chat settings are in. Never includes the key itself. */
 export function modeState() {
-  const env = readJson(SETTINGS())?.env || {};
+  const env = settingsEnv();
   // my17: any free provider counts (OR_PROVIDER is written by openrouter_switch.py), not just OpenRouter's address.
   const free = !!env.OR_PROVIDER || String(env.ANTHROPIC_BASE_URL || '').startsWith('https://openrouter.ai');
   const pool = readJson(path.join(CLAUDE_CONFIG_DIR, 'openrouter-models.json'))?.models || [];
@@ -69,16 +88,16 @@ export function modeState() {
 /** my17: the model to use for every new prompt while Free mode is on, so a model chosen mid-chat (from the menu, or by the
  *  model advisor running 'openrouter_switch.py setmodel') applies to the NEXT message of the SAME chat. Null in Paid mode. */
 export function freeModelOverride() {
-  const env = readJson(SETTINGS())?.env || {};
+  const env = settingsEnv();
   return env.OR_PROVIDER && env.ANTHROPIC_MODEL ? env.ANTHROPIC_MODEL : null;
 }
 
 /** my17: choose a free model from the live pool. Returns { ok, model } or { ok:false, error }. */
-export function setFreeModel(id) {
+export async function setFreeModel(id) {
   if (typeof id !== 'string' || !/^[A-Za-z0-9._:\/-]{3,120}$/.test(id)) return { ok: false, error: 'That model name is not valid.' };
   if (!modeState().free) return { ok: false, error: 'Free mode is not on.' };
   try {
-    const r = spawnSync('python3', ['-I', SWITCH, 'setmodel', id], { encoding: 'utf8', timeout: 25000, env: process.env });
+    const r = await runPy(['setmodel', id], 25000);
     if (r.status !== 0) { log('ERROR', `setmodel failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'That model is not on the free list right now. Nothing was changed.' }; }
     log('INFO', `free model set to ${id}`);
     return { ok: true, model: id };
@@ -88,11 +107,17 @@ export function setFreeModel(id) {
   }
 }
 
+let switching = null;
+/** my115: resolves once a Free/Paid switch in progress has finished (at once if none). */
+export const modeSwitchDone = () => switching ? switching.then(() => {}, () => {}) : Promise.resolve();
+
 /** Switch to Free (true) or Paid (false). Returns { ok, free } or { ok:false, error }. */
-export function setMode(free) {
+export async function setMode(free) {
   if (free && !modeState().hasKey) return { ok: false, error: 'No OpenRouter key is saved yet.' };
   try {
-    const r = spawnSync('python3', ['-I', SWITCH, free ? 'on' : 'off'], { encoding: 'utf8', timeout: 20000, env: process.env });
+    // my115: while the switch runs, a chat that wants to start waits for it (so it never starts half-way between modes)
+    switching = runPy([free ? 'on' : 'off'], 20000);
+    const r = await switching.finally(() => { switching = null; });
     if (r.status !== 0) { log('ERROR', `mode switch failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'The mode switch did not work. Nothing was changed.' }; }
     log('INFO', `mode switched to ${free ? 'free' : 'paid'}`);
     return { ok: true, free: !!free, mode: true };
@@ -134,9 +159,18 @@ export function switchTo(id) {
       for (const f of old.slice(0, Math.max(0, old.length - 5))) unlinkSync(path.join(BACKUPS, f));
     }
     const ident = readJson(IDENT()) || {};
+    const oldIdent = existsSync(IDENT()) ? readFileSync(IDENT(), 'utf8') : null;
     ident.oauthAccount = target.oauthAccount;
-    writePrivate(IDENT(), JSON.stringify(ident));
+    // my115: the sign-in goes first, then the name; if the second step fails the first is put back, so the name and
+    // the sign-in can never belong to different accounts
+    const oldLive = existsSync(LIVE()) ? readFileSync(LIVE(), 'utf8') : null;
     writePrivate(LIVE(), target.credentials);
+    try { writePrivate(IDENT(), JSON.stringify(ident)); }
+    catch (e) {
+      if (oldLive != null) { try { writePrivate(LIVE(), oldLive); } catch { /* backed up above */ } }
+      if (oldIdent != null) { try { writePrivate(IDENT(), oldIdent); } catch { /* unchanged */ } }
+      throw e;
+    }
     log('INFO', `account switched to ${target.email}`);
     return { ok: true };
   } catch (e) {
@@ -155,11 +189,11 @@ export function providerStats(cb) {
 }
 
 /** my25: pick which provider Free mode uses for the NEXT new chat. Only while Free mode is on. */
-export function useProvider(id) {
+export async function useProvider(id) {
   if (typeof id !== 'string' || !/^[a-z0-9]{2,20}$/.test(id)) return { ok: false, error: 'That provider name is not valid.' };
   if (!modeState().free) return { ok: false, error: 'Free mode is not on. Switch to Free models first.' };
   try {
-    const r = spawnSync('python3', ['-I', SWITCH, 'useprovider', id], { encoding: 'utf8', timeout: 25000, env: process.env });
+    const r = await runPy(['useprovider', id], 25000);
     if (r.status !== 0) { log('ERROR', `useprovider failed: ${(r.stderr || r.stdout || '').trim()}`); return { ok: false, error: 'That provider is not ready, so nothing was changed.' }; }
     log('INFO', `free provider set to ${id}`);
     return { ok: true, providerSet: true, provider: id };
@@ -212,10 +246,10 @@ const CTX_SRC = '/config/opencode/free-mode-context.md';
 const FREE_OWN = new Set(['settings.json', 'CLAUDE.md', 'free-mode-context.md', '.credentials.json', '.claude.json']);
 
 /** Can a free-account chat be opened? { ok, why } (cheap check, no translator start). */
-export function freeChatReady() {
+export async function freeChatReady() {
   if (!existsSync(SWITCH)) return { ok: false, why: 'The free-model tool is missing.' };
   try {
-    const r = spawnSync('python3', ['-I', SWITCH, 'chatenv', '--check'], { encoding: 'utf8', timeout: 15000, env: process.env });
+    const r = await runPy(['chatenv', '--check'], 15000);
     if (r.status === 0) return { ok: true, provider: (r.stdout || '').trim() };
     return { ok: false, why: (r.stderr || r.stdout || '').trim().slice(0, 200) || 'No free provider is ready.' };
   } catch (e) { return { ok: false, why: 'Could not check the free providers.' }; }
@@ -258,8 +292,8 @@ export function freeServiceNow() {
 }
 
 /** Build the free chat's settings folder. Returns { email:'', dir, model, provider } or throws with a plain reason. */
-export function prepareFreeDir() {
-  const r = spawnSync('python3', ['-I', SWITCH, 'chatenv'], { encoding: 'utf8', timeout: 60000, env: process.env });
+export async function prepareFreeDir() {
+  const r = await runPy(['chatenv'], 60000);
   if (r.status !== 0) throw new Error((r.stderr || r.stdout || '').trim().slice(0, 200) || 'No free provider is ready.');
   const j = JSON.parse(r.stdout);
   mkdirSync(FREE_DIR, { recursive: true, mode: 0o700 });

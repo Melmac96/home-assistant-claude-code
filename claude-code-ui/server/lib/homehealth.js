@@ -3,6 +3,7 @@
  * tells the page. Anything it cannot read or trust counts as "stale", never as fine.
  */
 import { SUPERVISOR_URL } from './config.js';
+import { fetchT } from './util.js';   // my115: every call to Home Assistant has a time limit
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
 import { getHaaiChecks } from './my79.js';   // my79 H12
@@ -28,7 +29,7 @@ export function readHealth(sensor, now = Date.now()) {
 
 export async function checkHomeHealth() {
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/core/api/states/sensor.home_health`, {
+    const res = await fetchT(`${SUPERVISOR_URL}/core/api/states/sensor.home_health`, {
       headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` },
     });
     if (!res.ok) throw new Error(`Home Assistant answered ${res.status}`);

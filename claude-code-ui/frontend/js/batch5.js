@@ -6,10 +6,8 @@
  *  33 Watch: route C is a separate job (own Wear OS app), not in this file
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { messagesEl } from './dom.js';
-
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 
 const bar = mk('div', 'h5-row');
 document.getElementById('chat-scroll').before(bar);

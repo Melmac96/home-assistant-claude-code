@@ -5,9 +5,9 @@
  * place is used if ANOTHER device saved it, or if this page has just been opened.
  */
 import { S } from './state.js';
+import { wsSend } from './util.js';   // my115: shared helpers
 import { messagesEl } from './dom.js';
 
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const DEV = localStorage.getItem('haai-dev') || (() => {
   const d = Math.random().toString(36).slice(2, 12);
   localStorage.setItem('haai-dev', d);
@@ -34,8 +34,10 @@ function here() {
 function save() {
   const cur = sid || S.activeSessionId;   // a brand-new chat gets its id after it was drawn
   if (!cur) return;
-  if (!S.stickToBottom && S.expandOlder) S.expandOlder();   // my82: message numbers count from the very first one
+  // my82: message numbers count from the very first one. my115: the older part that is not drawn yet is COUNTED
+  // (connection.js S.olderBubbles) instead of being drawn, so scrolling up a little no longer redraws the whole chat
   const p = S.stickToBottom ? { idx: 0, frac: 0 } : here();
+  if (!S.stickToBottom && S.olderBubbles) p.idx += S.olderBubbles;
   wsSend({ type: 'scrollpos_set', sid: cur, bottom: !!S.stickToBottom, idx: p.idx, frac: p.frac, dev: DEV });
 }
 

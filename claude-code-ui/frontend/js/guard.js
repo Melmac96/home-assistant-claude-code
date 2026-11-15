@@ -8,10 +8,10 @@
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
  */
 import { S } from './state.js';
+import { every, mk, wsSend } from './util.js';   // my115
 import { inputForm } from './dom.js';
 
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const send = wsSend;   // my115: shared helpers (util.js)
 
 let quota = {};
 let acc = { cur: null, saved: [], free: false };
@@ -25,7 +25,7 @@ window.addEventListener('haai-accounts', (e) => {
   lastEmail = em || lastEmail;
 });
 window.addEventListener('haai-usage', () => setTimeout(() => send({ type: 'quota_get' }), 2500));
-setInterval(() => { if (S.isConnected && !S.isRunning && !document.hidden) send({ type: 'quota_get' }); }, 90000);   // my88: rests while not on screen
+every(90000, () => { if (S.isConnected && !S.isRunning) send({ type: 'quota_get' }); });   // my88: rests while not on screen (my115: shared timer)
 setTimeout(() => send({ type: 'quota_get' }), 4000);
 
 // ── what we know ─────────────────────────────────────────────────────────────

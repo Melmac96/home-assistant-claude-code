@@ -6,11 +6,9 @@
  *  (I2 pack old chats is server only; its count rides on the morning line in batch2.js)
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { messagesEl } from './dom.js';
 import { sendText } from './quick.js';
-
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
 
 const css = mk('style');
 css.textContent = `
@@ -43,7 +41,17 @@ function addRemember(b) {
   b.append(r);
 }
 const scan = () => messagesEl.querySelectorAll('.bubble-user').forEach(addRemember);
-new MutationObserver(() => { clearTimeout(scan.t); scan.t = setTimeout(scan, 300); }).observe(messagesEl, { childList: true });
+// my115: only the messages just added are looked at (every message bubble was re-checked on every change);
+// a full look still happens after the whole chat is drawn again
+const added = new Set();
+new MutationObserver((recs) => {
+  for (const r of recs) for (const n of r.addedNodes) if (n.nodeType === 1 && n.classList.contains('bubble-user')) added.add(n);
+  clearTimeout(scan.t);
+  scan.t = setTimeout(() => {
+    if (added.size > 40) scan(); else for (const n of added) if (n.isConnected) addRemember(n);
+    added.clear();
+  }, 300);
+}).observe(messagesEl, { childList: true });
 
 export function filedLine(f) { return mk('div', 'h93-filed', `✓ Remembered. Filed in ${f[0] || 'your notes'}`); }
 

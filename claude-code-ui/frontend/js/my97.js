@@ -5,13 +5,12 @@
  *  The buttons sit in their own span so tidy.js does not tuck them into the More list.
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm } from './dom.js';
 import { sendText } from './quick.js';
 import { appendInfoLine } from './transcript.js';   // my115
 import { goAway, isAway } from './my96.js';
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
 const svg = (p, n) => `<svg viewBox="0 0 24 24" width="${n}" height="${n}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const STACK = '<path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 12l10 5 10-5"/><path d="M2 17l10 5 10-5"/>';
 const HAND = '<path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/><path d="M2.5 6.5a5 5 0 0 1 2.5-3.5"/><path d="M20 2.5a4 4 0 0 1 2 2"/>';

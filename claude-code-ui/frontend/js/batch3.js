@@ -6,6 +6,7 @@
  *  - Shared things from Android's Share menu and the home-screen Talk button arrive through window.haaiShared / haaiTalk.
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm, messagesEl, promptInput } from './dom.js';
 import { sendText } from './quick.js';
 import { addFiles } from './attachments.js';
@@ -13,9 +14,9 @@ import { splitReply, speakOne } from './read.js';
 import { stripMarks } from './batch1.js';
 
 const native = () => (typeof window.HaAiNative !== 'undefined' ? window.HaAiNative : null);
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
 const toast = (t) => { const d = mk('div', 'haai-toast', t); document.body.append(d); setTimeout(() => d.remove(), 5000); };
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+
 const b64ToFile = (b64, name, type) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new File([u], name, { type }); };
 
 // ── Buttons next to the microphone (only inside the phone app, which has the voices and camera) ──

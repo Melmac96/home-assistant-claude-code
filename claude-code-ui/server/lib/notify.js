@@ -11,6 +11,7 @@
  * notification matters most when no browser is open.
  */
 import { chats, slotNow, chatLabel } from './chats.js';   // my58, my77
+import { fetchT } from './util.js';   // my115: every call to Home Assistant has a time limit
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { NOTIFY_FILE, SUPERVISOR_URL } from './config.js';
 import { log, vlog } from './log.js';
@@ -63,7 +64,7 @@ export function shouldPush({ kind, settings, anyVisible, lastAt, now, cooldownMs
   return true;
 }
 
-const supervisorFetch = (route, init = {}) => fetch(`${SUPERVISOR_URL}/core/api/${route}`, {
+const supervisorFetch = (route, init = {}) => fetchT(`${SUPERVISOR_URL}/core/api/${route}`, {
   ...init,
   headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, 'Content-Type': 'application/json' },
 });
@@ -84,7 +85,7 @@ let panelUrl;   // undefined until looked up; null if it could not be
 async function getPanelUrl() {
   if (panelUrl) return panelUrl;   // my115: only a found link is kept; a failed look-up is tried again next time
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/addons/self/info`,
+    const res = await fetchT(`${SUPERVISOR_URL}/addons/self/info`,
       { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` }, signal: AbortSignal.timeout(10000) });
     const slug = res.ok ? (await res.json())?.data?.slug : null;
     panelUrl = slug ? `http://192.168.1.168/${slug}` : undefined;   // my13: the old /hassio/ingress/ link gives 404 on this HA

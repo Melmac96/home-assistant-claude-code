@@ -5,13 +5,14 @@
  * (6 allowance forecast, look B, lives in usage.js.)
  */
 import { S } from './state.js';
+import { every, mk, wsSend } from './util.js';   // my115
 import { inputForm, messagesEl } from './dom.js';
 import { sendText } from './quick.js';
 import { requestNewSession } from './composer.js';
 import { stripCards } from './batch2.js';   // my46
 
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const send = wsSend;   // my115: shared helper (util.js)
+
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const ls = (k, d) => { const v = localStorage.getItem(k); return v == null ? d : v; };
 
@@ -201,7 +202,7 @@ bind('rest-min', 'rest-min', '40', false);
 bind('night-toggle', 'night-on', '0', true);
 bind('night-from', 'night-from', '22:00', false);
 bind('night-to', 'night-to', '07:00', false);
-setInterval(() => { if (document.hidden) return; checkRest(); checkNight(); }, 30000);   // my88: rests while haAi is not on screen
+every(30000, () => { checkRest(); checkNight(); });   // my88: rests while haAi is not on screen (my115: shared timer)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkNight(); });   // my88
 checkNight();
 

@@ -10,6 +10,7 @@
  *  - white text becomes the normal haAi grey
  */
 import { S } from './state.js';
+import { mk } from './util.js';   // my115: shared helpers
 
 const q = /[?&]tvlayout=([01])/.exec(location.search);
 if (q) { try { localStorage.setItem('haai-tvlayout', q[1]); } catch { /* ignore */ } }
@@ -18,7 +19,6 @@ const isTv = forced === '1' || (forced !== '0' && /Android ?TV|SHIELD|AFT[A-Z]|B
 
 const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd' };
 const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com'];
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 if (isTv) {
   document.documentElement.classList.add('haai-tv');

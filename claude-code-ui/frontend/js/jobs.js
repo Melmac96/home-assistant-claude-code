@@ -5,8 +5,8 @@
  * "[Haiku]" / "[Sonnet]" tag Claude puts at the start of the task description (standing instruction in advisor.js).
  */
 import { S } from './state.js';
+import { mk } from './util.js';   // my115: shared helpers
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const KEY = 'haaiJobsStore';
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch { return []; } };
 const save = (a) => localStorage.setItem(KEY, JSON.stringify(a.slice(-30)));
@@ -29,10 +29,11 @@ let showStorage = false;
 export function onJobsChanged() {
   const now = new Map((S.backgroundTasks || []).map((t) => [t.id, t]));
   const store = load();
+  let changed = false;
   for (const [id, j] of live) {
-    if (!now.has(id)) { store.push({ n: j.n, text: j.text, model: j.model, summary: j.summary || '', at: Date.now() }); live.delete(id); }
+    if (!now.has(id)) { store.push({ n: j.n, text: j.text, model: j.model, summary: j.summary || '', at: Date.now() }); live.delete(id); changed = true; }
   }
-  save(store);
+  if (changed) save(store);   // my115: only written when a job really finished (it was written on every update)
   for (const [id, t] of now) {
     const g = tagOf(t.description);
     const prev = live.get(id);

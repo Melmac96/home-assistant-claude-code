@@ -43,7 +43,7 @@ import { ideasList, ideasOp } from './ideas.js';   // my59
 import * as scrollmem from './scrollmem.js';   // my73
 import { startMy93, getMessages, getNowTv } from './my93.js';   // my93
 import { awayState, setAway, startMy96 } from './my96.js';   // my96
-import { lotsState, setLots } from './my97.js';   // my97
+import { lotsState, setLots } from './my96.js';   // my97 (my115: lives in my96.js now)
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
@@ -248,8 +248,8 @@ const handlers = {
   },
 
   // my17: pick another FREE model; applies to the very next message of this same chat (no new chat needed).
-  model_set(ws, msg) {
-    const r = setFreeModel(msg.model);
+  async model_set(ws, msg) {
+    const r = await setFreeModel(msg.model);
     if (r.ok && runtime.activeRun?.q?.setModel) {
       runtime.activeRun.q.setModel(r.model).catch((e) => log('WARN', `setModel on the running chat failed: ${e?.message || e}`));
     }
@@ -259,22 +259,22 @@ const handlers = {
 
   // my25: usage lines for every provider (read-only) and choosing the Free-mode provider
   stats_get(ws) { providerStats((r) => send(ws, { type: 'provider_stats', ...r })); },
-  provider_use(ws, msg) {
-    const r = useProvider(msg.id);
+  async provider_use(ws, msg) {
+    const r = await useProvider(msg.id);
     send(ws, { type: 'account_result', ...r });
     broadcast({ type: 'accounts', ...listAccounts() });
     providerStats((x) => broadcast({ type: 'provider_stats', ...x }));
   },
 
   // my16: Free / Paid mode from the Accounts menu (same busy rule as an account switch).
-  mode_switch(ws, msg) {
+  async mode_switch(ws, msg) {
     // my115: a chat that has finished its reply and only waits on a background job no longer blocks Free/Paid
     // (the switch only changes how NEW chats start; that chat keeps the settings it started with).
     if (runningChats().some((s) => s.run?.phase !== 'background')) {
       send(ws, { type: 'account_result', ok: false, error: busyText() });
       return;
     }
-    const r = setMode(!!msg.free);
+    const r = await setMode(!!msg.free);
     send(ws, { type: 'account_result', ...r });
     broadcast({ type: 'accounts', ...listAccounts() });
   },
@@ -422,8 +422,8 @@ const handlers = {
   prefs_set(_ws, msg) { broadcast({ type: 'prefs', ...setPrefs(msg) }); },   // my41
   star_add(_ws, msg) { broadcast({ type: 'stars', list: extras.addStar(msg, runtime.activeSessionId) }); },   // my40
   star_remove(_ws, msg) { broadcast({ type: 'stars', list: extras.removeStar(msg.id) }); },
-  ideas_get(ws) { send(ws, { type: 'ideas', ...ideasList() }); },   // my59
-  ideas_op(_ws, msg) { broadcast({ type: 'ideas', ...ideasOp(msg) }); },
+  async ideas_get(ws) { send(ws, { type: 'ideas', ...(await ideasList()) }); },   // my59 (my115: no longer freezes haAi)
+  async ideas_op(_ws, msg) { broadcast({ type: 'ideas', ...(await ideasOp(msg)) }); },
   async refresh_screens(ws) { send(ws, { type: 'refresh_result', ...(await extras.refreshScreens()) }); },
   async quota_get(ws, msg) { send(ws, { type: 'quota', ...(await extras.getQuota(!!msg.force)) }); },
   app_latest_get(ws) { send(ws, { type: 'app_latest', latest: extras.appLatest() }); },

@@ -20,6 +20,7 @@
  * (index.js gates the whole port first). The watch app carries one such key.
  */
 import crypto from 'crypto';
+import { fetchT } from './util.js';   // my115: every call to Home Assistant has a time limit
 import fs from 'fs';
 import { getHomeHealth } from './homehealth.js';
 import { SUPERVISOR_URL } from './config.js';
@@ -79,10 +80,13 @@ async function houseTemp() {
   temp.at = Date.now();
   try {
     const vals = [];
-    for (const id of TEMPS) {
-      const r = await fetch(`${SUPERVISOR_URL}/core/api/states/${id}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
-      if (r.ok) { const v = Number((await r.json()).state); if (Number.isFinite(v)) vals.push(v); }
-    }
+    // my115: all rooms asked at once, not one after another (the watch waited for each)
+    await Promise.all(TEMPS.map(async (id) => {
+      try {
+        const r = await fetchT(`${SUPERVISOR_URL}/core/api/states/${id}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } }, 6000);
+        if (r.ok) { const v = Number((await r.json()).state); if (Number.isFinite(v)) vals.push(v); }
+      } catch { /* that room is left out */ }
+    }));
     temp.value = vals.length ? Math.round(10 * vals.reduce((a, b) => a + b, 0) / vals.length) / 10 : null;
   } catch (e) { log('WARN', `watch temperature: ${e?.message || e}`); temp.value = null; }
   return temp.value;
@@ -92,7 +96,7 @@ async function houseTemp() {
 const PAGES_FILE = '/config/opencode/watch-talk/watch-pages.json';
 const KEEP = ['friendly_name', 'unit_of_measurement', 'current_humidity', 'humidity', 'current_temperature', 'temperature',
   'hvac_action', 'hvac_mode', 'percentage', 'mode', 'brightness', 'message', 'start_time', 'end_time'];
-const ha = (path, opt = {}) => fetch(`${SUPERVISOR_URL}/core/api/${path}`, { ...opt,
+const ha = (path, opt = {}) => fetchT(`${SUPERVISOR_URL}/core/api/${path}`, { ...opt,
   headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, 'Content-Type': 'application/json' } });
 function pagesConf() { return JSON.parse(fs.readFileSync(PAGES_FILE, 'utf8')); }
 async function stateOf(id) {
@@ -128,7 +132,8 @@ async function pageBody(name) {
   const conf = pagesConf().pages?.[name];
   if (!conf) return null;
   const states = {};
-  for (const id of conf.read || []) states[id] = await stateOf(id);
+  for (const id of conf.read || []) states[id] = null;   // keeps the page's own order
+  await Promise.all((conf.read || []).map(async (id) => { states[id] = await stateOf(id).catch(() => ({ s: 'missing' })); }));   // my115: asked at once
   const body = { name, layout: conf.layout || {}, states, at: new Date().toISOString() };
   if (conf.calendars) body.events = await calendarEvents(conf.calendars, conf.days || 14);
   if (conf.forecast) { body.daily = await forecast(conf.forecast, 'daily'); body.hourly = await forecast(conf.forecast, 'hourly'); }

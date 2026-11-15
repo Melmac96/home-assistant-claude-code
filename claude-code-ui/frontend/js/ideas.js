@@ -4,9 +4,7 @@
  * No pop-ups: Add and Edit open a form in the page, Remove asks with a second tap. The server does the writing (server/lib/ideas.js).
  */
 import { S } from './state.js';
-
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 
 const panel = mk('div', 'haai-ideas hidden');
 const head = mk('div', 'haai-ideas-head');

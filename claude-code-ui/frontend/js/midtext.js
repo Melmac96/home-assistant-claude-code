@@ -5,6 +5,7 @@
  * message (counted per chat). A message with a question or a card is never hidden.
  */
 import { messagesEl } from './dom.js';
+import { every } from './util.js';   // my115
 import { S } from './state.js';
 
 const css = document.createElement('style');
@@ -33,7 +34,7 @@ function mark() {
   for (const [id, b] of last) if (running && id === (S.chat || id) && !keep(b)) b.classList.add('mid-text');
 }
 let running = false;
-setInterval(() => { if (S.isRunning !== running) mark(); }, 400);
+every(400, () => { if (S.isRunning !== running) mark(); });   // my115: the one shared page timer
 let t = 0;
 new MutationObserver(() => { clearTimeout(t); t = setTimeout(mark, 150); }).observe(messagesEl, { childList: true });
 mark();

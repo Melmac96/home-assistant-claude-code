@@ -3,6 +3,7 @@
  * the "Waiting for you" list (Sessions menu) and the New chat card.
  */
 import { S } from './state.js';
+import { wsSend } from './util.js';   // my115: shared helpers
 import { inputForm, messagesEl, promptInput } from './dom.js';
 import { requestNewSession } from './composer.js';
 import { appendInfoLine } from './transcript.js';
@@ -10,7 +11,7 @@ import { sendForButton } from './send.js';   // my115
 
 let quick = { jobs: [], replies: [] };
 let editing = false;
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+
 const saveQuick = () => wsSend({ type: 'quick_save', jobs: quick.jobs, replies: quick.replies });
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 

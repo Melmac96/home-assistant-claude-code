@@ -26,7 +26,7 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
-import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText } from './accounts.js';
+import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText, modeSwitchDone } from './accounts.js';   // my115 modeSwitchDone
 import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder, ADD_NOTE, sessionFile } from './sessions.js';   // my101 ADD_NOTE   // my114 sessionFile
 import { hooksFor, makeCanUseTool } from './permissions.js';
@@ -48,7 +48,7 @@ import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
 import { my96Prompt } from './my96.js';   // my96
-import { my97Prompt } from './my97.js';   // my97
+import { my97Prompt } from './my96.js';   // my97 (my115: lives in my96.js now)
 import { my87Prompt, moveOnAnswer } from './my87.js';   // my87, my113
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
@@ -230,8 +230,9 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
   // its own Claude account, and one opened alongside others takes the account with the most allowance left.
   let acct;
   if (!slot.free) await renewDone();   // my115: never start on a sign-in that is being renewed this moment
+  await modeSwitchDone();   // my115: never start half-way through a Free/Paid switch
   if (slot.free) {
-    try { acct = prepareFreeDir(); }
+    try { acct = await prepareFreeDir(); }   // my115: no longer freezes the other chats while it runs
     catch (e) {
       log('WARN', `my77: free chat ${slot.id} could not start: ${e?.message || e}`);
       if (runtime.activeQuery === abortController) runtime.activeQuery = null;

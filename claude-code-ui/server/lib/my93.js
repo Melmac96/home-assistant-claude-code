@@ -8,8 +8,8 @@
  *  I2  Pack old chats (Look A): every night at 03:00 UK, chats untouched for 2 months (his answer A) are packed
  *      (packed.js); the morning line says how many.
  */
-import { readFileSync, renameSync, writeFileSync } from 'fs';
-import { WebSocket } from 'ws';
+import { onEvent, onState } from './ha-events.js';   // my115: one shared Home Assistant link
+import { readJson as rj, saveJson, fetchT } from './util.js';   // my115: shared helpers
 import { SUPERVISOR_URL } from './config.js';
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
@@ -23,8 +23,7 @@ const PACKLOG = '/data/haai-pack.json';
 const TV = 'sensor.now_watching_home_trakt';
 const PACK_DAYS = 60;
 const KEEP_MS = 7 * 86400000;
-const readJson = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')) || d; } catch { return d; } };
-const saveJson = (f, o) => { writeFileSync(f + '.tmp', JSON.stringify(o)); renameSync(f + '.tmp', f); };
+const readJson = (f, d) => rj(f, d) || d;
 const ukParts = () => { const s = new Date().toLocaleString('sv-SE', { timeZone: 'Europe/London' }); return { day: s.slice(0, 10), hour: +s.slice(11, 13) }; };
 
 // ── H2 messages ──────────────────────────────────────────────────────────────
@@ -58,30 +57,22 @@ function noteCall(ev) {
 }
 export const getMessages = () => msgs.filter((x) => Date.now() - x.at < KEEP_MS);
 
-let haWs = null, wsTimer = null;
-function connectHa() {
-  clearTimeout(wsTimer);
-  try { haWs = new WebSocket(`${SUPERVISOR_URL.replace(/^http/, 'ws')}/core/websocket`); }
-  catch (e) { log('WARN', `messages link failed: ${e?.message || e}`); wsTimer = setTimeout(connectHa, 60000); return; }
-  haWs.on('message', (raw) => {
-    let m; try { m = JSON.parse(raw); } catch { return; }
-    if (m.type === 'auth_required') haWs.send(JSON.stringify({ type: 'auth', access_token: process.env.SUPERVISOR_TOKEN }));
-    else if (m.type === 'auth_ok') haWs.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'call_service' }));
-    else if (m.type === 'event') noteCall(m.event);
-  });
-  haWs.on('error', (e) => log('WARN', `messages link error: ${e?.message || e}`));
-  haWs.on('close', () => { haWs = null; wsTimer = setTimeout(connectHa, 30000); });
-}
+// my115: the shared Home Assistant event link (ha-events.js) instead of a link of its own
+function connectHa() { onEvent('call_service', noteCall); }
 
 // ── H19 Now on TV ────────────────────────────────────────────────────────────
+// my115: pushed by Home Assistant the moment it changes; the 5-minute ask is only a back-up (it asked every 30 s)
 let tv = { text: '' };
+function tvSet(stRaw) {
+  const st = String(stRaw || '');
+  const text = /^(nothing playing|unknown|unavailable|)$/i.test(st.trim()) ? '' : st.replace(/:\s*not sure what$/i, '').trim();
+  if (text !== tv.text) { tv = { text, at: Date.now() }; broadcast({ type: 'now_tv', ...tv }); }
+}
 async function tvTick() {
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/core/api/states/${TV}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
+    const res = await fetchT(`${SUPERVISOR_URL}/core/api/states/${TV}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } }, 10000);
     if (!res.ok) return;
-    const st = String((await res.json()).state || '');
-    const text = /^(nothing playing|unknown|unavailable|)$/i.test(st.trim()) ? '' : st.replace(/:\s*not sure what$/i, '').trim();
-    if (text !== tv.text) { tv = { text, at: Date.now() }; broadcast({ type: 'now_tv', ...tv }); }
+    tvSet((await res.json()).state);
   } catch (e) { log('WARN', `now on TV check failed: ${e?.message || e}`); }
 }
 export const getNowTv = () => tv;
@@ -112,7 +103,8 @@ export function packedLastNight() {   // for the morning line: only a run in the
 
 export function startMy93() {
   connectHa();
-  tvTick(); setInterval(tvTick, 30000).unref?.();
+  onState(TV, (s) => tvSet(s?.state));
+  tvTick(); setInterval(tvTick, 5 * 60000).unref?.();
   setInterval(packTick, 10 * 60000).unref?.();
 }
 

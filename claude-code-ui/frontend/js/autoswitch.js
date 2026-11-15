@@ -7,12 +7,13 @@
  * commands, or while Claude is already working. Word list: WORDS below.
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm, promptInput, modelSelect } from './dom.js';
 import { advisorOn } from './advisor.js';
 
 const WORDS = /\b(icons?|images?|pictures?|logos?|drawings?|button designs?|designs? (?:for )?(?:the |a )?buttons?)\b/i;
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const send = wsSend;   // my115: shared helper (util.js)
+
 let free = false;
 window.addEventListener('haai-accounts', (e) => { free = !!(e.detail && e.detail.free); });
 

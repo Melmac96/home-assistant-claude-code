@@ -8,6 +8,7 @@
  *  6. Accounts: 5-hour and weekly use for each paid account, as USED bars matching the top bars.
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm, messagesEl, modelSelect, effortSelect } from './dom.js';
 import { openNewChat } from './quick.js';
 import { onAdvisorMessage } from './advisor.js';   // my42
@@ -24,8 +25,8 @@ import { onIdeas } from './ideas.js';   // my59
 import { onQuiet } from './batch5.js';   // my49
 import { ruleButton } from './my74.js';   // my74
 
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const send = wsSend;   // my115: shared helper (util.js)
+
 const hash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return 'h' + (h >>> 0).toString(36) + '-' + s.length.toString(36); };
 const UK = { timeZone: 'Europe/London' };
 const hm = (d) => d.toLocaleTimeString('en-GB', { ...UK, hour: '2-digit', minute: '2-digit' });

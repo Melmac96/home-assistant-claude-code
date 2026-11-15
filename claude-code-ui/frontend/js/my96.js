@@ -4,12 +4,10 @@
  *  While away, a blue I'm back bar sits above the typing box on every device (only then).
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { inputForm } from './dom.js';
 import { sendText } from './quick.js';
 import { appendInfoLine } from './transcript.js';   // my115
-
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
 
 const css = mk('style');
 css.textContent = `

@@ -3,8 +3,8 @@
  * before this one; tap again to come back (it swaps). Remembered per device. Not shown until there is a previous chat.
  */
 import { S } from './state.js';
+import { every, mk } from './util.js';   // my115
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 const KEY = 'haai-chat-pair';
 let pair = { cur: null, prev: null };   // my115: a damaged saved value can no longer stop the app loading
 try { const p = JSON.parse(localStorage.getItem(KEY) || 'null'); if (p && typeof p === 'object') pair = { cur: p.cur ?? null, prev: p.prev ?? null }; } catch { /* start again */ }
@@ -21,7 +21,7 @@ function refresh() {
   if (id && id !== pair.cur) { pair = { cur: id, prev: pair.cur }; save(); }
   btn.classList.toggle('hidden', !(pair.prev && (!S.sessions || !S.sessions.length || exists(pair.prev))));
 }
-setInterval(() => { if (!document.hidden) refresh(); }, 1000);   // my82: rests while haAi is not on screen
+every(1000, refresh);   // my82: rests while haAi is not on screen (my115: the one shared page timer)
 
 btn.onclick = () => {
   if (!pair.prev || !S.ws || !S.isConnected) return;

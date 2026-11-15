@@ -7,11 +7,9 @@
  *  (H11 is a part of the morning line in batch2.js, H12 the haAi group in homehealth.js)
  */
 import { S } from './state.js';
+import { every, mk, wsSend } from './util.js';   // my115
 import { inputForm, messagesEl, promptInput } from './dom.js';
 import { sendText } from './quick.js';
-
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) { S.ws.send(JSON.stringify(o)); return true; } return false; };
 
 // ── H17 job at a set time ────────────────────────────────────────────────────
 let timed = {};   // id -> { status, ranAt }
@@ -112,7 +110,7 @@ function pushDraft() {
   }, 700);
 }
 promptInput.addEventListener('input', (e) => { if (e.isTrusted) { applied = null; drawNote(); } pushDraft(); });
-setInterval(() => { if (document.hidden) return; if (promptInput.value !== lastSent) pushDraft(); drawNote(); }, 1500);   // also catches the box being emptied by Send; my82: rests while not on screen   // also catches the box being emptied by Send
+every(1500, () => { if (promptInput.value !== lastSent) pushDraft(); drawNote(); });   // my115: the one shared page timer   // also catches the box being emptied by Send; my82: rests while not on screen   // also catches the box being emptied by Send
 // my108 (Michael 15 Nov): on the TV his words never show while he types; only 'Typing on the Phone/Tablet' shows,
 // and his message appears once he sends it. The line goes when the box on that device is empty again (sent) or
 // after 3 minutes with no change.

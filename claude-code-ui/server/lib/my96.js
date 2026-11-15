@@ -10,20 +10,21 @@
  *  or Claude, which run as other users), plus the Living Room RS90's real buttons (haptique_rs90_key_pressed).
  *  One file per month: /config/opencode/health/button-use/YYYY-MM.json. Report: opencode/tools/button_use_report.py.
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
-import { WebSocket } from 'ws';
+import { mkdirSync } from 'fs';
+import { onEvent } from './ha-events.js';   // my115: one shared Home Assistant link
+import { readJson as rj, saveJson, fetchT } from './util.js';   // my115: shared helpers
 import { SUPERVISOR_URL } from './config.js';
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
 
 const FILE = '/data/haai-away.json';
-const readJson = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')) || d; } catch { return d; } };
+const readJson = (f, d) => rj(f, d) || d;
 let st = readJson(FILE, { away: false });
 
 export const awayState = () => ({ away: !!st.away, since: st.since || 0 });
 export function setAway(on) {
   st = on ? { away: true, since: Date.now() } : { away: false, since: 0, backAt: Date.now() };
-  try { writeFileSync(FILE + '.tmp', JSON.stringify(st)); renameSync(FILE + '.tmp', FILE); } catch (e) { log('WARN', `away save failed: ${e?.message || e}`); }
+  try { saveJson(FILE, st); } catch (e) { log('WARN', `away save failed: ${e?.message || e}`); }
   log('INFO', on ? 'U decide: Michael is away' : "I'm back: Michael has returned");
   broadcast({ type: 'away_state', ...awayState() });
 }
@@ -50,7 +51,7 @@ function loadMonth() {
 }
 function saveUse(now) {
   clearTimeout(useT);
-  const go = () => { try { mkdirSync(USE_DIR, { recursive: true }); use.updated = Date.now(); writeFileSync(useFile(month) + '.tmp', JSON.stringify(use)); renameSync(useFile(month) + '.tmp', useFile(month)); } catch (e) { log('WARN', `button use save failed: ${e?.message || e}`); } };
+  const go = () => { try { mkdirSync(USE_DIR, { recursive: true }); use.updated = Date.now(); saveJson(useFile(month), use); } catch (e) { log('WARN', `button use save failed: ${e?.message || e}`); } };
   if (now) go(); else useT = setTimeout(go, 20000);
 }
 function count(key, label) {
@@ -61,7 +62,7 @@ function count(key, label) {
 }
 async function loadNames() {
   try {
-    const r = await fetch(`${SUPERVISOR_URL}/core/api/states`, { headers: hdr() });
+    const r = await fetchT(`${SUPERVISOR_URL}/core/api/states`, { headers: hdr() }, 20000);
     const list = await r.json();
     const n = {};
     for (const s of list) {
@@ -87,25 +88,35 @@ function onKey(ev) {
   if (!b) return;
   count(`rs90 ${ev.data.remote_id || ''} ${b}`, `RS90 Living Room real button: ${RS90[b] || 'Button ' + b}`);
 }
-let useWs = null;
+// my115: the shared Home Assistant event link (ha-events.js); it was a second link of its own
 function connectUse() {
-  try { useWs = new WebSocket(`${SUPERVISOR_URL.replace(/^http/, 'ws')}/core/websocket`); }
-  catch (e) { log('WARN', `button use link failed: ${e?.message || e}`); setTimeout(connectUse, 60000); return; }
-  useWs.on('message', (raw) => {
-    let m; try { m = JSON.parse(raw); } catch { return; }
-    if (m.type === 'auth_required') useWs.send(JSON.stringify({ type: 'auth', access_token: process.env.SUPERVISOR_TOKEN }));
-    else if (m.type === 'auth_ok') {
-      useWs.send(JSON.stringify({ id: 1, type: 'subscribe_events', event_type: 'call_service' }));
-      useWs.send(JSON.stringify({ id: 2, type: 'subscribe_events', event_type: 'haptique_rs90_key_pressed' }));
-    } else if (m.type === 'event') {
-      if (m.event?.event_type === 'call_service') onCall(m.event); else if (m.event?.event_type === 'haptique_rs90_key_pressed') onKey(m.event);
-    }
-  });
-  useWs.on('error', (e) => log('WARN', `button use link error: ${e?.message || e}`));
-  useWs.on('close', () => { useWs = null; setTimeout(connectUse, 30000); });
+  onEvent('call_service', onCall);
+  onEvent('haptique_rs90_key_pressed', onKey);
 }
 export function startMy96() {
-  loadNames().then(connectUse);
+  connectUse();   // my115: listening starts at once; names fill in when loaded (only HIS presses count, so nothing counts before)
+  loadNames();
   setInterval(loadNames, 30 * 60000).unref?.();
   process.on('exit', () => { if (use) saveUse(true); });
+}
+
+// ── my97 Lots to send (moved here from my97.js by my115: the two on/off modes now live in one file) ─────────
+// (Michael 2026-11-14): 'Lots to send' button next to the … button. Pressed = he is about to send lots of changes;
+// Claude works quietly and keeps its questions until he presses Done. Shared by every device, like U decide.
+const LOTS_FILE = '/data/haai-lots.json';
+let lots = readJson(LOTS_FILE, { on: false });
+
+export const lotsState = () => ({ on: !!lots.on, since: lots.since || 0 });
+export function setLots(on) {
+  lots = on ? { on: true, since: Date.now() } : { on: false, since: 0, doneAt: Date.now() };
+  try { saveJson(LOTS_FILE, lots); } catch (e) { log('WARN', `lots save failed: ${e?.message || e}`); }
+  log('INFO', on ? 'Lots to send: on' : 'Lots to send: Done');
+  broadcast({ type: 'lots_state', ...lotsState() });
+}
+
+export function my97Prompt() {
+  return 'LOTS TO SEND (haAi my97): a message starting "Lots to send:" means Michael is about to send many changes one after another. ' +
+    'While it is on, work on each message quietly (back up first, as always), ask NO questions and use no question markers; when a real choice comes up, pick nothing, note the question and carry on with what does not depend on it. ' +
+    'Reply to each message in one or two short plain lines (what you did or noted). A message starting "Done:" means he has finished: ask ALL the saved questions in ONE marked question block (Q1, Q2 ... his marker layout), then do whatever is left.' +
+    (lots.on ? ' Right now Lots to send IS ON: no questions until he presses Done.' : '');
 }

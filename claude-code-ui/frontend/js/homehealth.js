@@ -3,6 +3,7 @@
  * number = needs a look, red with ! = the check has stopped or haAi has lost touch.
  */
 import { sendText } from './quick.js';
+import { every } from './util.js';   // my115
 import { homeChip } from './batch5.js';   // my49
 
 const SILENCE_MS = 3 * 60 * 1000;
@@ -85,7 +86,7 @@ btn.addEventListener('click', () => {
   document.addEventListener('pointerdown', outside, true);
 });
 
-setInterval(() => { if (!document.hidden) draw(); }, 30 * 1000);   // my88: rests while haAi is not on screen
+every(30 * 1000, draw);   // my88: rests while haAi is not on screen (my115: the one shared page timer)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) draw(); });   // my88
 
 export function onHomeHealth(msg) {

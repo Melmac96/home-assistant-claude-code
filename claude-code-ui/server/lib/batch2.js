@@ -16,7 +16,7 @@ import { nextExpiry, getDatedChecks } from './my79.js';   // my79 H10 + H11
 import { packedLastNight } from './my93.js';   // my93 I2
 
 const FILE = '/data/haai-brief.json';
-const SLEEP = 'binary_sensor.sleeping_bedroom_sleep_as_android';
+import { onSleep } from './sleep-state.js';   // my115
 const read = () => { try { return JSON.parse(readFileSync(FILE, 'utf8')) || {}; } catch { return {}; } };
 const save = (o) => { writeFileSync(FILE + '.tmp', JSON.stringify(o)); renameSync(FILE + '.tmp', FILE); };
 
@@ -27,11 +27,10 @@ export function getBrief() {
   return { wokeAt: b.wokeAt, sleptMin: b.sleptMin ?? null, home: h.status === 'good' ? 'fine' : h.status === 'bad' ? `${h.count} thing(s) need a look` : 'not checked', waiting: getWaiting().length, overnight: overnightDoneCount(), expire: nextExpiry(), checks: getDatedChecks().length, packed: packedLastNight() };
 }
 
-async function tick() {
+// my115: reads the one shared sleep check (sleep-state.js) instead of asking Home Assistant itself
+function tick(cur) {
   try {
-    const res = await fetch(`${SUPERVISOR_URL}/core/api/states/${SLEEP}`, { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
-    if (!res.ok) return;
-    const st = (await res.json()).state;
+    const st = cur.state;
     const b = read();
     if (st === 'on' && !b.sleepStart) { save({ ...b, sleepStart: Date.now() }); }
     else if (st === 'off' && b.sleepStart) {
@@ -41,7 +40,7 @@ async function tick() {
     }
   } catch (e) { log('WARN', `morning brief check failed: ${e?.message || e}`); }
 }
-export function startBrief() { tick(); setInterval(tick, 60000).unref?.(); }
+export function startBrief() { onSleep(tick); }
 
 export function batch2Prompt() {
   return [

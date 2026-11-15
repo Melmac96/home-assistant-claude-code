@@ -10,13 +10,14 @@
  *   extras: A/B/C answer chips, jump-to-latest arrow, big faint name on an empty chat
  */
 import { S } from './state.js';
+import { every, mk } from './util.js';   // my115
 import { MODEL_LABELS } from './model.js';   // my108
 import { openNewChat } from './quick.js';
 import { messagesEl, promptInput, modelSelect, effortSelect, statusDot } from './dom.js';
 import { isAway } from './my96.js';   // my96
 
 const $ = (id) => document.getElementById(id);
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
 const LIM = 150;   // thousand tokens: where a chat counts as long (same number as the chat length strip)
 const EFF = { low: 'L', medium: 'M', high: 'H', xhigh: 'X', max: 'Max' };
 const colour = (p) => (p < 60 ? '#46bb68' : p < 85 ? '#e8b84a' : '#f3736c');
@@ -150,7 +151,7 @@ function cycle(now) {
   };
   if (now) paint(); else { cyc.classList.add('f'); setTimeout(paint, 900); }
 }
-setInterval(() => { if (!document.hidden) cycle(false); }, 5000);   // my82: rests while haAi is not on screen
+every(5000, () => cycle(false));   // my82: rests while haAi is not on screen (my115: shared timer)
 
 function drawNum() {
   const bad = lost || (health && health.status !== 'good');
@@ -380,9 +381,16 @@ function setWm() {
   if (updateNo()) wm.append(mk('small', null, 'update ' + updateNo()));
   wm.classList.toggle('hidden', messagesEl.children.length > 0);
 }
+// my115 (Michael C, 15 Nov): the work is done once, a moment after the changes stop (it ran for every streamed piece
+// of a reply, rebuilding the watermark and measuring the page each time)
+let tidyT = 0, wmEmpty = null;
 new MutationObserver(() => {
-  setWm();
-  jl.classList.toggle('hidden', nearEnd());
+  clearTimeout(tidyT);
+  tidyT = setTimeout(() => {
+    const empty = messagesEl.children.length === 0;
+    if (empty !== wmEmpty) { wmEmpty = empty; setWm(); }
+    jl.classList.toggle('hidden', nearEnd());
+  }, 120);
   clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 250);
 }).observe(messagesEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['disabled'] });   // my78: redraw when a question is locked
 window.addEventListener('mc-view', () => { clearTimeout(chipTimer); chipTimer = setTimeout(drawChips, 50); });   // my77

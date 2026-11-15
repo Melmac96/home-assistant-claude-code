@@ -12,6 +12,7 @@
  *    still working, and clears it if not.
  */
 import { S } from './state.js';
+import { every } from './util.js';
 
 let hooks = { queueOffline: null, info: null, bubble: null, started: null, ended: null };
 /** Filled in by composer.js (it owns the bubble, the Working state and the offline list), to avoid an import loop. */
@@ -106,20 +107,20 @@ function sendNow(t, opts) {
 }
 
 // held-back messages go once the pop-up has closed
-setInterval(() => {
+every(1000, () => {
   if (!held.length || popupOpen() || !linkOpen()) return;
   const all = held.splice(0);
   for (const h of all) sendNow(h.t, h.opts);
-}, 1000);
+}, true);
 
 // ── "Working" can never stick ────────────────────────────────────────────────
 let lastCheck = 0;
-setInterval(() => {
-  if (!S.isRunning || !linkOpen() || document.hidden) return;
+every(5000, () => {
+  if (!S.isRunning || !linkOpen()) return;
   if (Date.now() - lastCheck < 45000) return;
   lastCheck = Date.now();
   try { S.ws.send(JSON.stringify({ type: 'run_check', chat: S.chat || undefined })); } catch { /* the heartbeat replaces the link */ }
-}, 5000);
+});
 export function runStateAnswer(msg) {
   if (msg.running || !S.isRunning) return;
   if (msg.chat && S.chat && msg.chat !== S.chat) return;

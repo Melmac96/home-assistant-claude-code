@@ -7,10 +7,9 @@
  *  26 Find by day (A): day buttons in Sessions (built in sessions.js)
  */
 import { S } from './state.js';
+import { every, mk, wsSend } from './util.js';   // my115
 import { inputForm, promptInput, permModeSelect } from './dom.js';
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const wsSend = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
 const short = (t) => (t.length > 70 ? t.slice(0, 67) + '…' : t);
 
 export const undoText = (where) => `Please undo the last job. ${where ? `The undo copy is: ${where}. ` : ''}First tell me, in plain words, exactly what you would put back and from where, and ask me Yes / Not now before you change anything.`;
@@ -36,7 +35,7 @@ function drawQueue() {
   added.forEach((t, i) => queue.append(mk('div', 'h2-line', `${i + 1} ● ${short(t)}`)));
   queue.append(mk('div', 'h2-line grey', 'Claude takes these in order as soon as it can.'));
 }
-setInterval(() => { if (!document.hidden) drawQueue(); }, 1500);   // my82
+every(1500, drawQueue);   // my82 (my115: the one shared page timer)
 
 // ── 21. Overnight jobs ───────────────────────────────────────────────────────
 const night = mk('div', 'h2-card plain h4-night hidden');

@@ -13,6 +13,7 @@
  * then swapped back. Every top-level item in the list is tagged with its chat (data-chat) and time (data-t).
  */
 import { S } from './state.js';
+import { mk, wsSend } from './util.js';   // my115: shared helpers
 import { messagesEl, newSessionBtn, promptInput } from './dom.js';
 import { renderHistory, toolCallEls, appendInfoLine } from './transcript.js';
 import { showThinking } from './thinking.js';
@@ -21,8 +22,7 @@ import { refreshBgTasksStrip } from './banners.js';
 import { openNewChat } from './quick.js';
 import { shortName } from './accounts.js';   // my78
 
-const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-const send = (o) => { if (S.ws && S.isConnected) S.ws.send(JSON.stringify(o)); };
+const send = wsSend;   // my115: shared helper (util.js)
 const toast = (text) => { const t = mk('div', 'guard-toast', text); t.onclick = () => t.remove(); document.body.append(t); setTimeout(() => t.remove(), 7000); };
 
 S.chat = S.chat || null;      // the chat the next message goes to

@@ -6,7 +6,7 @@
  */
 import { execFile } from 'child_process';
 import { log } from './log.js';
-import { broadcast, send } from './broadcast.js';
+import { broadcast, send, connections } from './broadcast.js';
 
 const SHIELD = '192.168.1.102:5555';
 let state = { on: false };
@@ -40,4 +40,14 @@ async function check() {
 }
 
 export function sendPip(ws) { send(ws, { type: 'tv_pip', ...state }); }
-export function startTvPip() { setInterval(() => { check().catch(() => {}); }, 2000).unref?.(); }
+// my115 (Michael C, 15 Nov): one check at a time (they piled up when the Shield was off: 4 + 6 + 4 s each, started
+// every 2 s), every 2 s while the Shield answers and a screen is open, every 30 s while it cannot be reached or no
+// screen is open
+export function startTvPip() {
+  const loop = async () => {
+    try { await check(); } catch (e) { log('WARN', `my113: mini TV check failed: ${e?.message || e}`); }
+    const wait = warned || !connections.size ? 30000 : 2000;
+    setTimeout(loop, wait).unref?.();
+  };
+  setTimeout(loop, 2000).unref?.();
+}
