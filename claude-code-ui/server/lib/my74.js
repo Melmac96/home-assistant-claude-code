@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my104',
+  version: 'my105',
   items: [
+    { t: 'A quieter TV', how: 'On the TV haAi now shows only the chat. A question shows as one line, Question - Waiting For An Answer, and you answer it on the phone or tablet. The buttons under replies and your messages (Broke a rule, Explain it, Another way, speaker, star, Remember) and my working steps are gone from the TV. Phone and tablet keep them all.' },
     { t: 'A TV layout on the HA Shield', how: 'On the TV haAi now has no top buttons and one thin top line: the star stays still and everything else scrolls slowly across, including each account\'s 5-hour and Week allowance left. Reply buttons sit on one line, your messages go across the whole screen between the blue lines, and the text is grey. Phone and tablet are unchanged.' },
     { t: 'The star shows the connection', how: 'The green star fades slowly on and off while haAi is connected. If the connection is lost for 5 seconds it flashes red.' },
     { t: 'Account figures always up to date', how: 'haAi now renews an account\'s sign-in by itself when it runs out, so all 3 accounts are checked every 5 minutes, even one you have not used for days. The Accounts page shows the fresh figures on every device.' },
