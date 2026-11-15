@@ -80,8 +80,14 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my112',
+  version: 'my115',
   items: [
+    { t: 'Messages are never lost on a bad link', how: 'Every message now gets a receipt from haAi. If none comes back within a few seconds, or the link drops, the message goes into Waiting to send and goes again by itself when haAi is back. A copy that already arrived is never sent twice.' },
+    { t: 'Working can no longer stick', how: 'While Working shows, your screen checks every 45 seconds that I really am still working, and clears it if not. A background job that goes quiet for 30 minutes is stopped, so the chat and the Free/Paid switch are free again.' },
+    { t: 'Buttons never wipe what you are typing', how: 'Quick jobs, answers, Remember, I\'m back, Lots to send and the card buttons now send on their own. What you were typing stays in the box. With no link they wait and go by themselves.' },
+    { t: 'Your normal model at start-up', how: 'The pop-up when haAi starts now offers your normal Opus on High, and only shows if you are on something else.' },
+    { t: 'A safety net for haAi', how: 'One failed background job can no longer take the whole of haAi down. The Free/Paid watcher is checked every 30 seconds and started again if it has stopped.' },
+    { t: 'Faster with long chats', how: 'Long replies, long chats and scrolling up are lighter on the phone and tablet, and haAi no longer freezes while its helper tools run.' },
     { t: 'Questions stay on screen', how: 'A reply of mine with a question in it is never hidden now, even while haAi still thinks I am working. Before, it could vanish before you answered.' },
     { t: 'Finished bar fixed', how: 'The Finished bar now always shows how long my last reply took and how much of your 5-hour allowance it used, also after haAi reloads and on every device.' },
     { t: 'Tidier top', how: 'The job number box and the Now on TV line are gone from the top of the chat on every device. My tool blocks fold back into the working bar each time I start a new job.' },
