@@ -26,6 +26,7 @@ import { log, vlog } from './log.js';
 import { runtime } from './state.js';
 import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
+import { getPrefs } from './prefs.js';   // my124
 import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText, modeSwitchDone } from './accounts.js';   // my115 modeSwitchDone
 import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
 import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder, ADD_NOTE, sessionFile } from './sessions.js';   // my101 ADD_NOTE   // my114 sessionFile
@@ -145,6 +146,9 @@ function notStarted(slot) {
 }
 
 async function runQueryInner(ws, { text, permissionMode, model, effort, add, autoAttempts = 0, synthetic = false }) {
+  // my124: a chat haAi starts by itself (moved chat, saved job, overnight job) carries no model or effort, so it opened on
+  // 'default'. It now uses his saved choice (the same one the typing box shows). 'latest-sonnet' is the page's own label, so it is 'sonnet' here.
+  if (synthetic && !model) { const pf = getPrefs(); model = pf.model === 'latest-sonnet' ? 'sonnet' : pf.model; if (!effort) effort = pf.effort; }
   // my26: the Add button. A message sent WHILE a turn is running goes into that same
   // running chat instead of stopping it (the old way aborted the turn). If the run has
   // just ended (channel closed), it falls through and is sent as a normal new message.
