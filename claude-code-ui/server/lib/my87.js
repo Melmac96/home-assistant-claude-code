@@ -17,6 +17,11 @@
  * my110 (Michael 15 Nov, 'never move to a new chat before I have answered'): neither move happens while the chat's last
  *   reply holds a question waiting for him (slot.asks). After he answers and that reply has finished, the move carries
  *   the question and his answer word for word, so the new chat simply carries on as if it were the same chat.
+ * my113 (Michael 15 Nov, the chat that reached 219k): (1) after a haAi restart (an install) the chat's size and
+ *   'last reply finished' were forgotten until the next reply, so the move missed its chance. Now they are read back
+ *   from the chat's own file (with any question still waiting) the first time haAi looks at that chat after a restart.
+ *   (2) a chat past 150k moves AS SOON AS he answers a question: his answer is not run in the long chat; the new chat
+ *   gets the question and his answer word for word and acts on it, so a run of questions can no longer keep it growing.
  * my94: both moves also carry every question still waiting in the old chat (handover.js openQuestionsText). The page's "nearly full" pop-up and warnings are gone; the colour bar stays.
  */
 import { readFileSync, writeFileSync, renameSync } from 'fs';
@@ -25,7 +30,7 @@ import { broadcast } from './broadcast.js';
 import { chats, view, inChat, runningChats, hooks } from './chats.js';
 import { runtime } from './state.js';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
-import { sessionTitle, saveActive, listSessions, parseSession } from './sessions.js';
+import { sessionTitle, saveActive, listSessions, parseSession, sessionFile } from './sessions.js';   // my113 sessionFile
 import { modeState } from './accounts.js';   // my91
 import { writeNotes, openQuestionsText } from './handover.js';   // my94
 
@@ -67,20 +72,22 @@ function lastAnswered(id) {
 }
 
 /** Moves one chat on to a fresh chat in the same slot. Used by the request (my87) and the 150k move (my91). */
-async function moveOn(slot, nextStep, why) {
+async function moveOn(slot, nextStep, why, ans = null) {
   await inChat(slot, async () => {
     const id = runtime.activeSessionId;
     const title = ((id && sessionTitle(id)) || 'Chat').replace(/^Continue this job:\s*/, '');
     broadcast({ type: 'handover_status', text: why === 'auto' ? 'This chat has passed 150k, so haAi is moving it to a new chat by itself…' : 'Moving this job to a new chat by itself…' });
     const last = why === 'auto' && id ? lastReply(id) : '';
     const waitingQs = openQuestionsText(id);   // my94: questions left waiting come back in the new chat
-    const answered = id ? lastAnswered(id) : '';   // my110: his last answer carries over
+    const answered = id && !ans ? lastAnswered(id) : '';   // my110: his last answer carries over (my113: given straight in)
     const { file } = id ? await writeNotes(id, title, 'sonnet', 60000) : { file: '(no notes: the old chat was empty)' };
     runtime.activeSessionId = null; saveActive();
     broadcast({ type: 'cleared', chat: slot.id });
     broadcast({ type: 'sessions', sessions: listSessions(), activeId: null });
     hooks.changed();
-    const text = why === 'auto'
+    const text = ans
+      ? `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi moved this chat to a new one by itself because the old chat passed 150k tokens, straight after Michael answered your question (my113): no greeting.]\n\nTHE QUESTION YOU ASKED IN THE OLD CHAT (he has answered it now, never ask it again):\n${ans.q || '(could not be read: use the notes)'}\n\nHIS ANSWER, WORD FOR WORD:\n${ans.answer}\n\nNEXT STEP:\nAdd one short line at the top saying haAi moved to a new chat because the old one was long, then act on his answer exactly as the old chat would have done, and reply as usual.` + (waitingQs ? waitingQs + '\n(The question he has just answered above is NOT waiting any more: leave it out. Show only any others, once, in one block at the end.)' : '')
+      : why === 'auto'
       ? `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi moved this chat to a new one by itself because the old chat passed 150k tokens, as Michael asked (my91): no greeting.]\n\nNEXT STEP:\nThe old chat had just finished a reply, and the move took it off Michael's screen, so he may not have read it. Read the notes, then write that last reply again IN FULL (keep its layout and any question with its markers exactly as they were, but leave out any DONE, TIMED or PIN card lines so they are not shown twice), and add one short line at the top saying haAi moved to a new chat because the old one was long. Then stop and wait for his answer. Do not start new work and do not redo anything already done.\n\nLAST REPLY IN THE OLD CHAT:\n${last || '(could not be read: use the notes)'}` + answered + (waitingQs ? waitingQs + '\n(The last reply above may hold one of these questions: show it once, in the same single block.)' : '')
       : `Continue this job: ${title}\n\nRead the notes at ${file}, then carry on from where we left off. [haAi started this new chat by itself, as Michael asked (my87): no greeting.]\n\nNEXT STEP:\n${nextStep}` + answered + (waitingQs ? waitingQs + '\n(Do the next step only if it does not depend on those answers; otherwise stop and wait for them.)' : '');
     runner({ readyState: 3 }, { text, permissionMode: DEFAULT_PERMISSION_MODE });
@@ -96,12 +103,38 @@ function warnKept(s) {
   broadcast({ type: 'handover_status', text: 'This long chat could not move to a new one by itself (it was tried once). Please tap New chat, or ask me to move it.' });
 }
 
+// my113: after a restart a chat's size, 'reply finished' and waiting question are read back from its own file, once
+const seeded = new Set();
+function seedAfterRestart(s) {
+  if (s.ctx || !s.sessionId || seeded.has(s.sessionId)) return;
+  seeded.add(s.sessionId);
+  try {
+    const lines = readFileSync(sessionFile(s.sessionId), 'utf8').trim().split('\n');
+    for (let i = lines.length - 1; i >= 0 && i >= lines.length - 500; i--) {
+      let j; try { j = JSON.parse(lines[i]); } catch { continue; }
+      const c = j.message?.content;
+      if (j.type === 'user' && (typeof c === 'string' || (Array.isArray(c) && c.some((x) => x.type === 'text') && !c.some((x) => x.type === 'tool_result')))) return;   // he wrote after it: that reply never finished
+      if (j.type !== 'assistant' || !j.message?.usage) continue;
+      if (j.message.stop_reason !== 'end_turn') return;      // it stopped part way through a job
+      const u = j.message.usage;
+      const tokens = (u.input_tokens || 0) + (u.cache_read_input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.output_tokens || 0);
+      const text = (Array.isArray(c) ? c : []).filter((x) => x.type === 'text').map((x) => x.text || '').join('');
+      s.ctx = { tokens, sid: s.sessionId, at: Date.now() - 6000 };
+      s.lastOk = true;
+      if (/⟦QUESTION⟧/.test(text)) s.asks = true;            // a question still waits: never move before he answers
+      log('INFO', `my113: chat ${s.id} read back after a restart: ${Math.round(tokens / 1000)}k${s.asks ? ', a question waits' : ''}`);
+      return;
+    }
+  } catch (e) { log('WARN', `my113: could not read back chat ${s.id}: ${String(e?.message || e).slice(0, 120)}`); }
+}
+
 // my91: a chat past 150k whose reply has finished, not yet tried, not busy with anything else
 function autoCandidate(waitingSlot) {
   if (modeState().free) return null;
   const tried = new Set(readAuto().tried);
   for (const s of chats.values()) {
     if (s.free || s.query || !s.sessionId || s.id === waitingSlot) continue;
+    seedAfterRestart(s);                                    // my113
     if (!s.ctx || s.ctx.sid !== s.sessionId || s.ctx.tokens < AUTO_TOKENS || !(s.lastOk || s.lastCut)) continue;   // my100: cut short moves too
     if (s.bgTasks && s.bgTasks.size) continue;              // a background job of this chat is still running
     if (s.asks) continue;                                   // my110: a question is waiting for his answer: never move before he answers
@@ -160,6 +193,35 @@ async function tick() {
     j.status = 'failed'; j.error = String(e?.message || e).slice(0, 200); save(j);
     log('ERROR', `my87: could not move to a new chat: ${j.error}`);
     broadcast({ type: 'handover_status', text: 'Could not move to a new chat by itself. Nothing was lost.' });
+  } finally { busy = false; }
+}
+
+/** my113: he has just answered a question in a chat past 150k: move now, carrying the question and his answer.
+ *  Returns true when the new chat has taken his answer (runQuery then stops); false = run it in this chat as usual. */
+export async function moveOnAnswer(slot, text) {
+  if (!slot || busy || !runner || runtime.handoverBusy || modeState().free || slot.free) return false;
+  if (!slot.asks || slot.query || !slot.sessionId || !String(text || '').trim()) return false;
+  if (!slot.ctx || slot.ctx.sid !== slot.sessionId || slot.ctx.tokens < AUTO_TOKENS) return false;
+  if (slot.bgTasks && slot.bgTasks.size) return false;
+  const old = slot.sessionId;
+  const a = readAuto();
+  if (a.tried.includes(old)) return false;                  // one try per old chat, as for the 150k move
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/London' });
+  a.log = (a.log || []).filter((x) => x.day === today);
+  a.tried = [old, ...a.tried].slice(0, 100);
+  a.log.push({ day: today, at: Date.now(), from: old, k: Math.round(slot.ctx.tokens / 1000), on: 'answer' });
+  saveAuto(a);
+  const q = lastReply(old);
+  slot.asks = false;
+  busy = true;
+  try {
+    await moveOn(slot, '', 'auto', { q, answer: String(text).trim().slice(0, 6000) });
+    log('INFO', `my113: chat ${slot.id} passed ${Math.round(slot.ctx.tokens / 1000)}k, moved as soon as he answered`);
+    return true;
+  } catch (e) {
+    log('ERROR', `my113: could not move on his answer: ${String(e?.message || e).slice(0, 200)}`);
+    if (slot.sessionId === old) { slot.asks = true; return false; }   // nothing moved: answer it in this chat as usual
+    return true;
   } finally { busy = false; }
 }
 

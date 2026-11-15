@@ -49,7 +49,7 @@ import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
 import { my96Prompt } from './my96.js';   // my96
 import { my97Prompt } from './my97.js';   // my97
-import { my87Prompt } from './my87.js';   // my87
+import { my87Prompt, moveOnAnswer } from './my87.js';   // my87, my113
 
 // STALL_WARN_MS / STALL_CHECK_MS (config.js): how long the SDK may go quiet
 // before the log says so, and how often it checks — only while a turn is
@@ -153,6 +153,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     if (permissionMode) runtime.activePermMode = permissionMode;
     return;
   }
+
+  // my113: a chat past 150k moves the moment he answers a question (the new chat gets the question and his answer)
+  if (autoAttempts === 0 && await moveOnAnswer(slotNow(), text)) return;
 
   abortActive();
 
