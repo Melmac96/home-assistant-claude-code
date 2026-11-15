@@ -42,7 +42,7 @@ import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
-import { checkRun, recordUsage, recordReplyCost, pctOf, five } from './my90.js';   // my90, my95, my99
+import { checkRun, recordUsage, recordReplyCost, pctOf, five, takeWarning } from './my90.js';   // my90, my95, my99, my122
 import { freshenQuota, renewDone } from './extras.js';   // my99, my115
 import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
@@ -251,7 +251,9 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
     // my99: what the account stood at before this reply, and whether the chat just moved (that first reply costs more)
     try { const f0 = five(acct.email); if (f0.used != null) my99Start = f0.used; } catch (e) { log('WARN', `my99: start figure unreadable: ${e?.message || e}`); }
     my99Moved = !!(acct.moved || (wasOn && acct.email && wasOn !== acct.email));
-    // my90: every account is at its limit - stop and tell him (Carry on / Wait on the page).
+    // my122: no stop any more. Every account at 75%+ only shows the red warning (the reply goes ahead on the same account).
+    if (acct.warn) broadcast({ type: 'cycle_warn', ...acct.warn });
+    // my90 (old hold, now never set): every account is at its limit - stop and tell him (Carry on / Wait on the page).
     // my117: only while Free mode is off - with Free mode on the run goes to the free model, so the Claude hold never applies.
     if (acct.stop && freeModelOverride()) { log('INFO', `my117: chat ${slot.id} not held (Free mode on, runs on ${freeModelOverride()}): ${acct.stop}`); }
     else if (acct.stop) {
@@ -754,6 +756,8 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
       const from = my99Start != null && my95From != null && my99Start <= my95From ? my99Start : my95From;   // my99: count the first call too
       if (!acct.free && from != null && my95To >= from && (!slot.cycleMove || my99Moved)) recordReplyCost(my95To - from, my99Moved);
     } catch (e) { log('WARN', `my95: reply cost not saved: ${e?.message || e}`); }
+    // my122: a reply just finished: if every account is now at 75%+ the red warning shows (at most once every 30 minutes)
+    try { if (!acct.free && !fm) { const w = takeWarning(listAccounts().saved); if (w) broadcast({ type: 'cycle_warn', ...w }); } } catch (e) { log('WARN', `my122: warning check failed: ${e?.message || e}`); }
     if (slot.cycleMove) {
       const mv = slot.cycleMove; slot.cycleMove = null;
       broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });

@@ -251,7 +251,7 @@ const handlers = {
     broadcast({ type: 'accounts', ...listAccounts() });
   },
 
-  // my90: after "all accounts at 90%" he picks Carry on (main still stops at 95%) or Wait.
+  // my90 (old; my122: ignored, 75% is a warning only, there is no Carry on / Wait any more).
   cycle_carry_on(_ws, msg) {
     setCarryOn(!!msg.on);
     extras.getQuota(false).then((q) => broadcast({ type: 'quota', ...q })).catch((e) => log('WARN', `quota after carry on failed: ${e?.message || e}`));

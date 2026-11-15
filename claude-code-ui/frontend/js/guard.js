@@ -4,7 +4,8 @@
  *     moves it to a new chat by itself when the reply has finished (my87.js autoMove); the colour bar at the bottom stays.
  *  2. my90 (Michael 2026-11-13): the 75% pop-up and the page's own 90% switch are GONE. The server now moves a chat
  *     between the three accounts by itself (my90.js); this page only shows what happened: a small bar when a chat
- *     moved account, and a centre pop-up with Carry on / Wait when every account is at 90% (main stops at 95%).
+ *     moved account. my122 (Michael 2026-11-15): there is no stop any more; when every account is at 75% or more a red centre
+ *     warning shows each account's 5-hour and 7-day figures with reset times and a recommendation (cycle_warn).
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
  */
 import { S } from './state.js';
@@ -37,7 +38,7 @@ function use(email) {
   return { f, w, max: Math.max(f, w), what: f >= w ? '5-hour' : '7-day' };
 }
 // ── pop-up and bar ───────────────────────────────────────────────────────────
-function pop(title, text, buttons) {
+export function pop(title, text, buttons) {
   const ov = mk('div', 'start-check guard-pop'); ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
   const card = mk('div', 'sc-card');
   card.append(mk('div', 'sc-title', title), mk('div', 'sc-q', text));
@@ -74,11 +75,21 @@ window.addEventListener('haai-cycle', (e) => {
     toast(m.used ? `Your account reached ${m.used}% of its 5 hours, so haAi moved this chat to ${nameByEmail(m.to)} and carried on by itself.`
       : `haAi is using ${nameByEmail(m.to)} now, as its 5 hours run out soonest.`);
     send({ type: 'quota_get', force: true });
-  } else if (m.type === 'cycle_stop') {
+  } else if (m.type === 'cycle_warn') {   // my122: every account at 75% or more: a red warning, nothing moves
     if (document.querySelector('.guard-pop')) return;
-    pop('haAi has stopped', `${m.text || 'All your Claude accounts are at their limit.'} Carry on uses the other accounts up to their limit, but your main account still stops at 95%.`, [
-      ['Carry on', 'sc-switch', () => send({ type: 'cycle_carry_on', on: true })],
-      ['Wait', 'sc-stay', () => send({ type: 'cycle_carry_on', on: false })],
-    ]);
+    const ov = mk('div', 'start-check guard-pop'); ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
+    const card = mk('div', 'sc-card'); card.style.cssText = 'border:2px solid #f3736c;box-shadow:0 0 24px #f3736c66';
+    const t = mk('div', 'sc-title', 'All your Claude accounts are at 75% or more'); t.style.color = '#f3736c';
+    card.append(t, mk('div', 'sc-q', 'haAi will not switch or stop. Here is where each one stands:'));
+    const r0 = (n) => (n == null ? 'unknown' : Math.round(n) + '%');
+    (m.accounts || []).forEach((a, i) => {
+      const row = mk('div', 'sc-q', `${a.name}${i === m.recommend ? ' (recommended)' : ''}: 5 hours ${r0(a.five)} used, resets ${a.fiveText}. 7 days ${r0(a.week)} used, resets ${a.weekText}.`);
+      if (i === m.recommend) row.style.color = '#9ad6a6';
+      card.append(row);
+    });
+    const rec = mk('div', 'sc-q', 'My recommendation: ' + (m.why || '')); rec.style.fontWeight = '600';
+    const ok = mk('button', 'sc-switch', 'OK, I understand'); ok.type = 'button'; ok.onclick = () => ov.remove();
+    card.append(rec, ok); ov.append(card); ov.addEventListener('click', (e) => e.stopPropagation());
+    document.body.append(ov);
   }
 });

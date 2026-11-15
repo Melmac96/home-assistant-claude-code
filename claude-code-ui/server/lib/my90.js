@@ -1,4 +1,8 @@
 /*
+ * my122 (Michael 2026-11-15, REPLACES the 95% hold below): 75% is only a WARNING, never a stop. haAi still moves a chat between the
+ * paid accounts by itself, but always to the one that keeps the three as equal as possible (5-hour AND 7-day left, and when each
+ * resets). When EVERY account is at 75% or more it never moves or holds: it shows a red warning (cycle_warn) with all the figures
+ * and a recommendation of which account to go over 75% on. No carry on / stop any more.
  * my90 (Michael 2026-11-13): the three Claude Pro accounts take turns by themselves.
  *  - The account whose 5-HOUR allowance resets soonest is used first (an account with no 5 hours running counts last).
  *  - my95 (Michael 2026-11-13): a reply is never stopped part-way just to move. Before each reply haAi checks whether
@@ -17,7 +21,9 @@ import path from 'path';
 import { DATA_DIR } from './config.js';
 import { log } from './log.js';
 
-export const SWITCH_AT = 95, MAIN_CAP = 95;   // my95: was 90 (stopped replies part-way)
+export const WARN_AT = 75;   // my122: the warning level (was a 95% hold)
+export const SWITCH_AT = WARN_AT, MAIN_CAP = WARN_AT;
+export const BALANCE_GAP = 10;   // my122: a chat only moves for balance when another account is this many points less used
 const MAIN_DEFAULT = 'thereades@gmail.com';
 const STATE = path.join(DATA_DIR, 'haai-cycle.json');
 const QUOTA = path.join(DATA_DIR, 'haai-quota.json');
@@ -64,6 +70,18 @@ export function five(email, q = readJson(QUOTA) || {}) {
   return { used: Number(w.used), resetsAt: w.resetsAt || null };
 }
 
+/** my122: 7-day figures for an account: { used, resetsAt } (0 once the week has reset). */
+export function week(email, q = readJson(QUOTA) || {}) {
+  const w = q[lc(email)]?.seven_day;
+  if (!w || w.used == null) return { used: null, resetsAt: null };
+  if (w.resetsAt && w.resetsAt * 1000 <= Date.now()) return { used: 0, resetsAt: null };
+  return { used: Number(w.used), resetsAt: w.resetsAt || null };
+}
+/** my122: how loaded an account is (the week counts a little more than the 5 hours; no week figure = the 5 hours alone). */
+export const loadOf = (f, w) => (w.used == null ? (f.used ?? 0) : 0.6 * w.used + 0.4 * (f.used ?? 0));
+/** my122: is this account at the warning level (5 hours or 7 days at 75% or more)? */
+export const isHit = (email, q = readJson(QUOTA) || {}) => Math.max(five(email, q).used ?? 0, week(email, q).used ?? 0) >= WARN_AT;
+
 /** my95: how much of the 5 hours the next reply may use: the most of the last 5 replies, at least 3%, at most 20%. */
 export function nextReplyCost(st = cycleState()) {
   const c = (st.costs || []).slice(-5);
@@ -88,68 +106,93 @@ export function isFresh(email, q = readJson(QUOTA) || {}) {
   return !!(r && r.at && Date.now() - r.at < STALE_MS && r.five_hour && r.five_hour.used != null);
 }
 
-/** The most of its 5 hours an account may use right now. */
-export function limitFor(email, st = cycleState()) {
-  if (isMain(email)) return st.carryOn ? MAIN_CAP : SWITCH_AT;
-  return st.carryOn ? 100 : SWITCH_AT;
-}
+/** my122: the level an account is warned at (never a stop). */
+export const limitFor = () => WARN_AT;
 
 /**
- * Which saved account to use, or null when every one is at its limit. `exclude` = emails busy in other chats.
- * Order: his Accounts-menu pick (while under its limit), then the 5 hours that reset soonest, then the least used.
+ * Which saved account to use, or null when every one is at 75% or more (then only a warning is shown, nothing moves).
+ * `exclude` = emails busy in other chats. my122: only accounts under 75% (5 hours AND 7 days) are used. His Accounts-menu pick comes
+ * first. Otherwise the chat stays where it is unless another account is clearly less used (BALANCE_GAP points of load), then it goes to the
+ * least loaded one (7-day and 5-hour use together; ties: the 5 hours that reset soonest). That keeps the accounts level with each other.
  */
 export function chooseAccount(saved, exclude = new Set(), current = null) {
   const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st), mv = Math.max(est, moveCost(st));
-  // my95: only an account with room for the whole next reply before its limit.
-  // my99: an account the chat is not on yet must have room for the costly first reply after a move,
-  // its figure must be fresh (checked live just before, see extras.freshenQuota), and an unknown figure is never "0% used".
   const need = (a) => (current && lc(a.email) === lc(current) ? est : mv);
   const rested = restedMap();
-  const all = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)]).map((a) => ({ a, f: five(a.email, q), fresh: isFresh(a.email, q) || !!(current && lc(a.email) === lc(current)) }))
-    .map((x) => (x.f.used == null ? { ...x, fresh: false } : x))   // never seen: only used when nothing better
-    .filter((x) => (x.f.used ?? 0) + need(x.a) < limitFor(x.a.email, st));
-  // my99: never move on a stale figure while an account with a fresh one has room
-  const open = all.some((x) => x.fresh) ? all.filter((x) => x.fresh) : all;
+  const under = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)])
+    .map((a) => { const f = five(a.email, q), w = week(a.email, q); return { a, f, w, load: loadOf(f, w), fresh: f.used != null && (isFresh(a.email, q) || !!(current && lc(a.email) === lc(current))) }; })
+    .filter((x) => (x.f.used ?? 0) < WARN_AT && (x.w.used ?? 0) < WARN_AT);
+  // never move on a stale or unknown figure while an account with a fresh one has room
+  const fresh = under.some((x) => x.fresh) ? under.filter((x) => x.fresh) : under;
+  // prefer an account with room for the whole next reply under 75%; if none, any under 75% (going a little over is only a warning)
+  const roomy = fresh.filter((x) => (x.f.used ?? 0) + need(x.a) < WARN_AT);
+  const open = roomy.length ? roomy : fresh;
   if (!open.length) return null;
   if (st.manual?.email) { const m = open.find((x) => lc(x.a.email) === lc(st.manual.email)); if (m) return m.a; }
-  open.sort((x, y) => (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity) || (x.f.used ?? 0) - (y.f.used ?? 0));
+  open.sort((x, y) => x.load - y.load || (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity));
+  const cur = current && open.find((x) => lc(x.a.email) === lc(current));
+  if (cur && cur.load <= open[0].load + BALANCE_GAP) return cur.a;   // level enough: a move costs a long re-read, so stay
   return open[0].a;
 }
 
 /** He picked an account in the Accounts menu. */
 export const setManual = (email) => setState({ manual: email ? { email, at: Date.now() } : null });
 
-/** He chose Carry on after a stop (or Wait = false). Carry on lasts until some account has room again at 90%. */
+/** my122: Carry on / Wait no longer exist (there is no stop). Kept so an old page that still sends it does nothing. */
 export function setCarryOn(on) {
-  log('INFO', `my90: carry on ${on ? 'ON (main stops at 95%)' : 'off'}`);
-  return setState({ carryOn: !!on, stopped: on ? null : cycleState().stopped });
+  log('INFO', `my122: carry on ${on ? 'ON' : 'off'} ignored (75% is a warning only)`);
+  return cycleState();
 }
 
-/** Called after every usage figure: forget Carry on / a stale manual pick / the stop once they no longer apply. */
+/** Called after every usage figure: forget an old Carry on / stop and a manual pick that has reached the warning level. */
 export function tidyState(saved) {
   const st = cycleState(), q = readJson(QUOTA) || {};
   const patch = {};
-  const est = nextReplyCost(st);
-  if ((st.carryOn || st.stopped) && saved.some((a) => (five(a.email, q).used ?? 0) + est < SWITCH_AT)) { patch.carryOn = false; patch.stopped = null; }
-  if (st.manual?.email && (five(st.manual.email, q).used ?? 0) + est >= limitFor(st.manual.email, { ...st, ...patch })) patch.manual = null;
+  if (st.carryOn || st.stopped) { patch.carryOn = false; patch.stopped = null; }
+  if (st.manual?.email && isHit(st.manual.email, q)) patch.manual = null;
   if (Object.keys(patch).length) setState(patch);
 }
 
 /**
- * A usage figure arrived for the account a running chat is on. Returns null (carry on),
- * { move: account } (stop this reply now and carry on with that account) or { stop: text }.
+ * A usage figure arrived for the account a running chat is on. my122: a reply is NEVER stopped part-way for a percentage.
+ * Only when Claude itself refused the reply (the account is full) does the chat carry on with an account that is under 75%.
+ * Returns null (carry on) or { move: account }.
  */
 export function checkRun(email, used, saved, busy = new Set(), rejected = false) {
-  if (rejected) used = Math.max(used ?? 0, 100);   // my99: Claude refused the reply = this account is full, whatever the figure says
-  if (used == null || used < limitFor(email)) return null;
+  if (!rejected) return null;
   const next = chooseAccount(saved, new Set([...busy, email])) || chooseAccount(saved.filter((a) => a.email !== email), new Set([email]));
-  if (next) return { move: next };
+  return next ? { move: next } : null;
+}
+
+/**
+ * my122: when EVERY account is at 75% or more (5 hours or 7 days) this returns what the red warning shows:
+ * { accounts: [{ name, email, five, fiveText, week, weekText }], recommend: index, why }, else null.
+ * Nothing is ever moved because of it. Unknown figures never count as "at 75%".
+ */
+export function warnState(saved) {
+  const q = readJson(QUOTA) || {};
+  if (!saved || !saved.length) return null;
+  const rows = saved.map((a, i) => ({ a, i, f: five(a.email, q), w: week(a.email, q) }));
+  if (rows.some((r) => r.f.used == null && r.w.used == null)) return null;
+  if (rows.some((r) => Math.max(r.f.used ?? 0, r.w.used ?? 0) < WARN_AT)) return null;
+  const room = (r) => Math.min(100 - (r.f.used ?? 0), 100 - (r.w.used ?? 0));
+  const best = [...rows].sort((x, y) => room(y) - room(x) || (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity))[0];
+  const r0 = (n) => (n == null ? 'unknown' : `${Math.round(n)}%`);
+  return {
+    accounts: rows.map((r) => ({ name: `Claude Pro Account ${r.i + 1}`, email: r.a.email, five: r.f.used, week: r.w.used,
+      fiveText: r.f.resetsAt ? ukDay(r.f.resetsAt * 1000) : 'no 5 hours running', weekText: r.w.resetsAt ? ukDay(r.w.resetsAt * 1000) : 'unknown' })),
+    recommend: best.i,
+    why: `Claude Pro Account ${best.i + 1} has the most left (5 hours ${r0(best.f.used)} used, 7 days ${r0(best.w.used)} used).`,
+  };
+}
+/** my122: the warning, but only once every 30 minutes (so it never nags); null when there is nothing to warn about or it was shown recently. */
+export function takeWarning(saved, force = false) {
+  const w = warnState(saved);
+  if (!w) { if (cycleState().warnedAt) setState({ warnedAt: 0 }); return null; }   // under 75% again: the next time it shows at once
   const st = cycleState();
-  const text = isMain(email) && st.carryOn
-    ? `Your main account has reached ${Math.round(used)}% of its 5 hours. haAi stopped here so you always keep some of it. Wait for an account to reset.`
-    : `All your Claude accounts are close to ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.`;
-  setState({ stopped: { at: Date.now(), text } });
-  return { stop: text };
+  if (!force && st.warnedAt && Date.now() - st.warnedAt < 30 * 60 * 1000) return null;
+  setState({ warnedAt: Date.now() });
+  return w;
 }
 
 // ── usage history and the weekly forecast ────────────────────────────────────

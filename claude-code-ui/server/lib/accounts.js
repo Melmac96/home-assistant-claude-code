@@ -13,7 +13,7 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
-import { chooseAccount, cycleState, tidyState, SWITCH_AT } from './my90.js';   // my90
+import { chooseAccount, tidyState, takeWarning } from './my90.js';   // my122   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
@@ -210,7 +210,7 @@ const NOT_LINKED = new Set(['.credentials.json', '.claude.json', 'sessions', 'se
 /**
  * Which saved account a chat that is about to start should use. { email, dir } - dir is null for the shared main sign-in.
  * my90 (Michael 2026-11-13, replaces my77/my83): the not-busy account whose 5 hours reset soonest, with room for the next reply under 95% (my95)
- * (main under 95% after Carry on); see my90.js. `stop` is set when every account is at its limit.
+ * my122: 75% is only a warning: no stop; when every account is at 75%+ the chat stays put and `warn` carries the red-warning figures; see my90.js.
  */
 export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   const cur = currentIdentity();
@@ -227,11 +227,17 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   tidyState(saved);
   const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
   const pick = chooseAccount(saved, used, on) || chooseAccount(saved, new Set(), on);
-  if (!pick) return { email: cur.email, dir: null, stop: cycleState().stopped?.text || `All your Claude accounts are close to ${SWITCH_AT}% of their 5 hours, so haAi has stopped. Carry on, or wait for one to reset.` };
+  // my122 (Michael 2026-11-15): every account at 75% or more = NO stop and NO move: the chat stays on its account and a red warning is shown.
+  if (!pick) {
+    const stay = saved.find((a) => a.email === on) || saved.find((a) => a.email === cur.email) || saved[0];
+    const r = as(stay);
+    r.warn = takeWarning(saved);
+    return r;
+  }
   // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
   if (alone && !used.size && pick.email !== cur.email) {
     const r = switchTo(pick.id);
-    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (5 hours reset soonest / room for the next reply under ${SWITCH_AT}%)`); return { email: pick.email, dir: null, moved: true }; }
+    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (keeps the three accounts level: 5-hour and 7-day use, my122)`); return { email: pick.email, dir: null, moved: true }; }
   }
   return as(pick);
 }

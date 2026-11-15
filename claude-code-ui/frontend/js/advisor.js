@@ -1,7 +1,7 @@
 /*
  * my42: MODEL ADVISOR (Look C). Claude puts a hidden line  ⟦ADVISE|opus|high|kind|reason⟧  under its heading;
  * links.js hands it here, the line is hidden and a card with the reason and two buttons shows above the typing box.
- * ⟦ADVISE|back⟧ = the job on the advised model is finished: switch back to Sonnet on Medium by itself.
+ * ⟦ADVISE|back⟧ = the job on the advised model is finished: my122 (Michael 2026-11-15) it only SUGGESTS switching back (a card, he decides); nothing switches by itself.
  * Settings has an on/off switch (kept on the server, shared by every device).
  */
 import { S } from './state.js';
@@ -66,7 +66,7 @@ export function adviceFound(el, fields, key) {
     if (!all.length || all[all.length - 1] !== el || handled.has(key + all.length)) return;
     if (fields[0] === 'back') {
       markHandled(key + all.length);
-      if (adv.advised) goBack(true);
+      if (adv.advised) { card = { to: 'back', effort: '', kind: 'job finished', reason: 'The job on the other model looks finished, so Sonnet on Medium would use less allowance again.', key: key + all.length }; draw(); }   // my122: a suggestion, never automatic
       return;
     }
     const [to, effort, kind, reason, freeV, ...freeNote] = fields;
@@ -97,6 +97,14 @@ function draw(note) {
   if (strip.dataset.note && note) { strip.append(mk('div', 'adv-reason', strip.dataset.note)); strip.classList.remove('hidden'); return; }
   if (card) {
     const c0 = card, isFree = c0.to === 'free';
+    if (c0.to === 'back') {   // my122: suggestion to go back to Sonnet on Medium, he decides
+      strip.append(mk('div', 'adv-title', 'Suggestion: switch back to Sonnet on Medium'), mk('div', 'adv-reason', c0.reason));
+      const row0 = mk('div', 'adv-row');
+      const b1 = mk('button', 'adv-yes', 'Switch back to Sonnet'); b1.type = 'button'; b1.onclick = (e) => { e.preventDefault(); markHandled(c0.key); goBack(false); };
+      const b2 = mk('button', 'adv-no', 'Stay as I am'); b2.type = 'button'; b2.onclick = (e) => { e.preventDefault(); markHandled(c0.key); card = null; draw(); };
+      row0.append(b1, b2); strip.append(row0); strip.classList.remove('hidden');
+      return;
+    }
     const name = NAMES[c0.to], eff = isFree ? '' : c0.effort[0].toUpperCase() + c0.effort.slice(1);
     strip.append(mk('div', 'adv-title', isFree ? 'Suggestion: do this job on a free model' : `Suggestion: ${name} on ${eff} for this job`));
     strip.append(mk('div', 'adv-reason', c0.reason || (c0.to === 'opus' ? 'This looks hard; Opus is less likely to need a redo.' : isFree ? 'This is a small job.' : 'This looks small and simple.')));
