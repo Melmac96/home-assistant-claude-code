@@ -56,7 +56,11 @@ export function appendUserBubble(text, ts, atts) {
   }
   if (text) {
     const t = document.createElement('div');
-    t.textContent = text;
+    // my107 (Michael 15 Nov, Q1 A): the note haAi sends to start a new chat when the old one got long is for Claude,
+    // not for him - his screen shows one short line instead, on every device (the full note still goes to Claude).
+    const moved = /^Continue this job:/.test(text) && text.includes('[haAi moved this chat to a new one by itself');
+    if (moved) div.classList.add('h107-moved');
+    t.textContent = moved ? 'haAi moved to a new chat because the old one was long' : text;
     content.appendChild(t);
   }
   addTime(div, ts);

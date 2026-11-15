@@ -66,8 +66,10 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my106',
+  version: 'my107',
   items: [
+    { t: 'A short line when haAi moves you on', how: 'When a chat gets long and haAi moves you to a new one, you no longer see the long note it sends me. You just see one line: haAi moved to a new chat because the old one was long.' },
+    { t: 'My working shows on the TV again', how: 'On the TV you can see my steps, my thinking and the progress bar all the time again, like on the phone and tablet.' },
     { t: 'Only my final reply shows', how: 'The short lines I write part-way through a job are now hidden on every device. You only see my final reply each time. The thin progress bar still shows what I am doing.' },
     { t: 'Reset times on the TV', how: 'The top line on the TV now also says when each account\'s 5-hour and Week allowance starts again, in UK time.' },
     { t: 'A quieter TV', how: 'On the TV haAi now shows only the chat. A question shows as one line, Question - Waiting For An Answer, and you answer it on the phone or tablet. The buttons under replies and your messages (Broke a rule, Explain it, Another way, speaker, star, Remember) and my working steps are gone from the TV. Phone and tablet keep them all.' },
