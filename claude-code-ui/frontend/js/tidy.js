@@ -10,6 +10,7 @@
  *   extras: A/B/C answer chips, jump-to-latest arrow, big faint name on an empty chat
  */
 import { S } from './state.js';
+import { MODEL_LABELS } from './model.js';   // my108
 import { openNewChat } from './quick.js';
 import { messagesEl, promptInput, modelSelect, effortSelect, statusDot } from './dom.js';
 import { isAway } from './my96.js';   // my96
@@ -27,9 +28,27 @@ let lost = false;
 let growth = 6;        // thousand tokens added by the last reply: the guess for the next one
 let lastK = 0;
 
-const modelName = () => { const o = modelSelect.selectedOptions[0]; return o ? o.textContent.trim() : ''; };
-const effLetter = () => EFF[effortSelect.value] || '';
-const modelLabel = () => `${modelName()}${effLetter() ? ' ' + effLetter() : ''}`.trim();
+// my108 (Michael 15 Nov): never 'Default (recommended)' - always the real model and effort, e.g. 'Opus 5.5 · High'.
+// The model is the one the running chat reported (S.realModel, from the start of each chat), else what the picked row
+// resolves to; the effort is the one the chat started with (S.realEffort), else the effort picked.
+const EFF_WORD = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' };
+const niceModel = (id) => {
+  id = String(id || '').replace(/\[.*\]$/, '');
+  if (!id) return '';
+  if (MODEL_LABELS[id]) return MODEL_LABELS[id];
+  const m = id.match(/^claude-([a-z]+)-(\d+)(?:-(\d+))?/);
+  return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] && m[3].length < 3 ? '.' + m[3] : ''}` : id;
+};
+const modelName = () => {
+  const o = modelSelect.selectedOptions[0];
+  const real = niceModel(S.realModel) || niceModel(o && o.dataset.resolvedModel) || niceModel(o && /^claude-/.test(o.value) ? o.value : '');
+  return real || (o ? o.textContent.replace(/\s*\(recommended\)/i, '').trim() : '');
+};
+const effWord = () => EFF_WORD[S.realEffort || effortSelect.value] || '';
+const modelLabel = () => `${modelName()}${effWord() ? ' · ' + effWord() : ''}`.trim();
+window.addEventListener('haai-real-model', () => { drawTk(); cycle(true); });
+modelSelect.addEventListener('change', () => { S.realModel = ''; S.realEffort = ''; });
+effortSelect.addEventListener('change', () => { S.realEffort = ''; });
 window.haaiNextK = () => tokensK() + growth;   // my54: used by the stop-before-sending check (guard.js)
 const tokensK = () => (S.ctxUsage && S.ctxUsage.totalTokens ? Math.round(S.ctxUsage.totalTokens / 1000) : 0);
 const pctOf = (id) => { const e = $(id); const w = e ? parseFloat(e.style.width) : NaN; return Number.isFinite(w) ? Math.round(w) : null; };

@@ -107,13 +107,31 @@ function pushDraft() {
   sendTimer = setTimeout(() => {
     const v = promptInput.value;
     if (v === lastSent) return;
+    if (IS_TV) return;   // my108: the TV only shows 'Typing on ...', it never sends a draft
     if (wsSend({ type: 'draft', text: v, from: ME, kind: KIND })) lastSent = v;
   }, 700);
 }
 promptInput.addEventListener('input', (e) => { if (e.isTrusted) { applied = null; drawNote(); } pushDraft(); });
 setInterval(() => { if (document.hidden) return; if (promptInput.value !== lastSent) pushDraft(); drawNote(); }, 1500);   // also catches the box being emptied by Send; my82: rests while not on screen   // also catches the box being emptied by Send
+// my108 (Michael 15 Nov): on the TV his words never show while he types; only 'Typing on the Phone/Tablet' shows,
+// and his message appears once he sends it. The line goes when the box on that device is empty again (sent) or
+// after 3 minutes with no change.
+const IS_TV = (() => { let f = null; try { f = localStorage.getItem('haai-tvlayout'); } catch { /* ignore */ } return f === '1' || (f !== '0' && /Android ?TV|SHIELD|AFT[A-Z]|BRAVIA|Google ?TV/i.test(navigator.userAgent)); })();   // same test as tv.js
+const tvTyping = mk('div', 'h108-typing hidden');
+if (IS_TV) inputForm.before(tvTyping);
+let tvTypingTimer = null;
+function onDraftTv(msg) {
+  if (applied != null && promptInput.value === applied) { promptInput.value = ''; applied = null; lastSent = ''; promptInput.dispatchEvent(new Event('input')); }
+  clearTimeout(tvTypingTimer);
+  if (!msg.text) { tvTyping.classList.add('hidden'); return; }
+  const k = msg.kind === 'tablet' ? 'Tablet' : msg.kind === 'phone' ? 'Phone' : 'other device';
+  tvTyping.textContent = `Typing on the ${k}…`;
+  tvTyping.classList.remove('hidden');
+  tvTypingTimer = setTimeout(() => tvTyping.classList.add('hidden'), 180000);
+}
 function onDraft(msg) {
   if (msg.from === ME) return;
+  if (IS_TV) return onDraftTv(msg);
   const mine = promptInput.value;
   const free = !mine || mine === applied || mine === lastSent;   // never write over words typed here
   if (!free || (document.activeElement === promptInput && mine)) return;

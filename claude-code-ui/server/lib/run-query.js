@@ -417,7 +417,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         runtime.activeSessionId = event.session_id;
         saveActive();
         broadcast({ type: 'session', id: event.session_id });
-        if (event.model) broadcast({ type: 'model', model: event.model });
+        if (event.model) broadcast({ type: 'model', model: event.model, effort: opts.effort || '' });   // my108: effort too
         // Terminal-only commands (/exit, /statusline …) are dropped here rather
         // than in the browser, so there is one place that knows this is a
         // remote UI — see slash-commands.js.

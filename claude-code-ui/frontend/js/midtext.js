@@ -5,6 +5,7 @@
  * message (counted per chat). A message with a question or a card is never hidden.
  */
 import { messagesEl } from './dom.js';
+import { S } from './state.js';
 
 const css = document.createElement('style');
 css.textContent = '#messages > .bubble-assistant.mid-text{display:none!important}';
@@ -22,7 +23,13 @@ function mark() {
     n.classList.remove('mid-text');
     last.set(id, n);
   }
+  // my108 (Michael 15 Nov): while I am still working, even the newest line of this turn stays hidden; it shows when
+  // the turn ends (that is my final reply). The progress bar and step panel still show what I am doing.
+  running = S.isRunning;
+  for (const [id, b] of last) if (running && id === (S.chat || id) && !keep(b)) b.classList.add('mid-text');
 }
+let running = false;
+setInterval(() => { if (S.isRunning !== running) mark(); }, 400);
 let t = 0;
 new MutationObserver(() => { clearTimeout(t); t = setTimeout(mark, 150); }).observe(messagesEl, { childList: true });
 mark();

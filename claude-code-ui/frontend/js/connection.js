@@ -270,6 +270,8 @@ function handleOne(msg) {
     case 'model':
       // The model actually in use, reported by the SDK init event
       if (msg.model) {
+        S.realModel = msg.model; S.realEffort = msg.effort || '';   // my108: what the chat is really on
+        queueMicrotask(() => window.dispatchEvent(new Event('haai-real-model')));
         ensureModelOption(msg.model);
         if (!localStorage.getItem('model')) modelSelect.value = msg.model;
       }
