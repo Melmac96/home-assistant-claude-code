@@ -391,7 +391,7 @@ const handlers = {
     else broadcast({ type: 'keep', list: keep.list() });
   },
   keep_remove(_ws, msg) { keep.remove(String(msg.id || '')); broadcast({ type: 'keep', list: keep.list() }); },
-  advisor_set(_ws, msg) { broadcast({ type: 'advisor', ...setAdvisor({ enabled: typeof msg.enabled === 'boolean' ? msg.enabled : undefined, advised: typeof msg.advised === 'boolean' ? msg.advised : undefined, declineKind: msg.declineKind, clearDeclined: msg.clearDeclined === true }) }); },   // my42
+  advisor_set(_ws, msg) { broadcast({ type: 'advisor', ...setAdvisor({ enabled: typeof msg.enabled === 'boolean' ? msg.enabled : undefined, advised: typeof msg.advised === 'boolean' ? msg.advised : undefined, declineKind: msg.declineKind, clearDeclined: msg.clearDeclined === true, slimGone: typeof msg.slimGone === 'boolean' ? msg.slimGone : undefined, handledKey: typeof msg.handledKey === 'string' ? msg.handledKey : undefined }) }); },   // my104: slimGone/handledKey   // my42
   overnight_add(_ws, msg) { addOvernight(msg.text, msg.permissionMode); },   // my48
   quiet_clear(_ws) { clearHeld(); },   // my49
   overnight_clear(_ws) { clearOvernightDone(); },   // my48

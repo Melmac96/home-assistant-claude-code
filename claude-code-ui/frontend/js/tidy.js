@@ -87,6 +87,7 @@ const closeAll = () => { for (const e of [veil, sheet, menu, more]) e.classList.
 veil.onclick = closeAll;
 const open = (el) => { closeAll(); veil.classList.remove('hidden'); el.classList.remove('hidden'); };
 
+window.haaiStatusItems = () => items();   // my104: the TV information line reads the same words
 function items() {
   const a = [['Using ' + modelLabel(), 'cb']];
   const k = tokensK();

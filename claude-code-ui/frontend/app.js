@@ -58,6 +58,6 @@ const draft = localStorage.getItem('draft');
 if (draft) { promptInput.value = draft; resizeTextarea(); updateSendBtn(); }
 
 // my51: the tidy screen rearranges the others, so it loads last, and if it ever fails the plain app still runs.
-import('./js/tidy.js').catch((e) => console.error('tidy screen failed', e));
+import('./js/tidy.js').then(() => import('./js/tv.js')).catch((e) => console.error('tidy screen failed', e));   // my104: TV layout after tidy
 
 connect();

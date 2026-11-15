@@ -15,7 +15,7 @@ const PARTIAL = /⟦ADVISE[^⟧]*$/;
 let adv = { enabled: true, advised: false };
 let card = null;           // { to, effort, kind, reason } or null
 const handled = new Set(JSON.parse(localStorage.getItem('adv-handled') || '[]'));
-const markHandled = (k) => { handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); };
+const markHandled = (k) => { handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); try { send({ type: 'advisor_set', handledKey: String(k) }); } catch { /* not connected yet */ } };   // my104: tell the other devices
 
 const strip = mk('div', 'adv-card hidden');
 inputForm.prepend(strip);
@@ -90,21 +90,22 @@ function draw(note) {
   } else if (adv.advised && /sonnet/i.test(modelSelect.value + ' ' + (modelSelect.selectedOptions[0]?.dataset.resolvedModel || '')) && (document.getElementById('effort-select')?.value || 'medium') === 'medium') {
     send({ type: 'advisor_set', advised: false });   // my54: stuck flag, we are back on Sonnet Medium
     strip.classList.add('hidden');
-  } else if (adv.advised && !localStorage.getItem('adv-slim-gone')) {
+  } else if (adv.advised && !adv.slimGone) {   // my104: hidden on every device, not just this one
     const row = mk('div', 'adv-row adv-slim');
     row.append(mk('span', 'adv-reason', 'Using a different model for this job.'));
     const b = mk('button', 'adv-no', 'Back to Sonnet now'); b.type = 'button';
     b.onclick = (e) => { e.preventDefault(); goBack(false); };
     const x = mk('button', 'adv-x', '✕'); x.type = 'button'; x.title = 'Hide this'; x.setAttribute('aria-label', 'Hide this');   // my52
-    x.onclick = (e) => { e.preventDefault(); localStorage.setItem('adv-slim-gone', '1'); draw(); };
+    x.onclick = (e) => { e.preventDefault(); adv.slimGone = true; send({ type: 'advisor_set', slimGone: true }); draw(); };   // my104
     row.append(b, x); strip.append(row);
     strip.classList.remove('hidden');
   } else strip.classList.add('hidden');
 }
 
 export function onAdvisorMessage(msg) {
-  adv = { enabled: msg.enabled !== false, advised: !!msg.advised };
-  if (!adv.advised) localStorage.removeItem('adv-slim-gone');   // my52: the next switch shows the strip again
+  adv = { enabled: msg.enabled !== false, advised: !!msg.advised, slimGone: !!msg.slimGone };   // my104: slimGone shared
+  if (Array.isArray(msg.handled)) { for (const k of msg.handled) handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); }
+  if (card && handled.has(card.key)) card = null;   // my104: answered on another device
   if (!adv.enabled) card = null;
   const t = document.getElementById('advisor-toggle');
   if (t) { t.checked = adv.enabled; }

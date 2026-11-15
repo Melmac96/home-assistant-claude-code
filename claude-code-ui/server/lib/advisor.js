@@ -11,7 +11,7 @@ import path from 'path';
 import { DATA_DIR } from './config.js';
 
 const FILE = path.join(DATA_DIR, 'haai-advisor.json');
-const DEF = { enabled: true, advised: false, declined: [] };   // declined: [{kind, at}]
+const DEF = { enabled: true, advised: false, declined: [], slimGone: false, handled: [] };   // my104: slimGone + handled shared by every device   // declined: [{kind, at}]
 const DECLINE_MS = 2 * 60 * 60 * 1000;
 
 export function getAdvisor() {
@@ -19,9 +19,10 @@ export function getAdvisor() {
     const j = JSON.parse(readFileSync(FILE, 'utf8'));
     return {
       enabled: j.enabled !== false, advised: !!j.advised,
+      slimGone: !!j.slimGone, handled: (Array.isArray(j.handled) ? j.handled : []).filter((k) => typeof k === 'string').slice(-40),
       declined: (Array.isArray(j.declined) ? j.declined : []).filter((d) => d && d.kind && Date.now() - d.at < DECLINE_MS).slice(-5),
     };
-  } catch { return { ...DEF, declined: [] }; }
+  } catch { return { ...DEF, declined: [], handled: [] }; }
 }
 export function setAdvisor(patch) {
   const cur = getAdvisor();
@@ -30,6 +31,10 @@ export function setAdvisor(patch) {
   if (typeof patch.advised === 'boolean') next.advised = patch.advised;
   if (patch.declineKind) next.declined = [...cur.declined, { kind: String(patch.declineKind).slice(0, 40), at: Date.now() }].slice(-5);
   if (patch.clearDeclined) next.declined = [];
+  // my104 (Michael 15 Nov): the ✕ on 'Using a different model' and an answered Suggestion clear on EVERY device
+  if (typeof patch.slimGone === 'boolean') next.slimGone = patch.slimGone;
+  if (next.advised === false) next.slimGone = false;   // the next switch shows the line again
+  if (typeof patch.handledKey === 'string' && patch.handledKey) next.handled = [...new Set([...cur.handled, patch.handledKey.slice(0, 200)])].slice(-40);
   writeFileSync(FILE + '.tmp', JSON.stringify(next));
   renameSync(FILE + '.tmp', FILE);
   return next;
