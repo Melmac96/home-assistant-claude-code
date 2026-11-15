@@ -156,7 +156,8 @@ function turnCostText() {
   if (r == null) return '';
   const p = typeof r === 'object' ? r.pct : r;   // my112: {pct, ms} from the server (older pages kept a number)
   if (p == null) return '';
-  return p < 0.5 ? 'used under 1% of 5h' : `used ${Math.round(p)}% of 5h`;
+  const now = typeof r === 'object' && r.now != null ? ` (5h now ${r.now}% used)` : '';   // my112 (Michael): always the % and the figure
+  return `used ${Math.round(p)}% of 5h${now}`;
 }
 window.addEventListener('haai-turncost', () => { if (!S.isRunning) drawFinished(); });
 function drawFinished() {

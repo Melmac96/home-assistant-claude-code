@@ -57,7 +57,7 @@ export const turnCosts = () => cost.turns || {};
 export function finishTurn(sid, ms) {
   // my111 (Michael 15 Nov): every turn's share of the 5-hour allowance goes to the Finished bar (only the last one is shown)
   if (sid) {
-    const rec = { pct: Math.round((turnUse[sid] || 0) * 10) / 10, ms: Number(ms) || 0 };
+    const rec = { pct: Math.round(turnUse[sid] || 0), ms: Number(ms) || 0, now: cost.last ? Math.round(cost.last.used) : null };   // my112: whole % (the figures come in whole %), plus the 5 hours used so far
     cost.turns = cost.turns || {}; delete cost.turns[sid]; cost.turns[sid] = rec;
     const tk = Object.keys(cost.turns); for (const k of tk.slice(0, Math.max(0, tk.length - 50))) delete cost.turns[k];
     broadcast({ type: 'turncost', sid, ...rec }); delete turnUse[sid]; saveCost();
