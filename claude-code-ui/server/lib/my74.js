@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my110',
+  version: 'my111',
   items: [
+    { t: 'Working bar always there', how: 'The working bar above the typing box now stays on the screen all the time. While I work it shows my progress; when I have finished it says Finished in green, with how long the job took.' },
     { t: 'Replies stay one size', how: 'In Settings there is a new My replies text size. My replies stay at that size on the phone and tablet, and pinching no longer changes them. Pinching still changes your own messages. It starts at the size you have now.' },
     { t: 'No move while a question waits', how: 'A long chat no longer moves to a new one while a question of mine is waiting for you. haAi waits for your answer and my reply to it, then moves, taking the question and your answer along so the new chat just carries on.' },
     { t: 'Working bar on the TV', how: 'When you send a message from the phone or tablet, the TV now shows the working bar, my steps and Working too, until my reply is finished.' },

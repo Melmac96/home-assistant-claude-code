@@ -113,11 +113,24 @@ strip.before(bar);
 // my92 (Michael 13 Nov: the boxes took too much room all the time): the full box always starts folded, a tap opens it
 // for THIS job only, and it folds itself again when the job ends. The open state is no longer remembered.
 S.boxOpen = false; localStorage.removeItem('haai-box-open');
-bar.onclick = () => { S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
+bar.onclick = () => { if (!S.isRunning && !addedCount()) return;   // my111: nothing to open while it says Finished
+  S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
+// my111 (Michael 15 Nov): the bar always stays on screen; while Claude is not working it just says Finished
+// (with how long the last job took, when known), green dot instead of blue.
+let lastTook = 0;
+function drawFinished() {
+  const add = addedCount();
+  bar.classList.remove('hidden'); bar.classList.add('h6-done');
+  bStep.textContent = 'Finished';
+  bNow.textContent = '';
+  bEst.textContent = lastTook ? `took ${mmss(lastTook)}` : '';
+  bMore.textContent = add ? `· +${add} added ▾` : '';
+  strip.classList.add('h6-shut');
+}
 function drawBar(show, hasStep, n, t, now, est, took) {
   const add = addedCount();
-  if (!show && !add) { bar.classList.add('hidden'); return; }
-  bar.classList.remove('hidden');
+  if (!show && !add) { drawFinished(); return; }
+  bar.classList.remove('hidden', 'h6-done');
   bStep.textContent = hasStep ? `${n} of ${t}` : 'Working';
   bNow.textContent = now || '';
   const short = est.replace(/^Estimated time before I'll need you: /, '');
@@ -192,7 +205,7 @@ function guessText(took) {
   if (left > 20000) return lead + 'about 1 min (a guess)';
   return lead + 'a little longer than usual (a guess)';
 }
-function foldIfEnded() { if (wasRunning && !S.isRunning && runStart) noteRunEnd(Date.now() - runStart); if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
+function foldIfEnded() { if (wasRunning && !S.isRunning && runStart) { noteRunEnd(Date.now() - runStart); lastTook = Date.now() - runStart; } if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
 function drawStep() {
   foldIfEnded();
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }
@@ -200,7 +213,10 @@ function drawStep() {
   const n = Number(stepData && stepData[0]), t = Number(stepData && stepData[1]);
   const hasStep = !!stepData && t >= 2 && n >= 1;
   const took = Date.now() - runStart;
-  if (!hasStep && took < 5000) { hideStrip(); return; }
+  if (!hasStep && took < 5000) {   // my111: the bar says Working at once (the full box still waits 5 s)
+    strip.classList.add('hidden'); stepDrawn = '';
+    drawBar(true, false, 0, 0, plainAction(S.lastTool), '', took); bEst.textContent = `${mmss(took)} so far`; return;
+  }
   const act = plainAction(S.lastTool);
   const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`].filter(Boolean).join(' · ');
   let est = estText(hasStep ? stepData[4] : '');

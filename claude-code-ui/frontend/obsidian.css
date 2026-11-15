@@ -479,3 +479,6 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 
 /* my108 (Michael 15 Nov): the working bar and its box line up with the typing box and messages (12px in each side), not wider */
 .h6-bar,.h2-step{box-sizing:border-box;width:calc(100% - 24px)!important;margin-left:12px!important;margin-right:12px!important}
+
+/* my111 (Michael 15 Nov): the bar stays when Claude has finished and says Finished, with a green dot */
+.h6-bar.h6-done{cursor:default}.h6-bar.h6-done .h6-dot{background:#46bb68}.h6-bar.h6-done b{color:#46bb68}
