@@ -252,7 +252,9 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
     try { const f0 = five(acct.email); if (f0.used != null) my99Start = f0.used; } catch (e) { log('WARN', `my99: start figure unreadable: ${e?.message || e}`); }
     my99Moved = !!(acct.moved || (wasOn && acct.email && wasOn !== acct.email));
     // my90: every account is at its limit - stop and tell him (Carry on / Wait on the page).
-    if (acct.stop) {
+    // my117: only while Free mode is off - with Free mode on the run goes to the free model, so the Claude hold never applies.
+    if (acct.stop && freeModelOverride()) { log('INFO', `my117: chat ${slot.id} not held (Free mode on, runs on ${freeModelOverride()}): ${acct.stop}`); }
+    else if (acct.stop) {
       log('WARN', `my90: not starting chat ${slot.id}: ${acct.stop}`);
       if (runtime.activeQuery === abortController) runtime.activeQuery = null;
       broadcast({ type: 'cycle_stop', text: acct.stop, chat: slot.id });
@@ -604,7 +606,7 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
             const u = pctOf(fw.utilization);
             if (my95From == null) my95From = u; my95To = u;
           }
-          if (!acct.free && fw && fw.utilization != null && !slot.cycleMove && !slot.cycleStop) {
+          if (!acct.free && !fm && fw && fw.utilization != null && !slot.cycleMove && !slot.cycleStop) {   // my117: never in Free mode
             const used = pctOf(fw.utilization);
             const busy = new Set(runningChats().filter((x) => x !== slot && x.account && !x.free).map((x) => x.account));
             const refused = info.status === 'rejected' && info.rateLimitType === 'five_hour';   // my99: a refusal always moves on
