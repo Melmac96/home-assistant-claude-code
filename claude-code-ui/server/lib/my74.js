@@ -51,9 +51,17 @@ export function noteDoneText(sid, text) {
   for (const m of text.matchAll(DONE)) (pending[sid] = pending[sid] || []).push(costKey(m[1].split('|')));
 }
 
-export function finishTurn(sid) {
+// my112 (Michael 15 Nov: the Finished bar showed neither): the last turn of each chat (time taken + share of the 5 hours)
+// is kept on the server and sent to every page when it connects, so it shows after a reload or on another device too.
+export const turnCosts = () => cost.turns || {};
+export function finishTurn(sid, ms) {
   // my111 (Michael 15 Nov): every turn's share of the 5-hour allowance goes to the Finished bar (only the last one is shown)
-  if (sid) { broadcast({ type: 'turncost', sid, pct: Math.round((turnUse[sid] || 0) * 10) / 10 }); delete turnUse[sid]; }
+  if (sid) {
+    const rec = { pct: Math.round((turnUse[sid] || 0) * 10) / 10, ms: Number(ms) || 0 };
+    cost.turns = cost.turns || {}; delete cost.turns[sid]; cost.turns[sid] = rec;
+    const tk = Object.keys(cost.turns); for (const k of tk.slice(0, Math.max(0, tk.length - 50))) delete cost.turns[k];
+    broadcast({ type: 'turncost', sid, ...rec }); delete turnUse[sid]; saveCost();
+  }
   const keys = sid && pending[sid];
   if (!keys || !keys.length) return;
   delete pending[sid];
@@ -70,8 +78,10 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my111',
+  version: 'my112',
   items: [
+    { t: 'Finished bar fixed', how: 'The Finished bar now always shows how long my last reply took and how much of your 5-hour allowance it used, also after haAi reloads and on every device.' },
+    { t: 'Tidier top', how: 'The job number box and the Now on TV line are gone from the top of the chat on every device. My tool blocks fold back into the working bar each time I start a new job.' },
     { t: 'My tools inside the working bar', how: 'The separate command and file blocks are gone from the chat. The working bar now has 2 lines: the step and time left, then what I am doing now and how many tools so far. When I finish it lists them in one line, for example 9 tools: 5 commands, 3 files read, 1 file changed. Tap the bar to see them all in the chat.' },
     { t: 'Working bar always there', how: 'The working bar above the typing box now stays on the screen all the time. While I work it shows my progress; when I have finished it says Finished in green, with how long my last reply took and how much of your 5-hour allowance it used.' },
     { t: 'Replies stay one size', how: 'In Settings there is a new My replies text size. My replies stay at that size on the phone and tablet, and pinching no longer changes them. Pinching still changes your own messages. It starts at the size you have now.' },

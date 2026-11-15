@@ -145,9 +145,16 @@ bar.onclick = () => { document.body.classList.toggle('h111-tools');   // my111: 
 // (with how long the last job took, when known), green dot instead of blue.
 let lastTook = 0;
 // my111 (Michael 15 Nov): and how much of the 5-hour allowance that last turn used (figure from the server, per chat)
+function lastTookMs() {
+  let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { return 0; }
+  const r = S.activeSessionId != null ? m[S.activeSessionId] : null;
+  return r && typeof r === 'object' ? Number(r.ms) || 0 : 0;
+}
 function turnCostText() {
   let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { return ''; }
-  const p = S.activeSessionId != null ? m[S.activeSessionId] : undefined;
+  const r = S.activeSessionId != null ? m[S.activeSessionId] : undefined;
+  if (r == null) return '';
+  const p = typeof r === 'object' ? r.pct : r;   // my112: {pct, ms} from the server (older pages kept a number)
   if (p == null) return '';
   return p < 0.5 ? 'used under 1% of 5h' : `used ${Math.round(p)}% of 5h`;
 }
@@ -157,7 +164,8 @@ function drawFinished() {
   bar.classList.remove('hidden'); bar.classList.add('h6-done');
   bStep.textContent = 'Finished';
   bNow.textContent = '';
-  bEst.textContent = [lastTook ? `took ${mmss(lastTook)}` : '', turnCostText()].filter(Boolean).join(' · ');
+  const took = lastTookMs() || lastTook;   // my112: the server's time for the last turn, else this page's own
+  bEst.textContent = [took ? `took ${mmss(took)}` : '', turnCostText()].filter(Boolean).join(' · ');
   bMore.textContent = add ? `· +${add} added` : '';
   const c = turnTools();
   r2.classList.toggle('hidden', !c.all);
@@ -247,7 +255,8 @@ function guessText(took) {
   if (left > 20000) return lead + 'about 1 min (a guess)';
   return lead + 'a little longer than usual (a guess)';
 }
-function foldIfEnded() { if (wasRunning && !S.isRunning && runStart) { noteRunEnd(Date.now() - runStart); lastTook = Date.now() - runStart; } if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
+function foldIfEnded() { if (!wasRunning && S.isRunning) document.body.classList.add('h111-tools');   // my112: a new job starts with my tool blocks folded away again, on every device
+  if (wasRunning && !S.isRunning && runStart) { noteRunEnd(Date.now() - runStart); lastTook = Date.now() - runStart; } if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
 function drawStep() {
   foldIfEnded();
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }

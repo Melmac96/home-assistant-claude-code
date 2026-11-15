@@ -118,7 +118,8 @@ function drawNews() {
 export function onMy74Message(msg) {
   if (msg.type === 'turncost') {   // my111: the last turn's share of the 5 hours, for the Finished bar
     let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { /* start again */ }
-    delete m[msg.sid]; m[msg.sid] = msg.pct;
+    if (msg.map) m = { ...m, ...msg.map };   // my112: the server's list, sent when the page connects
+    else { delete m[msg.sid]; m[msg.sid] = { pct: msg.pct, ms: msg.ms || 0 }; }
     const ks = Object.keys(m); for (const k of ks.slice(0, Math.max(0, ks.length - 50))) delete m[k];
     try { localStorage.setItem('haai-turncost', JSON.stringify(m)); } catch { /* storage full */ }
     window.dispatchEvent(new Event('haai-turncost'));

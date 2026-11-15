@@ -34,7 +34,7 @@ import { getPrefs, setPrefs } from './prefs.js';   // my41
 import { getAdvisor, setAdvisor } from './advisor.js';   // my42
 import { listReminders, removeReminder, startReminders } from './batch1.js';   // my45
 import { getBrief, startBrief } from './batch2.js';   // my46
-import { getWhatsNew, whatsNewSeen, jobCosts, ruleBroken, startMy74 } from './my74.js';   // my74
+import { getWhatsNew, whatsNewSeen, jobCosts, turnCosts, ruleBroken, startMy74 } from './my74.js';   // my74
 import { startQuiet, quietState, clearHeld } from './batch5.js';   // my49
 import { listOvernight, addOvernight, removeOvernight, clearOvernightDone, startOvernight } from './batch4.js';   // my48
 import { takeScreenshot } from './screen.js';   // my47
@@ -122,6 +122,7 @@ function greetFor(ws) {
   send(ws, { type: 'reminders', list: listReminders() });   // my45
   send(ws, { type: 'brief', brief: getBrief() });   // my46
   send(ws, { type: 'jobcost', map: jobCosts() });   // my74
+  send(ws, { type: 'turncost', map: turnCosts() });   // my112
   send(ws, { type: 'whatsnew', ...getWhatsNew() });   // my74
   send(ws, { type: 'overnight', ...listOvernight() });   // my48
   send(ws, { type: 'timed', list: listTimed() });   // my79 H17
