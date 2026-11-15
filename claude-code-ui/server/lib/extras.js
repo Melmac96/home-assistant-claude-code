@@ -4,15 +4,18 @@
  *  - Refresh screens (quick replies, look C): reloads both Shields through Home Assistant.
  *  - Accounts quota: 5-hour and weekly use for EACH saved paid account. Live from Anthropic with
  *    that account's saved sign-in while its key is still fresh; otherwise the last figures seen.
- *    It never renews a saved sign-in (that would change it), and never sends a token to the page.
+ *    my104 (Michael 15 Nov, Q1 A): a saved sign-in that has run out is now RENEWED by haAi (backed up first),
+ *    so every account is checked even when not used for days. Never sends a token to the page.
  *  - haAi phone app: the newest published version (www/claude/haai-latest.json) for Settings.
  *  - Chat length: the last context figure, so the strip survives a page reload.
  */
-import { readFileSync, readdirSync, writeFileSync, renameSync, mkdirSync } from 'fs';
+import { readFileSync, readdirSync, writeFileSync, renameSync, mkdirSync, unlinkSync, chmodSync } from 'fs';
 import { createHash } from 'crypto';
 import path from 'path';
 import { CLAUDE_CONFIG_DIR, DATA_DIR, SUPERVISOR_URL } from './config.js';
-import { currentIdentity } from './accounts.js';
+import { currentIdentity, saveCurrent } from './accounts.js';
+import { anyRunning, runningChats } from './chats.js';   // my104
+import { broadcast } from './broadcast.js';   // my104
 import { log } from './log.js';
 import { recordUsage, forecasts, cycleState, pctOf, STALE_MS } from './my90.js';   // my90, my99
 
@@ -78,6 +81,70 @@ async function fetchUsage(token) {
   return { five_hour: toWin(j.five_hour), seven_day: toWin(j.seven_day) };
 }
 
+
+// ── my104: renew a sign-in that has run out, so an account not used for a while is still checked ────────────
+// Same request Claude itself makes (platform.claude.com/v1/oauth/token, refresh_token). The answer gives a NEW
+// refresh key and the old one stops working, so the new one is saved at once (old copy backed up first, last 3 kept).
+// Never for a sign-in a running chat is using: Claude renews those itself, and two renewals would clash.
+const TOKEN_URL = 'https://platform.claude.com/v1/oauth/token';
+const CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+const RENEW_BACKUPS = path.join(ACC_DIR, 'backups');
+const renewFailUntil = {};
+const writePriv = (p, text) => { mkdirSync(path.dirname(p), { recursive: true, mode: 0o700 }); writeFileSync(p + '.tmp', text, { mode: 0o600 }); chmodSync(p + '.tmp', 0o600); renameSync(p + '.tmp', p); };
+const needsRenew = (o) => !!(o && o.refreshToken && !(Number(o.expiresAt) > Date.now() + 5 * 60000));
+
+function backupCred(key, text) {
+  try {
+    mkdirSync(RENEW_BACKUPS, { recursive: true, mode: 0o700 });
+    const tag = key.replace(/[^a-z0-9._-]/g, '_');
+    writePriv(path.join(RENEW_BACKUPS, `renew-${tag}-${Date.now()}.json`), text);
+    const old = readdirSync(RENEW_BACKUPS).filter((f) => f.startsWith(`renew-${tag}-`)).sort();
+    for (const f of old.slice(0, Math.max(0, old.length - 3))) unlinkSync(path.join(RENEW_BACKUPS, f));
+  } catch (e) { log('WARN', `my104: backup before renewing failed: ${e?.message || e}`); throw e; }
+}
+
+async function renewCred(credText) {
+  const cred = JSON.parse(credText); const o = cred.claudeAiOauth;
+  const res = await fetch(TOKEN_URL, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grant_type: 'refresh_token', refresh_token: o.refreshToken, client_id: CLIENT_ID, scope: (o.scopes || []).join(' ') }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (res.status !== 200) { const err = new Error(`renewal answered ${res.status}`); err.status = res.status; throw err; }
+  const j = await res.json();
+  if (!j.access_token || !j.expires_in) throw new Error('renewal answer had no new key');
+  o.accessToken = j.access_token;
+  if (j.refresh_token) o.refreshToken = j.refresh_token;
+  o.expiresAt = Date.now() + Number(j.expires_in) * 1000;
+  if (j.refresh_token_expires_in) o.refreshTokenExpiresAt = Date.now() + Number(j.refresh_token_expires_in) * 1000;
+  return JSON.stringify(cred);
+}
+
+/** The usable sign-in for one saved account, renewed first if it has run out (and it is safe to). null = cannot check now. */
+async function usableOauth(a, file, active) {
+  const key = a.email.toLowerCase();
+  let credText = active ? (() => { try { return readFileSync(path.join(CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8'); } catch { return a.credentials; } })() : a.credentials;
+  let oauth = null;
+  try { oauth = JSON.parse(credText).claudeAiOauth; } catch { return null; }
+  if (!oauth || !oauth.accessToken) return null;
+  if (!needsRenew(oauth)) return oauth;
+  if (renewFailUntil[key] > Date.now()) return null;
+  // in use right now: the live sign-in while any chat works, or a chat running on this account's own copy
+  if (active ? anyRunning() : runningChats().some((s) => (s.account || '').toLowerCase() === key)) return null;
+  try {
+    backupCred(key, credText);
+    const fresh = await renewCred(credText);
+    if (active) { writePriv(path.join(CLAUDE_CONFIG_DIR, '.credentials.json'), fresh); try { saveCurrent(); } catch { /* saved copy follows on next switch */ } }
+    else { const cur = readJson(file) || a; cur.credentials = fresh; cur.savedAt = new Date().toISOString(); writePriv(file, JSON.stringify(cur)); }
+    log('INFO', `my104: renewed the sign-in for ${key.split('@')[0]}`);
+    return JSON.parse(fresh).claudeAiOauth;
+  } catch (e) {
+    renewFailUntil[key] = Date.now() + 30 * 60000;   // do not hammer it; try again in 30 min
+    log('WARN', `my104: could not renew the sign-in for ${key.split('@')[0]}: ${e?.message || e}`);
+    return null;
+  }
+}
+
 export async function getQuota(force = false) {
   const store = readJson(QUOTA) || {};
   if (!force && Date.now() - lastFetch < CACHE_MS) return withForecast(store);
@@ -90,15 +157,10 @@ export async function getQuota(force = false) {
     if (!a || !a.email) continue;
     const active = !!cur && cur.email === a.email;
     // The account in use: the live sign-in (Claude keeps it fresh). Others: their saved copy.
-    const credText = active ? (() => { try { return readFileSync(path.join(CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8'); } catch { return a.credentials; } })() : a.credentials;
-    let oauth = null;
-    try { oauth = JSON.parse(credText).claudeAiOauth; } catch { /* unreadable */ }
     const key = a.email.toLowerCase();
-    if (!oauth || !oauth.accessToken || !(Number(oauth.expiresAt) > Date.now() + 60000)) {
-      if (store[key]) store[key].live = false;
-      continue;   // key too old to use without renewing it: keep the last figures seen
-    }
     if (!force && restUntil[key] > Date.now()) { if (store[key]) store[key].live = false; continue; }
+    const oauth = await usableOauth(a, path.join(ACC_DIR, f), active);   // my104: renewed first if it has run out
+    if (!oauth) { if (store[key]) store[key].live = false; continue; }   // cannot check now: keep the last figures seen
     try {
       store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
       recordUsage(key, store[key].five_hour, store[key].seven_day);   // my90
@@ -130,10 +192,8 @@ export async function freshenQuota() {
     if (store[key]?.at && Date.now() - store[key].at < STALE_MS) continue;
     if (restUntil[key] > Date.now()) continue;
     const active = !!cur && cur.email === a.email;
-    const credText = active ? (() => { try { return readFileSync(path.join(CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8'); } catch { return a.credentials; } })() : a.credentials;
-    let oauth = null;
-    try { oauth = JSON.parse(credText).claudeAiOauth; } catch { /* unreadable */ }
-    if (!oauth || !oauth.accessToken || !(Number(oauth.expiresAt) > Date.now() + 60000)) continue;
+    const oauth = await usableOauth(a, path.join(ACC_DIR, f), active);   // my104
+    if (!oauth) continue;
     try {
       store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
       recordUsage(key, store[key].five_hour, store[key].seven_day);
@@ -148,8 +208,9 @@ export async function freshenQuota() {
 }
 
 /** my99: keep every account's figure fresh in the background (every 5 minutes, the rate Anthropic allows). */
+// my104: every screen gets the new figures straight away (TV info line, Accounts page), not only when it asks.
 export function startQuotaKeeper() {
-  setInterval(() => { getQuota(false).catch(() => {}); }, CACHE_MS + 5000).unref?.();
+  setInterval(() => { getQuota(false).then((q) => broadcast({ type: 'quota', ...q })).catch(() => {}); }, CACHE_MS + 5000).unref?.();
 }
 
 /** my90: the weekly forecast sentence for each account, and the cycle state (Carry on / stopped), go out with the figures. */
