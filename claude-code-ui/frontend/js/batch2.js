@@ -121,7 +121,7 @@ function drawBar(show, hasStep, n, t, now, est, took) {
   bStep.textContent = hasStep ? `${n} of ${t}` : 'Working';
   bNow.textContent = now || '';
   const short = est.replace(/^Estimated time before I'll need you: /, '');
-  bEst.textContent = short === 'working it out' ? `${mmss(took)} so far` : short;
+  bEst.textContent = short === 'working it out' ? `${mmss(took)} so far` : short.replace(' (a guess)', '?');
   bMore.textContent = (add ? `· +${add} added ` : '') + (S.boxOpen ? '▴' : '▾');
   strip.classList.toggle('h6-shut', !S.boxOpen);
 }
@@ -175,7 +175,24 @@ function estText(raw) {
 const mmss = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function hideStrip() { strip.classList.add('hidden'); stepDrawn = ''; drawBar(false, false, 0, 0, '', '', 0); }
 let wasRunning = false;   // my92: fold the box again once a job has ended
-function foldIfEnded() { if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
+// my103 (Michael 15 Nov: it always said 'working it out'): with no guess from Claude, guess from how long this chat's last jobs took
+// (the middle one of the last 15 runs, 2 min until 3 runs are known) and say it is a guess.
+const RT = 'haai-run-times';
+const runTimes = () => { try { const l = JSON.parse(localStorage.getItem(RT) || '[]'); return Array.isArray(l) ? l.filter((x) => x > 0) : []; } catch { return []; } };
+function noteRunEnd(ms) {
+  if (ms < 10000 || ms > 3600000) return;
+  try { localStorage.setItem(RT, JSON.stringify([...runTimes(), Math.round(ms)].slice(-15))); } catch { /* storage full: no memory this time */ }
+}
+function guessText(took) {
+  const lead = "Estimated time before I'll need you: ";
+  const l = runTimes().sort((a, b) => a - b);
+  const typ = l.length >= 3 ? l[Math.floor(l.length / 2)] : 120000;
+  const left = typ - took;
+  if (left > 90000) return lead + `about ${Math.round(left / 60000)} min (a guess)`;
+  if (left > 20000) return lead + 'about 1 min (a guess)';
+  return lead + 'a little longer than usual (a guess)';
+}
+function foldIfEnded() { if (wasRunning && !S.isRunning && runStart) noteRunEnd(Date.now() - runStart); if (wasRunning && !S.isRunning && S.boxOpen) { S.boxOpen = false; const q = document.querySelector('.h4-queue'); if (q) q.classList.add('h6-shut'); } wasRunning = !!S.isRunning; }
 function drawStep() {
   foldIfEnded();
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }
@@ -186,7 +203,8 @@ function drawStep() {
   if (!hasStep && took < 5000) { hideStrip(); return; }
   const act = plainAction(S.lastTool);
   const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`].filter(Boolean).join(' · ');
-  const est = estText(hasStep ? stepData[4] : '');
+  let est = estText(hasStep ? stepData[4] : '');
+  if (est.endsWith('working it out')) est = guessText(took);   // my103
   drawBar(true, hasStep, n, t, (hasStep && stepData[2]) || act, est, took);   // my89
   const sig = JSON.stringify([hasStep ? stepData : null, live, est]);
   if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
