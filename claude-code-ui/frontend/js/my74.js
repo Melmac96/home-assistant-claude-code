@@ -116,7 +116,13 @@ function drawNews() {
 
 // ── Messages from the server, and after each history rebuild ─────────────────
 export function onMy74Message(msg) {
-  if (msg.type === 'jobcost') {
+  if (msg.type === 'turncost') {   // my111: the last turn's share of the 5 hours, for the Finished bar
+    let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { /* start again */ }
+    delete m[msg.sid]; m[msg.sid] = msg.pct;
+    const ks = Object.keys(m); for (const k of ks.slice(0, Math.max(0, ks.length - 50))) delete m[k];
+    try { localStorage.setItem('haai-turncost', JSON.stringify(m)); } catch { /* storage full */ }
+    window.dispatchEvent(new Event('haai-turncost'));
+  } else if (msg.type === 'jobcost') {
     if (msg.map) costs = { ...msg.map }; else if (msg.key) costs[msg.key] = msg.pct;
     repaintCosts();
   } else if (msg.type === 'whatsnew') {

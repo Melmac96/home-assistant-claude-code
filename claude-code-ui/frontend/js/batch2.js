@@ -118,12 +118,20 @@ bar.onclick = () => { if (!S.isRunning && !addedCount()) return;   // my111: not
 // my111 (Michael 15 Nov): the bar always stays on screen; while Claude is not working it just says Finished
 // (with how long the last job took, when known), green dot instead of blue.
 let lastTook = 0;
+// my111 (Michael 15 Nov): and how much of the 5-hour allowance that last turn used (figure from the server, per chat)
+function turnCostText() {
+  let m = {}; try { m = JSON.parse(localStorage.getItem('haai-turncost') || '{}'); } catch { return ''; }
+  const p = S.activeSessionId != null ? m[S.activeSessionId] : undefined;
+  if (p == null) return '';
+  return p < 0.5 ? 'used under 1% of 5h' : `used ${Math.round(p)}% of 5h`;
+}
+window.addEventListener('haai-turncost', () => { if (!S.isRunning) drawFinished(); });
 function drawFinished() {
   const add = addedCount();
   bar.classList.remove('hidden'); bar.classList.add('h6-done');
   bStep.textContent = 'Finished';
   bNow.textContent = '';
-  bEst.textContent = lastTook ? `took ${mmss(lastTook)}` : '';
+  bEst.textContent = [lastTook ? `took ${mmss(lastTook)}` : '', turnCostText()].filter(Boolean).join(' · ');
   bMore.textContent = add ? `· +${add} added ▾` : '';
   strip.classList.add('h6-shut');
 }

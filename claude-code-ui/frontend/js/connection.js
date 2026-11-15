@@ -523,7 +523,7 @@ function handleOne(msg) {
       window.dispatchEvent(new CustomEvent('haai-cycle', { detail: msg }));
       break;
 
-    case 'jobcost': case 'whatsnew':   // my74
+    case 'jobcost': case 'whatsnew': case 'turncost':   // my74, my111
       onMy74Message(msg);
       break;
 

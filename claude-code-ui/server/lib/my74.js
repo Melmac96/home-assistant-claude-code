@@ -25,6 +25,7 @@ export const costKey = (fields) => fields.slice(0, 2).map((s) => String(s || '')
 // ── H6 job cost ──────────────────────────────────────────────────────────────
 let cost = readJson(COST, {});
 cost.acc = cost.acc || {}; cost.costs = cost.costs || {};
+const turnUse = {};   // my111: session id -> share of the 5 hours used by the turn running now
 const pending = {};   // session id -> DONE keys seen in this turn
 let saveTimer = null;
 const saveCost = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { saveJson(COST, cost); } catch (e) { log('WARN', `job cost save failed: ${e?.message || e}`); } }, 2000); };
@@ -41,6 +42,7 @@ export function noteJobUsage(sid, unified) {
   // otherwise: first figure ever, or a different account: start counting from here
   cost.last = now;
   cost.acc[sid] = (cost.acc[sid] || 0) + step;
+  turnUse[sid] = (turnUse[sid] || 0) + step;   // my111
   saveCost();
 }
 
@@ -50,6 +52,8 @@ export function noteDoneText(sid, text) {
 }
 
 export function finishTurn(sid) {
+  // my111 (Michael 15 Nov): every turn's share of the 5-hour allowance goes to the Finished bar (only the last one is shown)
+  if (sid) { broadcast({ type: 'turncost', sid, pct: Math.round((turnUse[sid] || 0) * 10) / 10 }); delete turnUse[sid]; }
   const keys = sid && pending[sid];
   if (!keys || !keys.length) return;
   delete pending[sid];
@@ -68,7 +72,7 @@ export const jobCosts = () => cost.costs;
 const WHATS_NEW = {
   version: 'my111',
   items: [
-    { t: 'Working bar always there', how: 'The working bar above the typing box now stays on the screen all the time. While I work it shows my progress; when I have finished it says Finished in green, with how long the job took.' },
+    { t: 'Working bar always there', how: 'The working bar above the typing box now stays on the screen all the time. While I work it shows my progress; when I have finished it says Finished in green, with how long my last reply took and how much of your 5-hour allowance it used.' },
     { t: 'Replies stay one size', how: 'In Settings there is a new My replies text size. My replies stay at that size on the phone and tablet, and pinching no longer changes them. Pinching still changes your own messages. It starts at the size you have now.' },
     { t: 'No move while a question waits', how: 'A long chat no longer moves to a new one while a question of mine is waiting for you. haAi waits for your answer and my reply to it, then moves, taking the question and your answer along so the new chat just carries on.' },
     { t: 'Working bar on the TV', how: 'When you send a message from the phone or tablet, the TV now shows the working bar, my steps and Working too, until my reply is finished.' },
