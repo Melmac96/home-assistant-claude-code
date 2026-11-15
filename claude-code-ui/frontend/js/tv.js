@@ -41,16 +41,8 @@ if (isTv) {
 .tv-grp .cy{color:#e8b84a}.tv-grp .cr{color:#f3736c}
 @keyframes tv-tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .haai-tv .bubble-user{align-self:stretch!important;width:100%;max-width:100%!important;box-sizing:border-box;background:transparent!important;border:0!important;border-top:2px solid var(--line-blue,#1f5fae)!important;border-bottom:2px solid var(--line-blue,#1f5fae)!important;border-radius:0!important}
-.haai-tv .bubble-assistant{display:flex;flex-wrap:wrap;align-items:center;column-gap:6px}
-.haai-tv .bubble-assistant>*{flex:0 0 100%;min-width:0}
-.haai-tv .bubble-assistant>.reply-foot,.haai-tv .bubble-assistant>.reply-chips,.haai-tv .bubble-assistant>.reply-chips>.tc-row{display:contents!important}
-.haai-tv .bubble-assistant>.reply-foot>*,.haai-tv .bubble-assistant>.reply-chips>.tc-row>*,.haai-tv .bubble-assistant>.msg-time{flex:none;margin-top:6px}
-.haai-tv .bubble-assistant>.reply-foot>.rule-btn{order:2}
-.haai-tv .bubble-assistant>.reply-chips>.tc-row>*{order:3}
-.haai-tv .bubble-assistant>.reply-foot>*:not(.rule-btn){order:4}
-.haai-tv .bubble-assistant>.reply-foot>.rule-btn+*{margin-left:auto}
-.haai-tv .bubble-assistant>.msg-time{order:5}
-.haai-tv .bubble-assistant>.reply-chips>.tc-way>em{margin-left:8px}
+/* my105 (Michael 15 Nov): no buttons under replies or his messages on the TV - Broke a rule, Explain it, Another way, speaker, star, time and Remember are tablet only */
+.haai-tv .bubble-assistant>.reply-foot,.haai-tv .bubble-assistant>.reply-chips,.haai-tv .bubble-assistant>.read-top,.haai-tv .bubble-assistant>.msg-time,.haai-tv .bubble-user>.h93-rem,.haai-tv .bubble-user>.msg-time{display:none!important}
 .haai-tv #attach-btn,.haai-tv .tidy-morebtn,.haai-tv #keep-btn,.haai-tv #send-btn,.haai-tv .h97-hand,.haai-tv .h97-lots:not(.h97-done){display:none!important}`;
   document.head.append(css);
 
