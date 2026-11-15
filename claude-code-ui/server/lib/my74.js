@@ -54,10 +54,12 @@ export function noteDoneText(sid, text) {
 // my112 (Michael 15 Nov: the Finished bar showed neither): the last turn of each chat (time taken + share of the 5 hours)
 // is kept on the server and sent to every page when it connects, so it shows after a reload or on another device too.
 export const turnCosts = () => cost.turns || {};
-export function finishTurn(sid, ms) {
+export function finishTurn(sid, ms, usage) {
   // my111 (Michael 15 Nov): every turn's share of the 5-hour allowance goes to the Finished bar (only the last one is shown)
   if (sid) {
-    const rec = { pct: Math.round(turnUse[sid] || 0), ms: Number(ms) || 0, now: cost.last ? Math.round(cost.last.used) : null };   // my112: whole % (the figures come in whole %), plus the 5 hours used so far
+    const rec = { pct: Math.round(turnUse[sid] || 0), ms: Number(ms) || 0, now: cost.last ? Math.round(cost.last.used) : null,
+      // my112 (Michael Q1 C): the tokens this reply used - new input, written cache and output (re-read history not counted)
+      tok: usage ? (usage.input_tokens || 0) + (usage.output_tokens || 0) + (usage.cache_creation_input_tokens || 0) : null };   // my112: whole % (the figures come in whole %), plus the 5 hours used so far
     cost.turns = cost.turns || {}; delete cost.turns[sid]; cost.turns[sid] = rec;
     const tk = Object.keys(cost.turns); for (const k of tk.slice(0, Math.max(0, tk.length - 50))) delete cost.turns[k];
     broadcast({ type: 'turncost', sid, ...rec }); delete turnUse[sid]; saveCost();

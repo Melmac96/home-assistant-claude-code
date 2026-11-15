@@ -577,7 +577,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           background: runtime.backgroundTasks.size > 0,
           more,
         });
-        try { finishTurn(event.session_id || runtime.activeSessionId, event.duration_ms); } catch {}   // my74: job cost onto its Finished box
+        try { finishTurn(event.session_id || runtime.activeSessionId, event.duration_ms, event.usage); } catch {}   // my74: job cost onto its Finished box
         await reportContextUsage(q);
         if (more) {
           // Keep the run open for the added message. If the CLI already folded it into

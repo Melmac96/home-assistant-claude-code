@@ -157,7 +157,8 @@ function turnCostText() {
   const p = typeof r === 'object' ? r.pct : r;   // my112: {pct, ms} from the server (older pages kept a number)
   if (p == null) return '';
   const now = typeof r === 'object' && r.now != null ? ` (5h now ${r.now}% used)` : '';   // my112 (Michael): always the % and the figure
-  return `used ${Math.round(p)}% of 5h${now}`;
+  const tk = typeof r === 'object' && r.tok != null ? ` · ${r.tok >= 1000 ? Math.round(r.tok / 1000) + 'k' : r.tok} tokens` : '';
+  return `used ${Math.round(p)}% of 5h${now}${tk}`;
 }
 window.addEventListener('haai-turncost', () => { if (!S.isRunning) drawFinished(); });
 function drawFinished() {
