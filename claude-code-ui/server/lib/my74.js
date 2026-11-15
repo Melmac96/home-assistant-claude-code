@@ -66,8 +66,9 @@ export const jobCosts = () => cost.costs;
 
 // ── H16 What's new (this list ships with the update itself) ─────────────────
 const WHATS_NEW = {
-  version: 'my108',
+  version: 'my109',
   items: [
+    { t: 'Working bar on the TV', how: 'When you send a message from the phone or tablet, the TV now shows the working bar, my steps and Working too, until my reply is finished.' },
     { t: 'The real model by the typing box', how: 'Next to the typing box (and on the top line) haAi now shows the model and effort the chat is really on, for example Opus 5.5 · High, never Default (recommended).' },
     { t: 'Typing stays private until you send', how: 'On the TV your words no longer appear while you type on the phone or tablet. The TV just says Typing on the Phone (or Tablet), and your message shows once you press send.' },
     { t: 'Working bar lined up', how: 'The working bar above the typing box is now the same width as everything else.' },

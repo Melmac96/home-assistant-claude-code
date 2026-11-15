@@ -341,6 +341,9 @@ function handleOne(msg) {
     case 'user':
       // A prompt sent from another connected client/tab
       appendUserBubble(msg.text);
+      // my109 (Michael 15 Nov, TV): a message sent on another device starts my work here too, so the working bar,
+      // steps and 'Working…' show on every screen watching (the TV never sends, so it never knew before)
+      if (!S.isRunning) { S.isRunning = true; showThinking(); updateSendBtn(); }
       break;
 
     case 'auth_url':
