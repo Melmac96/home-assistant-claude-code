@@ -6,7 +6,7 @@
  * set of messages the client may send is a list you can read.
  */
 import { sendPip } from './tvpip.js';   // my113
-import { setManual, setCarryOn } from './my90.js';   // my90
+import { setManual, setCarryOn, setPending } from './my90.js';   // my90
 import { readFileSync } from 'fs';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
 import { log } from './log.js';
@@ -237,11 +237,25 @@ const handlers = {
     stopLoginProc();
   },
 
+  // my123: he changed his mind about a switch that was waiting for the turn to end
+  account_switch_cancel(ws) {
+    setPending(null); setManual(null);
+    send(ws, { type: 'account_result', ok: true, cancelled: true });
+    broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
   account_switch(ws, msg) {
     if (anyRunning()) {
-      send(ws, { type: 'account_result', ok: false, error: busyText() });
+      // my123 (Michael 2026-11-15): not "try again later": the switch is remembered and happens right after the current turn (run-query.js applyPendingSwitch)
+      const a = listAccounts().saved.find((x) => x.id === msg.id);
+      if (!a) { send(ws, { type: 'account_result', ok: false, error: 'That account is not saved.' }); return; }
+      if (a.active) { setPending(null); send(ws, { type: 'account_result', ok: true, same: true }); broadcast({ type: 'accounts', ...listAccounts() }); return; }
+      setPending({ id: a.id, email: a.email }); setManual(a.email);
+      send(ws, { type: 'account_result', ok: true, pending: true, email: a.email });
+      broadcast({ type: 'accounts', ...listAccounts() });
       return;
     }
+    setPending(null);
     const r = switchTo(msg.id);
     // my83 (Michael 2026-11-11): the account he picks is the one the next message uses. Without this a chat kept the
     // account it had before (my77 'keep its own account') and every switch went on hitting the old account's limit.

@@ -135,6 +135,10 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
   return open[0].a;
 }
 
+/** my123 (Michael 2026-11-15): he picked an account while haAi was busy: the switch happens right after the current turn. { id, email, at } */
+export const getPending = () => cycleState().pending || null;
+export const setPending = (p) => setState({ pending: p ? { id: p.id, email: p.email, at: Date.now() } : null });
+
 /** He picked an account in the Accounts menu. */
 export const setManual = (email) => setState({ manual: email ? { email, at: Date.now() } : null });
 

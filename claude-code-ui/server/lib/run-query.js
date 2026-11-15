@@ -42,9 +42,9 @@ import { advisorPrompt, jobsPrompt } from './advisor.js';   // my42
 import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
-import { checkRun, recordUsage, recordReplyCost, pctOf, five, takeWarning } from './my90.js';   // my90, my95, my99, my122
+import { checkRun, recordUsage, recordReplyCost, pctOf, five, takeWarning, getPending, setPending, setManual } from './my90.js';   // my90, my95, my99, my122
 import { freshenQuota, renewDone } from './extras.js';   // my99, my115
-import { listAccounts } from './accounts.js';   // my90
+import { listAccounts, switchTo } from './accounts.js';   // my90, my123
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
 import { my96Prompt } from './my96.js';   // my96
@@ -758,6 +758,7 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
     } catch (e) { log('WARN', `my95: reply cost not saved: ${e?.message || e}`); }
     // my122: a reply just finished: if every account is now at 75%+ the red warning shows (at most once every 30 minutes)
     try { if (!acct.free && !fm) { const w = takeWarning(listAccounts().saved); if (w) broadcast({ type: 'cycle_warn', ...w }); } } catch (e) { log('WARN', `my122: warning check failed: ${e?.message || e}`); }
+    setTimeout(applyPendingSwitch, 1500);   // my123: the account he picked while busy takes over now the turn is over
     if (slot.cycleMove) {
       const mv = slot.cycleMove; slot.cycleMove = null;
       broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });
@@ -805,4 +806,21 @@ function lastBlockReason(sid, since) {
     }
   } catch {}
   return '';
+}
+
+/** my123 (Michael 2026-11-15): he picked an account while a turn was running; once nothing is running the switch is made (his pick, whatever its figures). */
+function applyPendingSwitch() {
+  try {
+    const p = getPending();
+    if (!p || runningChats().length) return;   // another chat's end tries again
+    const r = switchTo(p.id);
+    setPending(null);
+    if (r.ok) {
+      for (const s of chats.values()) if (!s.free) s.account = null;
+      setManual(p.email);
+      log('INFO', `my123: switched to ${p.email} after the turn, as he asked`);
+      broadcast({ type: 'cycle_moved', to: p.email });
+    } else log('WARN', `my123: the waiting switch to ${p.email} failed: ${r.error || ''}`);
+    broadcast({ type: 'accounts', ...listAccounts() });
+  } catch (e) { log('WARN', `my123: waiting switch failed: ${e?.message || e}`); }
 }

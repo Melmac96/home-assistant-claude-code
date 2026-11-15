@@ -69,8 +69,14 @@ export function showAccounts(msg) {
     const who = mk('div', 'acc-who acc-email', a.email);
     who.appendChild(mk('small', 'acc-paid', PAID[a.email.toLowerCase()] || 'PAID - Claude account'));
     row.appendChild(who);
-    if (a.active) row.appendChild(mk('span', 'acc-tag', 'Signed in'));
-    else {
+    const due = msg.pending && msg.pending.email === a.email;   // my123: his pick is waiting for the current turn to end
+    if (a.active) { row.appendChild(mk('span', 'acc-tag', 'Signed in')); if (msg.pending) who.appendChild(mk('small', 'acc-paid', 'Switching to ' + shortName(msg.pending.email) + ' right after this turn')); }
+    else if (due) {
+      row.appendChild(mk('span', 'acc-tag', 'Switch due after this turn'));
+      const c = mk('button', 'settings-btn', 'Cancel'); c.type = 'button';
+      c.onclick = () => { c.disabled = send({ type: 'account_switch_cancel' }); };
+      row.appendChild(c);
+    } else {
       const b = mk('button', 'settings-btn', 'Switch');
       b.type = 'button';
       b.onclick = () => askSwitch(a);
@@ -157,6 +163,12 @@ export function showAccountResult(msg) {
   if (msg.ok && msg.mode) {
     confirmBox.appendChild(mk('b', '', msg.free ? 'Done: Free models are on.' : 'Done: your paid Claude account is back.'));
     confirmBox.appendChild(mk('div', 'settings-hint', 'Open a NEW chat now for it to take effect. This chat will close shortly.'));
+    confirmBox.classList.remove('hidden');
+    return;
+  }
+  if (msg.ok && msg.pending) {   // my123
+    confirmBox.appendChild(mk('b', '', 'Done: switching to ' + shortName(msg.email) + ' right after this turn'));
+    confirmBox.appendChild(mk('div', 'settings-hint', 'haAi is busy, so nothing is cut off. It switches as soon as the current reply ends, and the account list above says so until then.'));
     confirmBox.classList.remove('hidden');
     return;
   }

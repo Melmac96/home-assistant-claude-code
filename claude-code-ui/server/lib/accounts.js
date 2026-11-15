@@ -13,7 +13,7 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
-import { chooseAccount, tidyState, takeWarning } from './my90.js';   // my122   // my90
+import { chooseAccount, tidyState, takeWarning, getPending, setPending } from './my90.js';   // my122   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
@@ -140,7 +140,8 @@ export function listAccounts() {
     }
   } catch { /* nothing saved yet */ }
   saved.sort((a, b) => a.email.localeCompare(b.email));
-  return { current: cur, saved, mode: modeState() };
+  const pend = getPending();   // my123: a switch he asked for while haAi was busy, due after the current turn
+  return { current: cur, saved, mode: modeState(), pending: pend ? { id: pend.id, email: pend.email } : null };
 }
 
 /** Switch the live sign-in to a saved account. Returns { ok, error? }. */
@@ -237,7 +238,7 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
   if (alone && !used.size && pick.email !== cur.email) {
     const r = switchTo(pick.id);
-    if (r.ok) { log('INFO', `my90: moved to ${pick.email} (keeps the three accounts level: 5-hour and 7-day use, my122)`); return { email: pick.email, dir: null, moved: true }; }
+    if (r.ok) { if (getPending()?.email === pick.email) setPending(null); log('INFO', `my90: moved to ${pick.email} (keeps the three accounts level: 5-hour and 7-day use, my122)`); return { email: pick.email, dir: null, moved: true }; }
   }
   return as(pick);
 }
