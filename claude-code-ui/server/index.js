@@ -51,6 +51,7 @@ import * as extras99 from './lib/extras.js';   // my99
 import { setOvernightRunner } from './lib/batch4.js';   // my48
 import { setTimedRunner } from './lib/my79.js';   // my79
 import { startMy87 } from './lib/my87.js';   // my87
+import { startTvPip } from './lib/tvpip.js';   // my113 mini TV on the HA Shield
 import * as notifier from './lib/notify.js';
 import * as deviceAuth from './lib/device-auth.js';
 import { registerWatchRoutes } from './lib/watch.js';   // my50
@@ -129,6 +130,7 @@ autoContinue.setResumeRunner(runQuery);
 setOvernightRunner(runQuery);   // my48
 setTimedRunner(runQuery);   // my79 H17
 startMy87(runQuery);   // my87 next chat by itself
+startTvPip();   // my113
 
 sanitizeMcpState();
 loadActive();

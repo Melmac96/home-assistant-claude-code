@@ -275,5 +275,6 @@ export function onExtrasMessage(msg) {
     }
     case 'app_latest': latest = msg.latest || null; drawApp(); break;
     case 'quota': quota = msg.accounts || {}; drawQuota(); window.dispatchEvent(new CustomEvent('haai-quota', { detail: quota })); break;
+    case 'tv_pip': window.dispatchEvent(new CustomEvent('haai-pip', { detail: msg })); break;   // my113 (tv.js)
   }
 }

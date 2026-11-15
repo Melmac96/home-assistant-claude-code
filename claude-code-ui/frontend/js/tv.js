@@ -122,4 +122,26 @@ if (isTv) {
   // first figures straight away, then the server sends fresh ones every 5 minutes
   const ask = () => { try { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'quota_get' })); } catch { /* ignore */ } };
   setTimeout(ask, 1500);
+
+  // my113 (Michael 15 Nov): while the mini TV (picture-in-picture) is on the screen, the working bar and the typing box
+  // end just left of it, so nothing of theirs sits behind it. No mini TV = normal width. The server tells us where it is.
+  let pip = null, pipTimer = null;
+  const fitPip = () => {
+    const els = [document.querySelector('.h6-bar'), document.querySelector('.h2-step'), document.getElementById('input-form')].filter(Boolean);
+    for (const el of els) el.style.maxWidth = '';
+    if (!pip || !pip.on) return;
+    const k = window.innerWidth / (pip.sw || 1920);         // the Shield gives screen points; the page may be scaled
+    const edge = pip.l * k - 10, top = pip.t * k - 6;        // a small gap before the mini TV
+    for (const el of els) {
+      const r = el.getBoundingClientRect();
+      if (r.height && r.bottom > top && r.right > edge) el.style.maxWidth = `${Math.max(120, Math.floor(edge - r.left))}px`;
+    }
+  };
+  window.addEventListener('haai-pip', (e) => {
+    pip = e.detail || null;
+    fitPip();
+    clearInterval(pipTimer); pipTimer = null;
+    if (pip && pip.on) pipTimer = setInterval(fitPip, 1000);   // the bar comes and goes and grows: keep it clear
+  });
+  window.addEventListener('resize', fitPip);
 }

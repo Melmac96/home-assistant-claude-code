@@ -5,6 +5,7 @@
  * The inbound half is a dispatch table rather than a chain of `else if`s, so the
  * set of messages the client may send is a list you can read.
  */
+import { sendPip } from './tvpip.js';   // my113
 import { setManual, setCarryOn } from './my90.js';   // my90
 import { readFileSync } from 'fs';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
@@ -538,6 +539,7 @@ export function attach(wss) {
     ws.on('pong', () => { ws.misses = 0; });
 
     greet(ws);
+    sendPip(ws);   // my113: where the mini TV is on the HA Shield, if it is on
 
     ws.on('message', (raw) => {
       ws.misses = 0;   // my88
