@@ -82,14 +82,14 @@ export async function listNotifyServices() {
 
 let panelUrl;   // undefined until looked up; null if it could not be
 async function getPanelUrl() {
-  if (panelUrl !== undefined) return panelUrl;
+  if (panelUrl) return panelUrl;   // my115: only a found link is kept; a failed look-up is tried again next time
   try {
     const res = await fetch(`${SUPERVISOR_URL}/addons/self/info`,
-      { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` } });
+      { headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}` }, signal: AbortSignal.timeout(10000) });
     const slug = res.ok ? (await res.json())?.data?.slug : null;
-    panelUrl = slug ? `http://192.168.1.168/${slug}` : null;   // my13: the old /hassio/ingress/ link gives 404 on this HA
-  } catch { panelUrl = null; }
-  return panelUrl;
+    panelUrl = slug ? `http://192.168.1.168/${slug}` : undefined;   // my13: the old /hassio/ingress/ link gives 404 on this HA
+  } catch (e) { panelUrl = undefined; console.warn(`[notify] tap link look-up failed: ${e?.message || e}`); }
+  return panelUrl || null;
 }
 
 const anyVisible = () => [...connections].some((c) => c.visible === true && c.readyState === 1);

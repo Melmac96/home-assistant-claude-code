@@ -120,6 +120,13 @@ async function renewCred(credText) {
   return JSON.stringify(cred);
 }
 
+// my115 (Michael C, 15 Nov): while a sign-in is being renewed, a chat that wants to start waits for it to finish
+// (at most 35 s), so it can never start on the old key that the renewal is about to retire (that showed the login screen).
+let renewing = null;
+export function renewDone() {
+  return renewing ? Promise.race([renewing, new Promise((r) => setTimeout(r, 35000))]) : Promise.resolve();
+}
+
 /** The usable sign-in for one saved account, renewed first if it has run out (and it is safe to). null = cannot check now. */
 async function usableOauth(a, file, active) {
   const key = a.email.toLowerCase();
@@ -131,6 +138,9 @@ async function usableOauth(a, file, active) {
   if (renewFailUntil[key] > Date.now()) return null;
   // in use right now: the live sign-in while any chat works, or a chat running on this account's own copy
   if (active ? anyRunning() : runningChats().some((s) => (s.account || '').toLowerCase() === key)) return null;
+  if (renewing) return null;   // my115: one renewal at a time
+  let release;
+  renewing = new Promise((r) => { release = r; });
   try {
     backupCred(key, credText);
     const fresh = await renewCred(credText);
@@ -142,7 +152,7 @@ async function usableOauth(a, file, active) {
     renewFailUntil[key] = Date.now() + 30 * 60000;   // do not hammer it; try again in 30 min
     log('WARN', `my104: could not renew the sign-in for ${key.split('@')[0]}: ${e?.message || e}`);
     return null;
-  }
+  } finally { renewing = null; release(); }
 }
 
 export async function getQuota(force = false) {
@@ -185,15 +195,16 @@ export async function freshenQuota() {
   let files = [];
   try { files = readdirSync(ACC_DIR).filter((f) => f.endsWith('.json')); } catch { return; }
   let changed = false;
-  for (const f of files) {
+  // my115: the accounts are checked side by side, not one after another (a reply waited for each in turn)
+  await Promise.all(files.map(async (f) => {
     const a = readJson(path.join(ACC_DIR, f));
-    if (!a || !a.email) continue;
+    if (!a || !a.email) return;
     const key = a.email.toLowerCase();
-    if (store[key]?.at && Date.now() - store[key].at < STALE_MS) continue;
-    if (restUntil[key] > Date.now()) continue;
+    if (store[key]?.at && Date.now() - store[key].at < STALE_MS) return;
+    if (restUntil[key] > Date.now()) return;
     const active = !!cur && cur.email === a.email;
     const oauth = await usableOauth(a, path.join(ACC_DIR, f), active);   // my104
-    if (!oauth) continue;
+    if (!oauth) return;
     try {
       store[key] = { ...(await fetchUsage(oauth.accessToken)), at: Date.now(), live: true };
       recordUsage(key, store[key].five_hour, store[key].seven_day);
@@ -203,14 +214,14 @@ export async function freshenQuota() {
       if (e?.status === 429) restUntil[key] = Date.now() + BACKOFF_MS;
       log('WARN', `my99: could not check ${key.split('@')[0]} live: ${e?.message || e}`);
     }
-  }
-  if (changed) try { writeJson(QUOTA, store); } catch { /* not important */ }
+  }));
+  if (changed) try { writeJson(QUOTA, store); } catch (e) { log('WARN', `my99: quota file not saved: ${e?.message || e}`); }
 }
 
 /** my99: keep every account's figure fresh in the background (every 5 minutes, the rate Anthropic allows). */
 // my104: every screen gets the new figures straight away (TV info line, Accounts page), not only when it asks.
 export function startQuotaKeeper() {
-  setInterval(() => { getQuota(false).then((q) => broadcast({ type: 'quota', ...q })).catch(() => {}); }, CACHE_MS + 5000).unref?.();
+  setInterval(() => { getQuota(false).then((q) => broadcast({ type: 'quota', ...q })).catch((e) => log('WARN', `my99: quota keeper: ${e?.message || e}`)); }, CACHE_MS + 5000).unref?.();
 }
 
 /** my90: the weekly forecast sentence for each account, and the cycle state (Carry on / stopped), go out with the figures. */

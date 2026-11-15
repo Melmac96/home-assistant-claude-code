@@ -36,11 +36,12 @@ export function cancelTimed(id) {
   timedChanged();
 }
 function pickSlot() {   // the chat he last looked at, else any other not working; never the grey free chat (privacy)
-  const ok = (s) => s && !s.free && !s.query;
+  const ok = (s) => s && !s.free && !s.query && !s.asks && !s.moving;   // my115: never a chat waiting on his answer or moving
   const last = chats.get(view.last);
   if (ok(last)) return last;
   return [...chats.values()].find(ok) || null;
 }
+const starting = new Set();   // my115: timed jobs whose run is being started right now
 function timedTick() {
   try {
     const l = readTimed();
@@ -51,12 +52,26 @@ function timedTick() {
     const due = keep.find((j) => j.status === 'wait' && j.at <= now);
     if (due && runner) {
       const slot = pickSlot();
-      if (slot) {
-        due.status = 'ran'; due.ranAt = now; dirty = true;
-        saveJson(TIMED, keep);
+      if (slot && !starting.has(due.id)) {
+        // my115: marked 'ran' only once the run has really started; a refused run is tried again (3 tries, then he is told)
+        starting.add(due.id);
         log('INFO', `my79: starting timed job ${due.id} in ${slot.id}`);
         const when = ukFmt.format(new Date(due.at));
-        inChat(slot, () => runner({ readyState: 3 }, { text: `[Job Michael set earlier for ${when} UK time. Do it now, then report in a few plain lines. If Sleep as Android shows he is asleep, send no message that makes a sound.]\n\n${due.text}`, permissionMode: DEFAULT_PERMISSION_MODE }));
+        Promise.resolve(inChat(slot, () => runner({ readyState: 3 }, { text: `[Job Michael set earlier for ${when} UK time. Do it now, then report in a few plain lines. If Sleep as Android shows he is asleep, send no message that makes a sound.]\n\n${due.text}`, permissionMode: DEFAULT_PERMISSION_MODE, synthetic: true })))
+          .then((started) => {
+            const l2 = readTimed();
+            const j = l2.find((x) => x.id === due.id);
+            if (!j) return;
+            if (started === false) {
+              j.tries = (j.tries || 0) + 1;
+              if (j.tries >= 3) { j.status = 'failed'; j.ranAt = Date.now(); log('WARN', `my79: timed job ${due.id} could not start 3 times`); broadcast({ type: 'handover_status', text: `A job set for ${when} could not start (3 tries). Ask me to do it again.` }); }
+              else j.at = Date.now() + 60000;   // try again in a minute
+            } else { j.status = 'ran'; j.ranAt = Date.now(); }
+            saveJson(TIMED, l2);
+            timedChanged();
+          })
+          .catch((e) => log('WARN', `my79: timed job ${due.id}: ${e?.message || e}`))
+          .finally(() => starting.delete(due.id));
       }
     }
     if (dirty) saveJson(TIMED, keep);

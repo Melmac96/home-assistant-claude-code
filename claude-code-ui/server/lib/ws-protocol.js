@@ -197,6 +197,15 @@ function startFresh() {
   broadcastSessions();
 }
 
+/** my115: which chat is busy and what he can do about it (was only 'Claude is busy'). */
+function busyText() {
+  const busy = runningChats();
+  const names = busy.map((s) => `Chat ${s.n}`).join(' and ');
+  const waiting = busy.some((s) => [...pendingPermissions.values()].some((p) => p.chat === s.id));
+  return `${names || 'A chat'} ${busy.length > 1 ? 'are' : 'is'} still working${waiting ? ' (one is waiting for your answer on screen)' : ''}. ` +
+    'Wait for the reply to finish, or tap Stop in that chat, then switch.';
+}
+
 /** Everything the browser may send. One entry per message type. */
 const handlers = {
   auth_check(ws) {
@@ -218,7 +227,7 @@ const handlers = {
 
   account_switch(ws, msg) {
     if (anyRunning()) {
-      send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
+      send(ws, { type: 'account_result', ok: false, error: busyText() });
       return;
     }
     const r = switchTo(msg.id);
@@ -233,7 +242,7 @@ const handlers = {
   // my90: after "all accounts at 90%" he picks Carry on (main still stops at 95%) or Wait.
   cycle_carry_on(_ws, msg) {
     setCarryOn(!!msg.on);
-    extras.getQuota(false).then((q) => broadcast({ type: 'quota', ...q }));
+    extras.getQuota(false).then((q) => broadcast({ type: 'quota', ...q })).catch((e) => log('WARN', `quota after carry on failed: ${e?.message || e}`));
   },
 
   // my17: pick another FREE model; applies to the very next message of this same chat (no new chat needed).
@@ -257,8 +266,10 @@ const handlers = {
 
   // my16: Free / Paid mode from the Accounts menu (same busy rule as an account switch).
   mode_switch(ws, msg) {
-    if (anyRunning()) {
-      send(ws, { type: 'account_result', ok: false, error: 'Claude is busy. Wait for the reply to finish, then switch.' });
+    // my115: a chat that has finished its reply and only waits on a background job no longer blocks Free/Paid
+    // (the switch only changes how NEW chats start; that chat keeps the settings it started with).
+    if (runningChats().some((s) => s.run?.phase !== 'background')) {
+      send(ws, { type: 'account_result', ok: false, error: busyText() });
       return;
     }
     const r = setMode(!!msg.free);
@@ -544,15 +555,23 @@ export function attach(wss) {
     ws.on('message', (raw) => {
       ws.misses = 0;   // my88
       let msg;
-      try { msg = JSON.parse(raw); } catch { return; }
+      try { msg = JSON.parse(raw); } catch { log('WARN', 'a browser sent a message that could not be read'); return; }
       const handler = handlers[msg.type];
       if (!handler) return;
+      // my115: a prompt names the chat it was typed in, so it can never land in another chat after a quick switch
+      if (msg.type === 'prompt' && msg.chat && chats.has(msg.chat)) ws.chat = msg.chat;
+      // my115: tell the sending screen at once that the message arrived (it resends or keeps it if no word comes)
+      if (msg.type === 'prompt' && msg.cid) send(ws, { type: 'prompt_ack', cid: String(msg.cid).slice(0, 40), chat: ws.chat || null });
+      const failed = (e) => {
+        log('ERROR', `handling ${msg.type} failed: ${e?.message || e}`);
+        if (msg.type === 'prompt') { send(ws, { type: 'error', message: `haAi could not take that message: ${e?.message || e}. Send it again.` }); send(ws, { type: 'run_idle', chat: ws.chat || null }); }
+      };
       try {
         const slot = chats.get(ws.chat);
-        if (slot) inChat(slot, () => handler(ws, msg)); else handler(ws, msg);   // my58: run for the chat this browser is looking at
-      } catch (e) {
-        log('ERROR', `handling ${msg.type} failed: ${e?.message || e}`);
-      }
+        // my58: run for the chat this browser is looking at. my115: async handlers are caught too (they crashed haAi)
+        const r = slot ? inChat(slot, () => handler(ws, msg)) : handler(ws, msg);
+        if (r && typeof r.catch === 'function') r.catch(failed);
+      } catch (e) { failed(e); }
     });
 
     ws.on('close', () => {

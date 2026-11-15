@@ -137,27 +137,35 @@ async function pageBody(name) {
 }
 
 export function registerWatchRoutes(app, express) {
+  // my115: a chat file that is busy or gone for a moment gives an error answer, never a crash
   app.get('/watch/state', async (_req, res) => {
-    const h = getHomeHealth();
-    res.json({ home: { status: h.status, count: h.count, temp: await houseTemp() }, quiet: isQuiet(), working: !!runtime.activeQuery, ...newestReply() });
+    try {
+      const h = getHomeHealth();
+      res.json({ home: { status: h.status, count: h.count, temp: await houseTemp() }, quiet: isQuiet(), working: !!runtime.activeQuery, ...newestReply() });
+    } catch (e) { log('WARN', `watch state failed: ${e?.message || e}`); res.status(500).json({ ok: false }); }
   });
   app.get('/watch/reply', (_req, res) => {
-    const last = newestText(parseSession(runtime.activeSessionId));
-    res.json({ id: idOf(last), working: !!runtime.activeQuery, quiet: isQuiet(), ...newestReply(true) });
+    try {
+      const last = newestText(parseSession(runtime.activeSessionId));
+      res.json({ id: idOf(last), working: !!runtime.activeQuery, quiet: isQuiet(), ...newestReply(true) });
+    } catch (e) { log('WARN', `watch reply failed: ${e?.message || e}`); res.status(500).json({ ok: false }); }
   });
-  app.post('/watch/answer', express.json({ limit: '1kb' }), (req, res) => {
+  // my115: the watch is told whether the message really went (it said OK even when it was refused)
+  app.post('/watch/answer', express.json({ limit: '1kb' }), async (req, res) => {
     const letter = String(req.body?.letter || '').toUpperCase();
     if (!/^[A-D]$/.test(letter)) return res.status(400).json({ ok: false });
     log('INFO', `my50: watch answered ${letter}`);
-    runQuery({ readyState: 3 }, { text: letter, permissionMode: 'default', add: true });
-    res.json({ ok: true });
+    const ok = await runQuery({ readyState: 3 }, { text: letter, permissionMode: 'default', add: true });
+    res.json({ ok: ok !== false });
   });
-  app.post('/watch/say', express.json({ limit: '8kb' }), (req, res) => {
+  app.post('/watch/say', express.json({ limit: '8kb' }), async (req, res) => {
     const text = String(req.body?.text || '').replace(/\s+/g, ' ').trim().slice(0, 2000);
     if (!text) return res.status(400).json({ ok: false });
     log('INFO', `my26: watch said ${text.length} chars`);
-    runQuery({ readyState: 3 }, { text: '(Said on my watch, please answer short and plain, it may be read aloud) ' + text, permissionMode: 'default', add: true });
-    res.json({ ok: true, id: idOf(newestText(parseSession(runtime.activeSessionId))) });
+    const ok = await runQuery({ readyState: 3 }, { text: '(Said on my watch, please answer short and plain, it may be read aloud) ' + text, permissionMode: 'default', add: true });
+    let id = null;
+    try { id = idOf(newestText(parseSession(runtime.activeSessionId))); } catch { /* chat file busy: the watch asks again */ }
+    res.json({ ok: ok !== false, id });
   });
   app.get('/watch/page/:name', async (req, res) => {
     try {

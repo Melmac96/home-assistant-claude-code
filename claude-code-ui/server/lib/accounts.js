@@ -8,6 +8,7 @@
  * email and display name. Before any switch the live sign-in is backed up.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from 'fs';
+import * as fsSync from 'fs';   // my115
 import path from 'path';
 import { spawnSync, execFile, spawn } from 'child_process';   // my114 spawn
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
@@ -312,12 +313,35 @@ export function syncChatAccount(dir) {
 // my114 (Michael 15 Nov): the Free/Paid watcher runs from the moment haAi starts, not only once a chat has started.
 // On 15 Nov it was dead after a restart, so a switch at 11:57 was only noticed at 12:00 and a new chat got locked.
 // The script itself refuses to run twice (pid file), so starting it again is harmless.
-let watcherLogged = false;
-export function startModeWatcher() {
+// my115 (Michael C, 15 Nov): the watcher is checked every 30 s (its pid file must point at a live process) and started
+// again at once if it has died; its own error output goes to a log file instead of being thrown away.
+let watcherLogged = false, lastStart = 0;
+const WATCH_PID = '/data/.config/claude/openrouter-watch.pid';
+const WATCH_LOG = '/data/mode-watcher.log';
+export function modeWatcherAlive() {
   try {
-    const c = spawn('python3', ['-I', SWITCH, 'watch'], { detached: true, stdio: 'ignore', env: process.env });
+    const pid = Number(String(readFileSync(WATCH_PID, 'utf8')).trim());
+    if (!Number.isInteger(pid) || pid <= 1) return false;
+    process.kill(pid, 0);
+    return true;
+  } catch { return false; }
+}
+export function startModeWatcher() {
+  if (modeWatcherAlive()) return;
+  if (Date.now() - lastStart < 20000) return;   // just started one: give it time to write its pid file
+  lastStart = Date.now();
+  try {
+    let out = 'ignore';
+    try {
+      const { openSync, statSync: st } = fsSync;
+      try { if (st(WATCH_LOG).size > 200000) writeFileSync(WATCH_LOG, ''); } catch { /* new file */ }
+      out = openSync(WATCH_LOG, 'a');
+    } catch { out = 'ignore'; }
+    const c = spawn('python3', ['-I', SWITCH, 'watch'], { detached: true, stdio: ['ignore', out, out], env: process.env });
     c.on('error', (e) => log('WARN', `my114: mode watcher did not start: ${e?.message || e}`));
+    c.on('exit', (code) => { if (code) log('WARN', `my115: mode watcher stopped (exit ${code}); see ${WATCH_LOG}. It is started again within 30 s.`); });
     c.unref();
-    if (!watcherLogged) { watcherLogged = true; log('INFO', 'my114: Free/Paid mode watcher started (checked again every 10 min)'); }
+    log('INFO', watcherLogged ? 'my115: Free/Paid mode watcher was not running, started it again' : 'my114: Free/Paid mode watcher started (checked every 30 s)');
+    watcherLogged = true;
   } catch (e) { log('WARN', `my114: mode watcher did not start: ${e?.message || e}`); }
 }

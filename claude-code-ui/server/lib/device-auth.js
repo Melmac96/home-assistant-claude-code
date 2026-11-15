@@ -11,7 +11,7 @@
  * Five wrong codes in 10 minutes lock pairing for 10 minutes.
  */
 import { createHash, randomBytes, randomInt, timingSafeEqual } from 'crypto';
-import { readFileSync, writeFileSync, chmodSync } from 'fs';
+import { readFileSync, writeFileSync, chmodSync, renameSync, copyFileSync, existsSync } from 'fs';   // my115
 import path from 'path';
 import { DATA_DIR } from './config.js';
 import { log } from './log.js';
@@ -21,10 +21,24 @@ const FILE = path.join(DATA_DIR, 'devices.json');
 const COOKIE = 'haai_key';
 const sha = (k) => createHash('sha256').update(k).digest();
 
+// my115 (Michael C, 15 Nov): saved via a temporary file and a rename, so a crash mid-write can never damage the list;
+// if the file cannot be read, the damaged copy is kept and the last good copy is used, and the log says so.
 let devices = [];
-try { devices = JSON.parse(readFileSync(FILE, 'utf8')); if (!Array.isArray(devices)) devices = []; } catch { devices = []; }
+function loadDevices(f) { const d = JSON.parse(readFileSync(f, 'utf8')); if (!Array.isArray(d)) throw new Error('not a list'); return d; }
+try { devices = loadDevices(FILE); }
+catch (e) {
+  if (existsSync(FILE)) {
+    log('ERROR', `my115: paired devices file could not be read (${e.message}); kept as devices.json.damaged`);
+    try { copyFileSync(FILE, FILE + '.damaged'); } catch { /* best effort */ }
+    try { devices = loadDevices(FILE + '.good'); log('WARN', `my115: using the last good copy (${devices.length} device(s))`); } catch { devices = []; }
+  }
+}
 function save() {
-  try { writeFileSync(FILE, JSON.stringify(devices, null, 1)); chmodSync(FILE, 0o600); } catch (e) { log('ERROR', 'devices save failed: ' + e.message); }
+  try {
+    writeFileSync(FILE + '.tmp', JSON.stringify(devices, null, 1)); chmodSync(FILE + '.tmp', 0o600);
+    renameSync(FILE + '.tmp', FILE);
+    copyFileSync(FILE, FILE + '.good'); chmodSync(FILE + '.good', 0o600);
+  } catch (e) { log('ERROR', 'devices save failed: ' + e.message); }
 }
 
 let pending = null;

@@ -66,10 +66,12 @@ function loginSucceeded() {
   catch { return false; }
 }
 
+const LOGIN_MAX_MS = 15 * 60 * 1000;   // my115: an abandoned sign-in is closed after 15 minutes
 function startPolling(onSuccess) {
   if (login.pollInterval) return;
   login.pollInterval = setInterval(() => {
-    if (loginSucceeded()) { stopLoginProc(); onSuccess(); }
+    if (loginSucceeded()) { stopLoginProc(); onSuccess(); return; }
+    if (Date.now() - login.startedAt > LOGIN_MAX_MS) { console.log('[my115] sign-in left unfinished for 15 minutes, closed it'); stopLoginProc(); }
   }, 2000);
 }
 
@@ -106,6 +108,12 @@ export function startLoginFlow(notifyAll, onSuccess) {
     }
   }
 
+  // my115: if the sign-in program cannot start, say so instead of crashing haAi
+  login.proc.on('error', (e) => {
+    console.error(`[my115] sign-in could not start: ${e?.message || e}`);
+    login.proc = null;
+    notifyAll({ type: 'error', message: `The sign-in could not start: ${e?.message || e}` });
+  });
   login.proc.stdout.on('data', tryCapture);
   login.proc.stderr.on('data', tryCapture);
 

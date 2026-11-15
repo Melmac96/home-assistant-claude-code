@@ -137,6 +137,13 @@ loadActive();
 autoContinue.load();
 notifier.load();
 cleanupUploads();          // drop attachments older than a week
+// my115 (Michael C, 15 Nov): the safety net. One failed background job used to be able to take the whole of haAi
+// down (every chat dropped). Now it is written in the log and haAi keeps running.
+process.on('unhandledRejection', (r) => console.error(`[my115] a background step failed (haAi keeps running): ${r?.stack || r}`));
+process.on('uncaughtException', (e) => console.error(`[my115] unexpected error (haAi keeps running): ${e?.stack || e}`));
+// my115: on a normal stop (an install) the 'exit' savers run (the button counts were lost before)
+process.on('SIGTERM', () => { console.log('[my115] stopping (SIGTERM)'); process.exit(0); });
+
 refreshHaLinks();          // populate entity/automation link targets
 autoContinue.rearmOnBoot();
 extras99.startQuotaKeeper();   // my99: every account's figure kept fresh
@@ -146,14 +153,23 @@ extras99.startQuotaKeeper();   // my99: every account's figure kept fresh
 const MAILBOX = '/config/opencode/tools/claude_mailbox.py';
 function keepMailbox() {
   if (!existsSync(MAILBOX)) return;
-  try { spawn('python3', ['-I', MAILBOX], { detached: true, stdio: 'ignore' }).unref(); } catch (e) { console.log(`mailbox start failed: ${e?.message || e}`); }
+  try {
+    const c = spawn('python3', ['-I', MAILBOX], { detached: true, stdio: 'ignore' });
+    c.on('error', (e) => console.log(`mailbox start failed: ${e?.message || e}`));   // my115: async start errors no longer crash haAi
+    c.unref();
+  } catch (e) { console.log(`mailbox start failed: ${e?.message || e}`); }
 }
 setTimeout(keepMailbox, 20000);
 setInterval(keepMailbox, 5 * 60000);
 
+// my115 (Michael C, 15 Nov): a port already in use is logged clearly instead of crashing haAi over and over
+directServer.on('error', (e) => console.error(`[my115] direct device port ${deviceAuth.DIRECT_PORT} could not open: ${e?.message || e}`));
+server.on('error', (e) => { console.error(`[my115] haAi port ${PORT} could not open: ${e?.message || e}`); if (e?.code === 'EADDRINUSE') setTimeout(() => server.listen(PORT, '0.0.0.0'), 5000); });
 directServer.listen(deviceAuth.DIRECT_PORT, '0.0.0.0');
 server.listen(PORT, '0.0.0.0', () => {
-  import('./lib/accounts.js').then((m) => { m.startModeWatcher(); setInterval(() => m.startModeWatcher(), 10 * 60 * 1000); }).catch(() => {});   // my114
+  // my114 + my115: the Free/Paid watcher, checked every 30 s and started again if it has died
+  import('./lib/accounts.js').then((m) => { m.startModeWatcher(); setInterval(() => m.startModeWatcher(), 30 * 1000); })
+    .catch((e) => console.error(`[my115] Free/Paid watcher could not load: ${e?.message || e}`));
   console.log(`Claude Code UI listening on port ${PORT}`);
   console.log(`  Working dir: ${WORK_DIR}`);
   console.log(`  Plugin dir:  ${PLUGIN_DIR}`);

@@ -37,12 +37,20 @@ async function tick() {
     if (!res.ok) return;
     const st = await res.json();
     if (st.state !== 'on' || Date.now() - new Date(st.last_changed).getTime() < WAIT_MS) return;
-    const job = d.jobs.shift();
-    d.done.push({ id: job.id, at: Date.now() });
-    save(d);
-    broadcast({ type: 'overnight', ...listOvernight() });
+    const job = d.jobs[0];
     log('INFO', `my48: starting overnight job ${job.id} (${job.text.length} chars)`);
-    runner({ readyState: 3 }, { text: `[Overnight job he saved earlier. He is asleep: do not ask questions, do not make loud or disruptive changes, and leave a short plain-English report of what you did for the morning.]\n\n${job.text}`, permissionMode: job.permissionMode });
+    // my115: the job only leaves the list once its run has really started; a refused run keeps it for the next check
+    const started = await runner({ readyState: 3 }, { text: `[Overnight job he saved earlier. He is asleep: do not ask questions, do not make loud or disruptive changes, and leave a short plain-English report of what you did for the morning.]\n\n${job.text}`, permissionMode: job.permissionMode, synthetic: true });
+    const now = read();
+    if (started === false) {
+      const j = now.jobs.find((x) => x.id === job.id);
+      if (j) { j.tries = (j.tries || 0) + 1; if (j.tries >= 3) { now.jobs = now.jobs.filter((x) => x.id !== job.id); now.done.push({ id: job.id, at: Date.now(), failed: true }); log('WARN', `my48: overnight job ${job.id} could not start 3 times, put in the morning list as not done`); } save(now); }
+    } else {
+      now.jobs = now.jobs.filter((x) => x.id !== job.id);
+      now.done.push({ id: job.id, at: Date.now() });
+      save(now);
+    }
+    broadcast({ type: 'overnight', ...listOvernight() });
   } catch (e) { log('WARN', `overnight check failed: ${e?.message || e}`); }
 }
 export function startOvernight() { setInterval(tick, 60000).unref?.(); }

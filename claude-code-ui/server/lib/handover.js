@@ -15,6 +15,7 @@ import { parseSession, sessionFile, sessionTitle } from './sessions.js';
 import { modeState } from './accounts.js';
 import { SUPERVISOR_URL } from './config.js';   // my73
 import { DEFAULT_QUICK } from './quick-default.js';   // my74
+import { readJson as readJsonU, saveJson } from './util.js';   // my115
 
 const NOTES_DIR = '/config/opencode/handovers';
 const WAITING = '/config/opencode/waiting-for-you.json';
@@ -24,7 +25,8 @@ const QUICK = '/data/haai-quick.json';
 const SAVED = '/data/haai-saved.json';
 const TMP = '/tmp/haai-save';
 
-const readJson = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return d; } };
+const readJson = readJsonU;   // my115: one shared copy
+const NOTES_MAX_MS = 90 * 1000;   // my115: the notes summary may take this long at most, then the plain chat end is saved
 const ukNow = () => new Date().toLocaleString('sv-SE', { timeZone: 'Europe/London' });
 
 export function getQuick() { return readJson(QUICK, DEFAULT_QUICK); }
@@ -33,7 +35,7 @@ export function saveQuick(msg) {
   const jobs = (Array.isArray(msg.jobs) ? msg.jobs : []).slice(0, 60).map((j) => ({ label: clean(j.label, 40), text: clean(j.text, 2000) })).filter((j) => j.label && j.text);
   const replies = (Array.isArray(msg.replies) ? msg.replies : []).slice(0, 60).map((r) => clean(r, 500)).filter(Boolean);
   const q = { jobs, replies };
-  writeFileSync(QUICK, JSON.stringify(q, null, 1));
+  saveJson(QUICK, q, true);
   return q;
 }
 
@@ -41,7 +43,8 @@ export function saveQuick(msg) {
 // kept OUT of the list until then. show_from = "YYYY-MM-DD" or "YYYY-MM-DD HH:MM" (UK time);
 // after = an automation or entity id: shown once it has fired / changed after the line was added;
 // after = "flag:<name>": shown once /config/opencode/waiting-flags/<name> exists (e.g. energy_watch.py's gas warnings).
-export function getAllWaiting() { const l = readJson(WAITING, []); return Array.isArray(l) ? l : []; }
+// my115: a damaged line (not an object with text) is skipped instead of stopping the whole list
+export function getAllWaiting() { const l = readJson(WAITING, []); return Array.isArray(l) ? l.filter((w) => w && typeof w === 'object' && typeof w.text === 'string') : []; }
 const fired = {};   // id -> ms of the last firing / change, read from Home Assistant
 const addedMs = (w) => { const t = Date.parse(w.added_at || w.when || ''); return Number.isFinite(t) ? t : 0; };
 function isDue(w) {
@@ -65,17 +68,19 @@ async function readFired() {
 }
 let dueKey = null;
 async function dueRound() {
-  await readFired();
-  const key = getWaiting().map((w) => w.id).join(',');
-  if (dueKey !== null && key !== dueKey) broadcast({ type: 'waiting', list: getWaiting() });
-  dueKey = key;
+  try {
+    await readFired();
+    const key = getWaiting().map((w) => w.id).join(',');
+    if (dueKey !== null && key !== dueKey) broadcast({ type: 'waiting', list: getWaiting() });
+    dueKey = key;
+  } catch (e) { log('WARN', `my73: waiting list check failed: ${e?.message || e}`); }   // my115: never crashes haAi
 }
 setTimeout(() => { dueRound(); setInterval(dueRound, 5 * 60 * 1000); }, 20 * 1000);
 export function waitingDone(id) {
   const l = getAllWaiting();
   const hit = l.find((w) => w.id === id);
   if (!hit) return;
-  writeFileSync(WAITING, JSON.stringify(l.filter((w) => w.id !== id), null, 1));
+  saveJson(WAITING, l.filter((w) => w.id !== id), true);
   try { appendFileSync(WAITING_LOG, `${ukNow()} | confirmed by Michael | ${hit.text}\n`); } catch { /* the chat message records it too */ }
 }
 function addWaiting(texts, job) {
@@ -89,13 +94,13 @@ function addWaiting(texts, job) {
     const from = t && typeof t === 'object' && /^\d{4}-\d\d-\d\d( \d\d:\d\d)?$/.test(String(t.show_from || '')) ? { show_from: String(t.show_from) } : {};   // my73
     l.push({ id: randomBytes(4).toString('hex'), text, when: ukNow().slice(0, 10), ...from, ...(jobName ? { job: jobName } : {}) });
   }
-  writeFileSync(WAITING, JSON.stringify(l, null, 1));
+  saveJson(WAITING, l, true);
 }
 
-function chatText(id, max) {
+function chatText(id, max, items = parseSession(id)) {   // my115: the caller may pass the chat it has already read
   const lines = [];
   let you = 0, tools = 0;
-  for (const it of parseSession(id)) {
+  for (const it of items) {
     if (it.kind === 'user') { you++; lines.push('MICHAEL: ' + it.text); }
     else if (it.kind === 'text') lines.push('CLAUDE: ' + it.text);
     else if (it.kind === 'tool_use') tools++;
@@ -111,10 +116,10 @@ function chatText(id, max) {
  */
 const Q_BLOCK = /⟦QUESTION⟧[\s\S]*?⟦\/QUESTION⟧/g;
 const LOOKS_ANSWERED = /^\s*(\*\*)?(Q\d+\s*[.:)-]?\s*)?[A-Z](\*\*)?(\s*$|[\s.,:;)!-])/;
-export function openQuestions(id) {
+export function openQuestions(id, items = parseSession(id)) {
   const out = [];
   let pending = null;
-  for (const it of parseSession(id)) {
+  for (const it of items) {
     if (it.kind === 'text') {
       const blocks = String(it.text || '').match(Q_BLOCK);
       if (blocks) pending = blocks[blocks.length - 1];
@@ -129,20 +134,29 @@ export function openQuestions(id) {
   if (pending) out.push({ q: pending, reply: '' });
   return out.slice(-8);
 }
-export function openQuestionsText(id) {
+export function openQuestionsText(id, items) {
   let list = [];
-  try { list = id ? openQuestions(id) : []; } catch (e) { log('WARN', `my94 open questions: ${e?.message || e}`); }
+  try { list = id ? openQuestions(id, items && items.length ? items : undefined) : []; } catch (e) { log('WARN', `my94 open questions: ${e?.message || e}`); }
   if (!list.length) return '';
   const parts = list.map((x, i) => `QUESTION ${i + 1}:\n${x.q.slice(0, 3000)}\n${x.reply ? `HIS NEXT MESSAGE AFTER IT: ${x.reply}` : 'HIS NEXT MESSAGE AFTER IT: (none, it was never answered)'}`);
   return `\n\nQUESTIONS THAT MAY STILL BE WAITING FOR MICHAEL (haAi my94, he asked that these ALWAYS come back at the start of a new chat):\nFor each one, check the old chat's notes and his next message. Leave out a question only if his next message or the notes clearly answered it, or a later question replaced it. Every other one MUST be shown again in your FIRST reply, in full, in ONE marked question block at the end of that reply (label them Q1, Q2 ... in bold, keep their options, Recommended first, last option Any other answer, no question shown twice), with one short line near the top saying these questions from the old chat were still waiting.\n\n${parts.join('\n\n')}`.slice(0, 16000);
 }
 
+// my115: the summary has a time limit. If it hangs, it is stopped and the note is saved from the chat as it stands,
+// so "New chat" and the automatic 150k move can never be blocked for good.
 async function ask(prompt, model) {
   mkdirSync(TMP, { recursive: true });
   let out = '';
-  for await (const ev of query({ prompt, options: { cwd: TMP, model, settingSources: [], tools: [], maxTurns: 1, env: { ...process.env } } })) {
-    if (ev.type === 'result' && ev.subtype === 'success' && ev.result) out = ev.result;
-  }
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), NOTES_MAX_MS);
+  try {
+    for await (const ev of query({ prompt, options: { cwd: TMP, model, settingSources: [], tools: [], maxTurns: 1, abortController: ac, env: { ...process.env } } })) {
+      if (ev.type === 'result' && ev.subtype === 'success' && ev.result) out = ev.result;
+    }
+  } catch (e) {
+    if (ac.signal.aborted) throw new Error(`the notes summary took longer than ${NOTES_MAX_MS / 1000} s`);
+    throw e;
+  } finally { clearTimeout(timer); }
   return out;
 }
 
@@ -183,9 +197,9 @@ export async function writeNotes(id, title, model, max) {
       if (at > 0) writeFileSync(CHANGES, s.slice(0, at + 1) + `- ${ukNow().slice(0, 10)} | haAi auto-save | ${String(parsed.change_line).replace(/\s+/g, ' ').slice(0, 400)} | Note: ${file.replace('/config/', '')}\n` + s.slice(at + 1));
     } catch (e) { log('WARN', `change log line failed: ${e?.message || e}`); }
   }
-  if (Array.isArray(parsed?.waiting) && parsed.waiting.length) { try { addWaiting(parsed.waiting, parsed.job); } catch { /* the note still has them */ } }
-  const saved = readJson(SAVED, {});
-  try { saved[id] = statSync(sessionFile(id)).mtimeMs; writeFileSync(SAVED, JSON.stringify(saved)); } catch { /* only used to skip repeat saves */ }
+  if (Array.isArray(parsed?.waiting) && parsed.waiting.length) { try { addWaiting(parsed.waiting, parsed.job); } catch (e) { log('WARN', `waiting list lines not added (the note still has them): ${e?.message || e}`); } }
+  const saved = readJson(SAVED, {}) || {};
+  try { saved[id] = statSync(sessionFile(id)).mtimeMs; saveJson(SAVED, saved); } catch { /* only used to skip repeat saves */ }
   return { file, summarised: !!parsed?.summary };
 }
 
@@ -208,9 +222,10 @@ export function saveInBackground(id) {
 
 /** Continue this job: wait for Claude to finish, write the note, open a new chat that reads it. */
 export async function continueJob(ws, startNew) {
-  if (runtime.handoverBusy) return;
+  // my115: never a silent nothing - say what is going on
+  if (runtime.handoverBusy) { send(ws, { type: 'handover_status', text: 'haAi is already saving notes for a new chat. It takes up to a minute or two.' }); return; }
   const id = runtime.activeSessionId;
-  if (!id) return;
+  if (!id) { send(ws, { type: 'handover_status', text: 'This chat is empty, so there is nothing to carry over. Just type in it.' }); return; }
   runtime.handoverBusy = true;
   try {
     if (runtime.activeQuery) {

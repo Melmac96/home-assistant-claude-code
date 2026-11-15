@@ -19,18 +19,22 @@ export function listReminders() {
 function save(l) { writeFileSync(FILE + '.tmp', JSON.stringify(l)); renameSync(FILE + '.tmp', FILE); }
 export function removeReminder(id) { save(listReminders().filter((r) => r.id !== id)); return listReminders(); }
 
+/** Returns how many devices took it (my115: a reminder that reached neither is kept and tried again). */
 async function push(text, late) {
-  if (!process.env.SUPERVISOR_TOKEN) return;
+  if (!process.env.SUPERVISOR_TOKEN) return 0;
+  let ok = 0;
   for (const s of SERVICES) {
     try {
       const res = await fetch(`${SUPERVISOR_URL}/core/api/services/notify/${s}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${process.env.SUPERVISOR_TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: 'Reminder', message: late ? `${text} (a little late, haAi was restarting)` : text, data: { channel: 'Reminders', importance: 'low', tag: 'haai-reminder' } }),
+        signal: AbortSignal.timeout(15000),
       });
-      if (!res.ok) log('WARN', `reminder push ${s} returned ${res.status}`);
+      if (!res.ok) log('WARN', `reminder push ${s} returned ${res.status}`); else ok++;
     } catch (e) { log('WARN', `reminder push failed: ${e.message}`); }
   }
+  return ok;
 }
 
 let last = '';
@@ -38,10 +42,18 @@ async function tick() {
   try {
     const l = listReminders();
     const now = Date.now();
-    const due = l.filter((r) => r.at <= now);
+    const due = l.filter((r) => r.at <= now && (!r.nextTry || r.nextTry <= now));
     if (due.length) {
-      save(l.filter((r) => r.at > now));
-      for (const r of due) await push(r.text, now - r.at > 5 * 60 * 1000);
+      const sentIds = new Set(), keepBack = new Map();
+      for (const r of due) {
+        const n = await push(r.text, now - r.at > 5 * 60 * 1000);
+        if (n > 0) { sentIds.add(r.id); continue; }
+        // my115: it reached neither device. Try again in a minute, 5 tries, then show it on screen so it is never lost.
+        const tries = (r.tries || 0) + 1;
+        if (tries >= 5) { sentIds.add(r.id); log('WARN', `reminder ${r.id} could not reach phone or tablet 5 times`); broadcast({ type: 'handover_status', text: `⏰ Reminder (it could not reach your phone): ${r.text}` }); }
+        else keepBack.set(r.id, { tries, nextTry: Date.now() + 60000 });
+      }
+      save(listReminders().filter((r) => !sentIds.has(r.id)).map((r) => (keepBack.has(r.id) ? { ...r, ...keepBack.get(r.id) } : r)));
     }
     const cur = JSON.stringify(listReminders());
     if (cur !== last) { last = cur; broadcast({ type: 'reminders', list: JSON.parse(cur) }); }

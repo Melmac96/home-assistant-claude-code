@@ -43,7 +43,7 @@ import { batch1Prompt } from './batch1.js';   // my45
 import { batch2Prompt } from './batch2.js';   // my46
 import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js';   // my74
 import { checkRun, recordUsage, recordReplyCost, pctOf, five } from './my90.js';   // my90, my95, my99
-import { freshenQuota } from './extras.js';   // my99
+import { freshenQuota, renewDone } from './extras.js';   // my99, my115
 import { listAccounts } from './accounts.js';   // my90
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
@@ -119,7 +119,32 @@ export function abortActive() {
   }
 }
 
-export async function runQuery(ws, { text, permissionMode, model, effort, add, autoAttempts = 0 }) {
+// my115 (Michael C, 15 Nov): a background phase that has gone quiet this long, or lasted this long, is ended so the
+// chat can never stay "working" for ever (it blocked Free/Paid switching and the automatic chat moves).
+const BACKGROUND_QUIET_MAX_MS = 30 * 60 * 1000;
+const BACKGROUND_TOTAL_MAX_MS = 3 * 60 * 60 * 1000;
+
+/** my115: every caller gets a run that can never crash the server. Any error is logged and shown, and the
+ *  screens are told the chat is idle again, so "Working" cannot stick. Resolves to true when a run really started. */
+export async function runQuery(ws, msg) {
+  try {
+    return await runQueryInner(ws, msg);
+  } catch (e) {
+    const m = String(e?.message || e);
+    log('ERROR', `my115: runQuery failed before or outside the run: ${m}`);
+    try { broadcast({ type: 'error', message: `haAi could not send that message: ${m}. Nothing was lost: send it again.`, chat: slotNow().id }); } catch {}
+    try { broadcast({ type: 'run_idle', chat: slotNow().id }); } catch {}
+    return false;
+  }
+}
+
+/** my115: an early return that never started a run still tells every screen to stop showing "Working". */
+function notStarted(slot) {
+  broadcast({ type: 'run_idle', chat: slot.id });
+  return false;
+}
+
+async function runQueryInner(ws, { text, permissionMode, model, effort, add, autoAttempts = 0, synthetic = false }) {
   // my26: the Add button. A message sent WHILE a turn is running goes into that same
   // running chat instead of stopping it (the old way aborted the turn). If the run has
   // just ended (channel closed), it falls through and is sent as a normal new message.
@@ -128,7 +153,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     slotNow().asks = false;   // my77
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
     log('INFO', `my26: message added into the running turn (no stop): promptLen=${text.length}`);
-    return;
+    return true;
   }
 
   // The previous turn already reported its `result`, but a background task it
@@ -137,9 +162,10 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // — aborting would kill the background work, which is the bug this exists to
   // avoid. (autoAttempts !== 0 is a headless auto-continue resume, which always
   // starts its own run.)
-  if (autoAttempts === 0 && runtime.activeRun?.phase === 'background') {
+  // my115: only when the push really went in (a channel closed a moment ago refuses it, and the message then
+  // starts a normal new run below instead of vanishing).
+  if (autoAttempts === 0 && runtime.activeRun?.phase === 'background' && runtime.activeRun.channel.push(text)) {
     for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: slotNow().id });
-    runtime.activeRun.channel.push(text);
     slotNow().asks = false;   // my77
     log('INFO', `prompt queued into backgrounded run (waiting on ${runtime.backgroundTasks.size} task(s)): promptLen=${text.length}`);
     const fm0 = freeModelOverride(); if (fm0) model = fm0;   // my17
@@ -151,11 +177,22 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     // makeCanUseTool reading runtime.activePermMode at call time; a run that
     // started in 'auto' can't be live-switched regardless of this path.
     if (permissionMode) runtime.activePermMode = permissionMode;
-    return;
+    return true;
+  }
+
+  // my115: a message he sends while this chat is moving to a new one is carried into the new chat, never aborted.
+  if (autoAttempts === 0 && !synthetic && slotNow().moving) {
+    const sm = slotNow();
+    sm.moveExtra = [...(sm.moveExtra || []), text];
+    for (const c of connections) if (c !== ws) send(c, { type: 'user', text, chat: sm.id });
+    broadcast({ type: 'handover_status', chat: sm.id, text: 'This chat is moving to a new one. Your message goes with it.' });
+    log('INFO', `my115: message kept for the chat that is moving (promptLen=${text.length})`);
+    return true;
   }
 
   // my113: a chat past 150k moves the moment he answers a question (the new chat gets the question and his answer)
-  if (autoAttempts === 0 && await moveOnAnswer(slotNow(), text)) return;
+  // my115: never for haAi's own messages (a timed job is not his answer)
+  if (autoAttempts === 0 && !synthetic && await moveOnAnswer(slotNow(), text)) return true;
 
   abortActive();
 
@@ -192,6 +229,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // my77: a grey free-account chat runs on the free provider in its own settings folder; every other chat keeps
   // its own Claude account, and one opened alongside others takes the account with the most allowance left.
   let acct;
+  if (!slot.free) await renewDone();   // my115: never start on a sign-in that is being renewed this moment
   if (slot.free) {
     try { acct = prepareFreeDir(); }
     catch (e) {
@@ -199,33 +237,38 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       if (runtime.activeQuery === abortController) runtime.activeQuery = null;
       broadcast({ type: 'error', message: `The free account could not start: ${e?.message || e}. Nothing was sent. Use one of your Claude chats instead, or try again later.` });
       chatHooks.changed();
-      return;
+      return notStarted(slot);
     }
   } else {
     const others = runningChats().filter((x) => x !== slot && x.account && !x.free);
     const alone = ![...chats.values()].some((x) => x !== slot && !x.free && (x.query || x.sessionId || x.opened));
-    try { await freshenQuota(); } catch (e) { log('WARN', `my99: live check failed: ${e?.message || e}`); }   // my99: never decide on an old figure
+    // my99: never decide on an old figure. my115: but never wait more than 4 s for it (the saved figure is used then).
+    try { await Promise.race([freshenQuota(), new Promise((r) => setTimeout(r, 4000))]); } catch (e) { log('WARN', `my99: live check failed: ${e?.message || e}`); }
+    await renewDone();   // my115: the live check may have started a renewal; wait for it before starting
     const wasOn = slot.account || null;
     acct = pickChatAccount(others.map((x) => x.account), slot, alone);
     // my99: what the account stood at before this reply, and whether the chat just moved (that first reply costs more)
-    try { const f0 = five(acct.email); if (f0.used != null) my99Start = f0.used; } catch {}
+    try { const f0 = five(acct.email); if (f0.used != null) my99Start = f0.used; } catch (e) { log('WARN', `my99: start figure unreadable: ${e?.message || e}`); }
     my99Moved = !!(acct.moved || (wasOn && acct.email && wasOn !== acct.email));
     // my90: every account is at its limit - stop and tell him (Carry on / Wait on the page).
     if (acct.stop) {
       log('WARN', `my90: not starting chat ${slot.id}: ${acct.stop}`);
       if (runtime.activeQuery === abortController) runtime.activeQuery = null;
       broadcast({ type: 'cycle_stop', text: acct.stop, chat: slot.id });
+      // my115: his message is kept: it goes back into the typing box so he never has to type it again.
+      if (!synthetic && autoAttempts === 0) broadcast({ type: 'draft_back', text, chat: slot.id });
       notify('stopped', { title: 'haAi stopped: accounts used up', message: acct.stop.slice(0, 200) });
       chatHooks.changed();
-      return;
+      return notStarted(slot);
     }
     if (acct.moved) { broadcast({ type: 'accounts', ...listAccounts() }); broadcast({ type: 'cycle_moved', to: acct.email }); }
   }
   slot.account = acct.email;
   if (acct.free) slot.service = freeServiceText(acct.provider, acct.model);   // my78: named in its typing box
   slot.finishedUnseen = false;
-  slot.asks = false;   // my77: he has answered
+  if (!synthetic) slot.asks = false;   // my77: he has answered (my115: haAi's own messages never count as his answer)
   slot.turnText = '';
+  slot.lastText = '';   // my115: the last text block only, for the question check
   const opts = {
     cwd: WORK_DIR, abortController, plugins: PLUGINS, settings: MCP_FREE_SETTINGS,
     env: { ...process.env, CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS: '1', ...(acct.dir ? { CLAUDE_CONFIG_DIR: acct.dir } : {}),
@@ -339,6 +382,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   let failed = false;
   let runPhase = 'turn';
   let backgroundHeartbeatTicks = 0;
+  let backgroundSince = 0;   // my115
 
   const syncBackgroundTasks = (tasks) => {
     const next = new Map();
@@ -371,6 +415,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     if (runtime.backgroundTasks.size > 0) {
       if (runPhase !== 'background') {
         runPhase = 'background';
+        backgroundSince = Date.now();
         if (runtime.activeRun) runtime.activeRun.phase = 'background';
         log('INFO', `turn finished; waiting on ${runtime.backgroundTasks.size} background task(s): ` +
           [...runtime.backgroundTasks.values()].map((t) => t.description).join(', '));
@@ -394,6 +439,16 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       backgroundHeartbeatTicks += 1;
       if (backgroundHeartbeatTicks % BACKGROUND_HEARTBEAT_TICKS === 0) {
         vlog(`still waiting on ${runtime.backgroundTasks.size} background task(s)`);
+      }
+      // my115: a background wait that went silent (or ran too long) is ended, so the chat is never stuck "working".
+      const quiet = Date.now() - lastEventAt, total = Date.now() - (backgroundSince || startedAt);
+      if (quiet >= BACKGROUND_QUIET_MAX_MS || total >= BACKGROUND_TOTAL_MAX_MS) {
+        log('WARN', `my115: background wait ended after ${Math.round(total / 60000)} min (quiet ${Math.round(quiet / 60000)} min): ` +
+          [...runtime.backgroundTasks.values()].map((t) => t.description).join(', '));
+        broadcast({ type: 'task_notice', status: 'stopped', summary: `A background job went quiet for ${Math.round(quiet / 60000)} minutes, so haAi stopped waiting for it. The chat is free again.`, chat: slot.id });
+        runtime.backgroundTasks = new Map();
+        broadcast({ type: 'background_tasks', tasks: [] });
+        channel.close();
       }
       return;
     }
@@ -477,6 +532,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
             vlog(`text: ${block.text.length} chars`);
             broadcast({ type: 'text', text: block.text });
             slot.turnText = (slot.turnText || '').slice(-4000) + block.text;   // my77: does this reply end on a question?
+            slot.lastText = block.text;   // my115
             noteDoneText(event.session_id || runtime.activeSessionId, block.text);   // my74
           } else if (block.type === 'tool_use') {
             vlog(`tool_use: ${block.name}`);
@@ -527,17 +583,17 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         // exactly what the engine reports before designing a usage screen.
         try {
           const f = '/data/usage-events.jsonl';
-          try { if (statSync(f).size > 200000) writeFileSync(f, ''); } catch {}
+          try { if (statSync(f).size > 200000) writeFileSync(f, ''); } catch { /* no file yet */ }
           appendFileSync(f, JSON.stringify({ at: new Date().toISOString(), event }) + '\n');
-        } catch {}
+        } catch (e) { vlog(`usage log write failed: ${e?.message || e}`); }
         log('INFO', `usage update: ${JSON.stringify(info)}`);
         vlog(`rate_limit: status=${info.status} type=${info.rateLimitType} ` +
           `resetsAt=${info.resetsAt || 'n/a'} util=${info.utilization ?? 'n/a'}`);
         runtime.lastUsage = { status: info.status, rateLimitType: info.rateLimitType,
           resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
-        try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch {}   // my77: cost so far on the chat's tab (before the store moves on)
-        try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch {}   // my40: Accounts quota, account in use; my77: this chat's own account
+        try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch (e) { log('WARN', `my77: chat cost failed: ${e?.message || e}`); }   // my77: cost so far on the chat's tab (before the store moves on)
+        try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch (e) { log('WARN', `my40: quota save failed: ${e?.message || e}`); }   // my40: Accounts quota, account in use; my77: this chat's own account
         // my90/my95: the account is chosen BEFORE each reply so the reply fits under 95%; only if a reply still reaches
         // 95% of its 5 hours (the safety net) is it stopped and carried on with the next account,
         // or stopped altogether when every account is at its limit.
@@ -675,7 +731,9 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     slot.lastCut = !abortController.signal.aborted && !limitHit && !slot.cycleMove && !slot.lastOk && (failed || resultSeen || !!slot.turnText);
     slot.finishedUnseen = !abortController.signal.aborted && !failed;   // my58
     slot.finishedAt = Date.now();   // my77: folds into Previous chats 30 minutes after this
-    slot.asks = !abortController.signal.aborted && /⟦QUESTION⟧/.test(slot.turnText || '');   // my77: "Chat 2 needs your answer"
+    // my77: "Chat 2 needs your answer". my115: only the LAST text block counts (a marker quoted part-way through a
+    // reply no longer blocks the chat moves until he answers).
+    slot.asks = !abortController.signal.aborted && /⟦QUESTION⟧/.test(slot.lastText || '');
     chatHooks.changed();
     // The new or updated session (and its title) should appear in the list.
     broadcast({ type: 'sessions', sessions: listSessions(), activeId: runtime.activeSessionId });
@@ -683,21 +741,26 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
     // Anything the run just created — a new automation, a new entity — should be
     // linkable in the reply that announces it.
     refreshHaLinks().then(() =>
-      broadcast({ type: 'ha_links', entities: runtime.haLinks.entities, automations: runtime.haLinks.automations }));
+      broadcast({ type: 'ha_links', entities: runtime.haLinks.entities, automations: runtime.haLinks.automations }))
+      .catch((e) => log('WARN', `ha links refresh failed: ${e?.message || e}`));
 
     // my90: the account reached its limit mid-reply - carry on in this same chat with the next account, or say why it stopped.
     // my95: remember what a finished reply cost (not one stopped part-way; a reset in between gives a fall, ignored)
     try {
       const from = my99Start != null && my95From != null && my99Start <= my95From ? my99Start : my95From;   // my99: count the first call too
       if (!acct.free && from != null && my95To >= from && (!slot.cycleMove || my99Moved)) recordReplyCost(my95To - from, my99Moved);
-    } catch {}
+    } catch (e) { log('WARN', `my95: reply cost not saved: ${e?.message || e}`); }
     if (slot.cycleMove) {
       const mv = slot.cycleMove; slot.cycleMove = null;
       broadcast({ type: 'cycle_moved', from: mv.from, to: mv.to, used: mv.used, chat: slot.id });
-      setTimeout(() => inChat(slot, () => runQuery({ readyState: 3 }, {
-        text: `(haAi: the account in use reached ${mv.used}% of its 5 hours, so haAi stopped your last reply part-way and moved this chat to another Claude account. Carry on with the same job exactly where you stopped. First check whether the last step finished, and redo it only if it did not.)`,
-        permissionMode: permissionMode || DEFAULT_PERMISSION_MODE, model, effort,
-      })), 2000);
+      setTimeout(() => {
+        // my115: if he (or anything else) started a run in this chat in the meantime, that run carries on instead.
+        if (slot.query) { log('INFO', 'my90: account-move resume skipped, a new run already started'); return; }
+        inChat(slot, () => runQuery({ readyState: 3 }, {
+          text: `(haAi: the account in use reached ${mv.used}% of its 5 hours, so haAi stopped your last reply part-way and moved this chat to another Claude account. Carry on with the same job exactly where you stopped. First check whether the last step finished, and redo it only if it did not.)`,
+          permissionMode: permissionMode || DEFAULT_PERMISSION_MODE, model, effort, synthetic: true,
+        }));
+      }, 2000);
     } else if (slot.cycleStop) {
       const text = slot.cycleStop; slot.cycleStop = null;
       broadcast({ type: 'cycle_stop', text, chat: slot.id });
@@ -713,6 +776,7 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       });
     }
   }
+  return true;
 }
 
 // my114 (Michael A, 15 Nov 2026): when a message never reaches Claude, show him a plain message instead of silence.

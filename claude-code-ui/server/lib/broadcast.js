@@ -11,7 +11,7 @@ export const connections = new Set();
 
 export function send(ws, data) {
   if (ws.readyState === 1) {
-    try { ws.send(JSON.stringify(data)); } catch {}
+    try { ws.send(JSON.stringify(data)); } catch (e) { console.warn(`[broadcast] send failed: ${e?.message || e}`); }
   }
 }
 
