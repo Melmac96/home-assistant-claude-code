@@ -542,7 +542,7 @@ function handleOne(msg) {
       onKeepMessage(msg);
       break;
 
-    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders': case 'brief': case 'screen_shot': case 'overnight': case 'quiet':   // my40, my45, my46 (brief was missing), my47, my48
+    case 'stars': case 'prefs': case 'advisor': case 'refresh_result': case 'app_latest': case 'quota': case 'reminders': case 'brief': case 'screen_shot': case 'overnight': case 'quiet': case 'tv_pip': case 'ideas':   // my40, my45, my46 (brief was missing), my47, my48; my119: + tv_pip (mini TV) and ideas, never passed on before
       onExtrasMessage(msg);
       break;
 
