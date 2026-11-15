@@ -28,6 +28,9 @@ function isStale(content) {
   return false;
 }
 
+// my105: the TV-only question line stays hidden everywhere else (tv.js shows it on the TV)
+{ const st = document.createElement('style'); st.textContent = '.q-tv{display:none}'; document.head.append(st); }
+
 export function enhanceQuestions(content) {
   const raw = content._rawMd || '';
   if (!raw.includes('⟦/QUESTION⟧')) return;
@@ -124,6 +127,10 @@ export function enhanceQuestions(content) {
   const last = usable[usable.length - 1].cards.slice(-1)[0];
   (last._box || last).after(send);
   paint();
+  // my105 (Michael 15 Nov): the TV shows one line instead of the question; he answers on the phone or tablet
+  for (let n = kids[start]; n; n = n.nextElementSibling) { n.classList.add('q-part'); if (n === kids[end]) break; }
+  const tvq = document.createElement('div'); tvq.className = 'q-tv'; tvq.textContent = 'Question - Waiting For An Answer';
+  kids[start].before(tvq);
   if (isStale(content)) lock(content);
 }
 
@@ -131,6 +138,7 @@ function lock(root) {
   root.querySelectorAll('.answer-send').forEach((b) => b.remove());
   root.querySelectorAll('.answer-other').forEach((b) => { if (!b.value) b.remove(); else b.disabled = true; });
   root.querySelectorAll('.answer-card').forEach((b) => { b.disabled = true; b.classList.add('locked'); });
+  root.querySelectorAll('.q-tv').forEach((b) => b.classList.add('q-done'));
 }
 
 /** A message has gone in, so every question above it is finished with. */

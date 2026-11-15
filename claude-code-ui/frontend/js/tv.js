@@ -43,6 +43,10 @@ if (isTv) {
 .haai-tv .bubble-user{align-self:stretch!important;width:100%;max-width:100%!important;box-sizing:border-box;background:transparent!important;border:0!important;border-top:2px solid var(--line-blue,#1f5fae)!important;border-bottom:2px solid var(--line-blue,#1f5fae)!important;border-radius:0!important}
 /* my105 (Michael 15 Nov): no buttons under replies or his messages on the TV - Broke a rule, Explain it, Another way, speaker, star, time and Remember are tablet only */
 .haai-tv .bubble-assistant>.reply-foot,.haai-tv .bubble-assistant>.reply-chips,.haai-tv .bubble-assistant>.read-top,.haai-tv .bubble-assistant>.msg-time,.haai-tv .bubble-user>.h93-rem,.haai-tv .bubble-user>.msg-time{display:none!important}
+/* my105: questions = one line on the TV (gone once answered); no answer buttons, no card buttons; none of Claude's working shown (tool steps, thinking, run lines, helper reports) */
+.haai-tv .q-tv{display:block!important;margin:6px 0;padding:6px 12px;border:1px solid var(--accent);border-radius:8px;color:#9cc8ff;font-weight:600}
+.haai-tv .q-tv.q-done,.haai-tv .q-part,.haai-tv #tidy-chips,.haai-tv .bubble-assistant .h2-btn,.haai-tv .bubble-assistant .h2-row{display:none!important}
+.haai-tv .tool-group,.haai-tv .tool-call,.haai-tv .result-line,.haai-tv .agent-report,.haai-tv .compacted-divider,.haai-tv .older-line,.haai-tv .thinking{display:none!important}
 .haai-tv #attach-btn,.haai-tv .tidy-morebtn,.haai-tv #keep-btn,.haai-tv #send-btn,.haai-tv .h97-hand,.haai-tv .h97-lots:not(.h97-done){display:none!important}`;
   document.head.append(css);
 
