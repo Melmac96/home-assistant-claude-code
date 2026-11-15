@@ -47,7 +47,20 @@ const modelName = () => {
 };
 const effWord = () => EFF_WORD[S.realEffort || effortSelect.value] || '';
 const modelLabel = () => `${modelName()}${effWord() ? ' · ' + effWord() : ''}`.trim();
-window.addEventListener('haai-real-model', () => { drawTk(); cycle(true); });
+// my125 (Michael 15 Nov): the typing box never says just 'Default' - it says which model that is, e.g. 'Default · Sonnet 5.5'.
+// The picked row shows what the running chat reported (S.realModel); other rows show what they resolve to, when known.
+function nameDefault() {
+  for (const o of modelSelect.options) {
+    if (o.value !== 'default') continue;
+    if (o.dataset.orig === undefined) o.dataset.orig = o.textContent;
+    const id = (o.selected && S.realModel) || o.dataset.resolvedModel || '';
+    const n = niceModel(id);
+    o.textContent = n ? `Default · ${n}` : o.dataset.orig;
+  }
+}
+window.addEventListener('haai-real-model', () => { nameDefault(); drawTk(); cycle(true); });
+window.addEventListener('haai-models', nameDefault);
+modelSelect.addEventListener('change', nameDefault);
 modelSelect.addEventListener('change', () => { S.realModel = ''; S.realEffort = ''; });
 effortSelect.addEventListener('change', () => { S.realEffort = ''; });
 window.haaiNextK = () => tokensK() + growth;   // my54: used by the stop-before-sending check (guard.js)
