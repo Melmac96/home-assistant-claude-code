@@ -3,7 +3,11 @@
 .header{padding:2px 9px!important;max-height:none!important;border-bottom:1px solid #1c1d20}
 .header-left{gap:7px}
 .tidy-star{color:#7d8087;font-size:20px;line-height:1;width:20px;text-align:center}
-.tidy-star.on{color:#46bb68;text-shadow:0 0 8px #46bb68}
+.tidy-star.on{color:#46bb68;text-shadow:0 0 8px #46bb68;animation:haai-star-ok 3s ease-in-out infinite}
+/* my104 (Michael 15 Nov): green star fades slowly on and off while connected; red flashes when the link has been lost for 5 s */
+.tidy-star.bad{color:#f3736c;text-shadow:0 0 8px #f3736c;animation:haai-star-bad 1.5s ease-in-out infinite}
+@keyframes haai-star-ok{0%,100%{opacity:1}50%{opacity:.2}}
+@keyframes haai-star-bad{0%,100%{opacity:1}50%{opacity:.1}}
 .header-left .svc-badge{margin-left:0!important;padding:2px 10px!important;border-radius:10px}
 .icon-group{gap:5px!important}
 .icon-group .icon-btn{width:30px!important;height:30px!important;border-radius:10px!important}

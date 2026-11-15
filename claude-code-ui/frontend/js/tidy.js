@@ -312,8 +312,16 @@ window.addEventListener('haai-health', (e) => { health = e.detail.data; lost = e
 modelSelect.addEventListener('change', () => { drawTk(); cycle(true); });
 effortSelect.addEventListener('change', () => { drawTk(); cycle(true); });
 window.addEventListener('haai-models', () => { drawTk(); cycle(true); });
-star.classList.toggle('on', statusDot.classList.contains('connected'));
-new MutationObserver(() => star.classList.toggle('on', statusDot.classList.contains('connected'))).observe(statusDot, { attributes: true, attributeFilter: ['class'] });
+// my104: green + slow fade while connected; red flashing once the link has been lost for 5 s (a quick reconnect stays quiet)
+let starBadTimer = null;
+const starState = () => {
+  const ok = statusDot.classList.contains('connected');
+  star.classList.toggle('on', ok);
+  if (ok) { clearTimeout(starBadTimer); starBadTimer = null; star.classList.remove('bad'); }
+  else if (!starBadTimer && !star.classList.contains('bad')) starBadTimer = setTimeout(() => { starBadTimer = null; if (!statusDot.classList.contains('connected')) star.classList.add('bad'); }, 5000);
+};
+starState();
+new MutationObserver(starState).observe(statusDot, { attributes: true, attributeFilter: ['class'] });
 
 // ── answer chips (A / B / C) above the typing box ────────────────────────────
 const chips = mk('div'); chips.id = 'tidy-chips'; chips.classList.add('hidden');
