@@ -9,7 +9,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, chmodSync, readdirSync, unlinkSync, symlinkSync, lstatSync, rmSync } from 'fs';
 import path from 'path';
-import { spawnSync, execFile } from 'child_process';
+import { spawnSync, execFile, spawn } from 'child_process';   // my114 spawn
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
 import { chooseAccount, cycleState, tidyState, SWITCH_AT } from './my90.js';   // my90
@@ -307,4 +307,17 @@ export function syncChatAccount(dir) {
     const a = readJson(f);
     if (a && a.credentials !== live) { a.credentials = live; a.savedAt = new Date().toISOString(); writePrivate(f, JSON.stringify(a)); }
   } catch (e) { log('WARN', `my58: could not save the refreshed sign-in: ${e?.message || e}`); }
+}
+
+// my114 (Michael 15 Nov): the Free/Paid watcher runs from the moment haAi starts, not only once a chat has started.
+// On 15 Nov it was dead after a restart, so a switch at 11:57 was only noticed at 12:00 and a new chat got locked.
+// The script itself refuses to run twice (pid file), so starting it again is harmless.
+let watcherLogged = false;
+export function startModeWatcher() {
+  try {
+    const c = spawn('python3', ['-I', SWITCH, 'watch'], { detached: true, stdio: 'ignore', env: process.env });
+    c.on('error', (e) => log('WARN', `my114: mode watcher did not start: ${e?.message || e}`));
+    c.unref();
+    if (!watcherLogged) { watcherLogged = true; log('INFO', 'my114: Free/Paid mode watcher started (checked again every 10 min)'); }
+  } catch (e) { log('WARN', `my114: mode watcher did not start: ${e?.message || e}`); }
 }

@@ -28,7 +28,7 @@ import { connections, send, broadcast } from './broadcast.js';
 import { isAuthError, isSubscriptionAuth } from './auth.js';
 import { freeModelOverride, pickChatAccount, syncChatAccount, prepareFreeDir, freeServiceText } from './accounts.js';
 import { slotNow, inChat, runningChats, hooks as chatHooks, MAX_RUNNING, chats, CLASH_MS } from './chats.js';   // my58, my77
-import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder, ADD_NOTE } from './sessions.js';   // my101 ADD_NOTE
+import { listSessions, saveActive, isQuestionAnswer, parseTaskNotification, truncateOutput, isNoResponsePlaceholder, ADD_NOTE, sessionFile } from './sessions.js';   // my101 ADD_NOTE   // my114 sessionFile
 import { hooksFor, makeCanUseTool } from './permissions.js';
 import { askQuestion } from './dialogs.js';
 import { refreshHaLinks } from './ha-links.js';
@@ -331,6 +331,8 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
   // signal (REPLACE semantics); `task_progress` only enriches the entries
   // already there. Ambient tasks (housekeeping, not activity) are excluded.
   let resultSeen = false;
+  let sawReply = false;   // my114: did any text or tool step reach the screen this turn?
+  let blockShown = false;   // my114: a hook-block reason already shown
   // If this CLI never sends session_state_changed, the run's genuine end (the
   // `finally` below) stands in for it, so a reply is still announced.
   let sawStateEvents = false;
@@ -461,7 +463,15 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
           broadcast({ type: 'task_notice', taskId: event.task_id, status: event.status, summary: event.summary });
         }
 
+      } else if (event.type === 'system' && event.subtype === 'informational' && /blocked by hook/i.test(String(event.content || ''))) {
+        // my114 (Michael A, 15 Nov): a start-of-message check that BLOCKS the message is always shown, never silence
+        // (12:01-12:16 on 15 Nov, 16 messages were blocked and he saw nothing).
+        blockShown = true; sawReply = true;
+        log('WARN', `my114: message blocked by a hook: ${String(event.content).slice(0, 200)}`);
+        broadcast({ type: 'text', text: blockedText(event.content) });
+
       } else if (event.type === 'assistant' && !isNoResponsePlaceholder(event)) {
+        sawReply = true;   // my114
         for (const block of (event.message?.content || [])) {
           if (block.type === 'text' && block.text) {
             vlog(`text: ${block.text.length} chars`);
@@ -563,6 +573,13 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
         if (runtime.credentialsExpired) {
           runtime.credentialsExpired = false;
           broadcast({ type: 'auth_status', authenticated: true });
+        }
+        if (!sawReply && !blockShown && !event.num_turns) {   // my114: nothing reached Claude - say so, and why if we can find it
+          blockShown = true;
+          let why = typeof event.result === 'string' ? event.result : '';
+          if (!/blocked/i.test(why)) why = lastBlockReason(event.session_id || runtime.activeSessionId, startedAt) || '';
+          log('WARN', `my114: turn ended with 0 turns and no reply${why ? ' (blocked)' : ''}`);
+          broadcast({ type: 'text', text: blockedText(why) });
         }
         slot.lastOk = event.subtype === 'success' && !limitHit;   // my91: only a reply that really finished moves the chat on
         const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
@@ -696,4 +713,24 @@ export async function runQuery(ws, { text, permissionMode, model, effort, add, a
       });
     }
   }
+}
+
+// my114 (Michael A, 15 Nov 2026): when a message never reaches Claude, show him a plain message instead of silence.
+function blockedText(reason) {
+  const r = String(reason || '').replace(/^UserPromptSubmit operation blocked by hook:\s*/i, '').split('\n\nOriginal prompt:')[0].trim();
+  return '🔹🔹🔹🔹🔹🔹🔹🔹\n\n**Your message did not reach Claude**\n\n' +
+    (r ? 'A safety check stopped it. Its message was:\n\n> ' + r.slice(0, 600).replace(/\n/g, '\n> ') + '\n\n'
+       : 'Claude did no work on it and gave no reason. ') +
+    'Tap **New chat** to carry on. Your message was not lost: send it again in the new chat.';
+}
+function lastBlockReason(sid, since) {
+  try {
+    if (!sid) return '';
+    const lines = readFileSync(sessionFile(sid), 'utf8').trim().split('\n').slice(-30).reverse();
+    for (const l of lines) {
+      let e; try { e = JSON.parse(l); } catch { continue; }
+      if (e.type === 'system' && /blocked by hook/i.test(String(e.content || '')) && Date.parse(e.timestamp || 0) >= since - 5000) return String(e.content);
+    }
+  } catch {}
+  return '';
 }

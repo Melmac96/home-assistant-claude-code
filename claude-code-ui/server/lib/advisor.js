@@ -40,6 +40,10 @@ export function setAdvisor(patch) {
   return next;
 }
 
+const FREE_LINE = 'FREE OR ANOTHER ACCOUNT (Michael 15 Nov, my114): "if the turn can be done just as well for free then it should be done by a free account". So EVERY ⟦ADVISE|...⟧ line ends with two more fields: |free|freenote  where free = same (a free model would do this job just as well), worse (it could, but not as well) or private (health, home security, money, passwords or private files: those NEVER go to a free model), and freenote = one short plain sentence saying why. A free chat starts fresh and cannot see this chat, so say same only when the job stands on its own. Example: ⟦ADVISE|haiku|low|quick check|One state to read back.|same|A free model reads one state just as well.⟧ The card offers the switch on this account, the other paid account with the most room, and the free chat, by itself; you only give the verdict. When no model change is needed but a free model would clearly do the job just as well, write ⟦ADVISE|free|-|kind|reason|same|freenote⟧.';
+// my114: used when a model was chosen by hand or advised: only the free suggestion is allowed then.
+const FREE_ONLY = 'Only when a free model would CLEARLY do THIS job just as well (it stands on its own and is not private: no health, home security, money, passwords or private files), put this line on its own line under your bold heading: ⟦ADVISE|free|-|kind|reason|same|freenote⟧ (kind = 1-3 plain words, reason and freenote = one short plain sentence each, no | and no ⟧). He gets a button that does it in a free chat. Otherwise write nothing about it.';
+const skipText = (a) => a.declined.length ? ` He said "Stay as I am" for these kinds of job, so do NOT suggest again for them: ${a.declined.map((d) => d.kind).join(', ')}.` : '';
 const isDefaultChoice = (model, effort) => (!model || /sonnet/i.test(model)) && (!effort || effort === 'medium');
 
 // The standing instruction added to the chat for this turn (or '' = none).
@@ -50,13 +54,14 @@ export function advisorPrompt(model, effort) {
   // silenced the advisor for good (found 2026-11-09, flag stuck since 12:45). The real model and effort win.
   if (a.advised && isDefaultChoice(model, effort)) a = setAdvisor({ advised: false });
   if (a.advised) {
-    return [
+    return FREE_ONLY + ' ' + [
       'MODEL ADVISOR (haAi): this chat was switched to a different model for one job. When that job is FINISHED and you are not expecting more steps of it,',
       'put this single line on its own line directly under your bold heading: ⟦ADVISE|back⟧  (nothing else on it). Otherwise write nothing about the advisor.',
     ].join(' ');
   }
-  if (!isDefaultChoice(model, effort)) return '';   // his own manual choice is left alone
-  const skip = a.declined.length ? ` He said "Stay on Sonnet" for these kinds of job, so do NOT suggest again for them: ${a.declined.map((d) => d.kind).join(', ')}.` : '';
+  // my114: his own model choice is left alone, but a job a free model does just as well is still offered to the free chat
+  if (!isDefaultChoice(model, effort)) return 'MODEL ADVISOR (haAi): ' + FREE_ONLY + skipText(a);
+  const skip = skipText(a);
   return [
     'MODEL ADVISOR (haAi), normal turn, costs nothing extra. Judge THIS request before you answer.',
     'Only when it is a CLEAR case, put ONE line on its own line directly under your bold heading (never at the end of the message), exactly in this form:',
@@ -69,6 +74,7 @@ export function advisorPrompt(model, effort) {
     'Opus on High fits: building or changing an app or add-on, debugging that is not obvious, anything touching several files or devices, security or money, a plan that needs careful thought, work that already went wrong once in this chat.',
     'Haiku on Low fits: a single fact, a status check, reading one file back, a one-line edit, a short rewrite, a yes/no.',
     'Still answer the request normally in the same reply. If it is not a clear case, write NOTHING about the advisor. Never suggest twice in a row for the same kind of job.' + skip,
+    FREE_LINE,
   ].join(' ');
 }
 

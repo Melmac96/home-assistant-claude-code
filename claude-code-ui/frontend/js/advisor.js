@@ -17,6 +17,24 @@ let card = null;           // { to, effort, kind, reason } or null
 const handled = new Set(JSON.parse(localStorage.getItem('adv-handled') || '[]'));
 const markHandled = (k) => { handled.add(k); localStorage.setItem('adv-handled', JSON.stringify([...handled].slice(-40))); try { send({ type: 'advisor_set', handledKey: String(k) }); } catch { /* not connected yet */ } };   // my104: tell the other devices
 
+// my114 (Michael 15 Nov): the card also offers the other PAID account with the most room, and a FREE chat, and says
+// whether the free one would do the job just as well (Claude's verdict: same / worse / private).
+let accts = { cur: null, saved: [], free: false };
+let quota = {};
+window.addEventListener('haai-accounts', (e) => { accts = e.detail || accts; if (card) draw(); });
+window.addEventListener('haai-quota', (e) => { quota = e.detail || {}; if (card) draw(); });
+const SHORTN = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd' };
+const used5 = (email) => { const w = (quota[String(email).toLowerCase()] || {}).five_hour; if (!w) return null; return w.resetsAt && w.resetsAt * 1000 <= Date.now() ? 0 : w.used; };
+function otherPaid() {
+  const cur = accts.cur && accts.cur.email;
+  const list = (accts.saved || []).filter((a) => !a.active && a.email !== cur).map((a) => ({ ...a, used: used5(a.email) }));
+  if (!list.length) return null;
+  list.sort((x, y) => (x.used ?? 101) - (y.used ?? 101));
+  return list[0];
+}
+const lastAsk = () => { const u = messagesEl.querySelectorAll('.bubble-user'); return u.length ? (u[u.length - 1].innerText || '').trim() : ''; };
+const FREE_SAYS = { same: 'A free model would do this just as well.', worse: 'A free model could do it, but not as well.', private: 'Not for a free model: it is private.' };
+
 const strip = mk('div', 'adv-card hidden');
 inputForm.prepend(strip);
 
@@ -47,10 +65,16 @@ export function adviceFound(el, fields, key) {
       if (adv.advised) goBack(true);
       return;
     }
-    if (adv.advised && modelSelect.value !== 'latest-sonnet' && !/sonnet/i.test(modelSelect.value)) return;   // already on an advised model (my54: a stuck flag no longer blocks it)
-    const [to, effort, kind, ...rest] = fields;
+    const [to, effort, kind, reason, freeV, ...freeNote] = fields;
+    if (to === 'free') {   // my114: no model change, just "a free chat does this as well"
+      if (accts.free || (freeV || 'same') !== 'same') return;
+      card = { to: 'free', effort: '', kind: kind || 'this job', reason: reason || '', free: 'same', freeNote: freeNote.join(' '), key: key + all.length };
+      draw(); return;
+    }
+    if (adv.advised && modelSelect.value !== 'latest-sonnet' && !/sonnet/i.test(modelSelect.value)) return;
     if (!['opus', 'haiku'].includes(to) || !pick(to)) return;
-    card = { to, effort: ['low', 'medium', 'high'].includes(effort) ? effort : (to === 'opus' ? 'high' : 'low'), kind: kind || 'this job', reason: rest.join('|'), key: key + all.length };
+    card = { to, effort: ['low', 'medium', 'high'].includes(effort) ? effort : (to === 'opus' ? 'high' : 'low'), kind: kind || 'this job', reason: reason || '',
+      free: ['same', 'worse', 'private'].includes(freeV) ? freeV : '', freeNote: freeNote.join(' '), key: key + all.length };
     draw();
   });
 }
@@ -68,24 +92,35 @@ function draw(note) {
   strip.textContent = '';
   if (strip.dataset.note && note) { strip.append(mk('div', 'adv-reason', strip.dataset.note)); strip.classList.remove('hidden'); return; }
   if (card) {
-    const name = NAMES[card.to], eff = card.effort[0].toUpperCase() + card.effort.slice(1);
-    strip.append(mk('div', 'adv-title', `Suggestion: ${name} on ${eff} for this job`));
-    strip.append(mk('div', 'adv-reason', card.reason || (card.to === 'opus' ? 'This looks hard; Opus is less likely to need a redo.' : 'This looks small and simple.')));
-    strip.append(mk('div', 'adv-note', card.to === 'opus'
+    const c0 = card, isFree = c0.to === 'free';
+    const name = NAMES[c0.to], eff = isFree ? '' : c0.effort[0].toUpperCase() + c0.effort.slice(1);
+    strip.append(mk('div', 'adv-title', isFree ? 'Suggestion: do this job on a free model' : `Suggestion: ${name} on ${eff} for this job`));
+    strip.append(mk('div', 'adv-reason', c0.reason || (c0.to === 'opus' ? 'This looks hard; Opus is less likely to need a redo.' : isFree ? 'This is a small job.' : 'This looks small and simple.')));
+    if (!isFree) strip.append(mk('div', 'adv-note', c0.to === 'opus'
       ? 'Costs about two-thirds more allowance per reply than Sonnet, but can be cheaper overall if Sonnet would need a redo.'
       : 'Should use less allowance than Sonnet. This saving is a guess, not measured yet.'));
+    if (c0.free) strip.append(mk('div', 'adv-note adv-free-' + c0.free, (FREE_SAYS[c0.free] || '') + (c0.freeNote ? ' ' + c0.freeNote : '')));
     const row = mk('div', 'adv-row');
-    const yes = mk('button', 'adv-yes', `Switch to ${name} · ${eff}`); yes.type = 'button';
-    const no = mk('button', 'adv-no', 'Stay on Sonnet'); no.type = 'button';
-    yes.onclick = (e) => {
-      e.preventDefault(); const c = card; markHandled(c.key); card = null;
-      const o = pick(c.to);
-      send({ type: 'prefs_set', model: o.value, effort: c.effort });
-      send({ type: 'advisor_set', advised: true });
-      draw();
-    };
-    no.onclick = (e) => { e.preventDefault(); const c = card; markHandled(c.key); card = null; send({ type: 'advisor_set', declineKind: c.kind }); draw(); };
-    row.append(yes, no); strip.append(row);
+    const done = () => { markHandled(c0.key); card = null; draw(); };
+    const btn = (cls, text, fn) => { const b = mk('button', cls, text); b.type = 'button'; b.onclick = (e) => { e.preventDefault(); fn(); }; row.append(b); };
+    const useModel = () => { if (isFree) return; const o = pick(c0.to); if (!o) return; send({ type: 'prefs_set', model: o.value, effort: c0.effort }); send({ type: 'advisor_set', advised: true }); };
+    if (!isFree) btn('adv-yes', `Switch to ${name} · ${eff}`, () => { useModel(); done(); });
+    const other = otherPaid();
+    if (other && !accts.free) {
+      const pct = other.used == null ? '' : ` (${other.used}% used)`;
+      btn('adv-no adv-acct', `${isFree ? 'Use' : 'Same on'} ${SHORTN[other.email.toLowerCase()] || other.email.split('@')[0]} account${pct}`,
+        () => { send({ type: 'account_switch', id: other.id }); useModel(); done(); });
+    }
+    if (c0.free && c0.free !== 'private' && !accts.free) {
+      btn(c0.free === 'same' ? 'adv-yes adv-freebtn' : 'adv-no adv-freebtn', c0.free === 'same' ? 'Do it free (just as good)' : 'Do it free anyway (not as good)', () => {
+        const ask = lastAsk();
+        send({ type: 'new_session', mode: 'extra_free' });   // grey free chat; this chat stays open as it is
+        if (ask) send({ type: 'prompt', text: '(Moved here from a paid chat: the advisor said a free model does this job ' + (c0.free === 'same' ? 'just as well' : 'but not as well') + '.)\n\n' + ask });
+        done();
+      });
+    }
+    btn('adv-no', 'Stay as I am', () => { markHandled(c0.key); card = null; send({ type: 'advisor_set', declineKind: c0.kind }); draw(); });
+    strip.append(row);
     strip.classList.remove('hidden');
   } else if (adv.advised && /sonnet/i.test(modelSelect.value + ' ' + (modelSelect.selectedOptions[0]?.dataset.resolvedModel || '')) && (document.getElementById('effort-select')?.value || 'medium') === 'medium') {
     send({ type: 'advisor_set', advised: false });   // my54: stuck flag, we are back on Sonnet Medium

@@ -153,6 +153,7 @@ setInterval(keepMailbox, 5 * 60000);
 
 directServer.listen(deviceAuth.DIRECT_PORT, '0.0.0.0');
 server.listen(PORT, '0.0.0.0', () => {
+  import('./lib/accounts.js').then((m) => { m.startModeWatcher(); setInterval(() => m.startModeWatcher(), 10 * 60 * 1000); }).catch(() => {});   // my114
   console.log(`Claude Code UI listening on port ${PORT}`);
   console.log(`  Working dir: ${WORK_DIR}`);
   console.log(`  Plugin dir:  ${PLUGIN_DIR}`);
