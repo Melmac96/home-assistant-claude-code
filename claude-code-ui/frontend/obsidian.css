@@ -482,3 +482,9 @@ body.night .diamond-row,body.night .btn,body.night button{filter:brightness(.78)
 
 /* my111 (Michael 15 Nov): the bar stays when Claude has finished and says Finished, with a green dot */
 .h6-bar.h6-done{cursor:default}.h6-bar.h6-done .h6-dot{background:#46bb68}.h6-bar.h6-done b{color:#46bb68}
+/* my111 Look A: the bar has 2 lines; my tool blocks in the chat are folded into it (a tap on the bar shows them) */
+.h6-bar{flex-direction:column;align-items:stretch;gap:2px}
+.h6-r1,.h6-r2{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;overflow:hidden}
+.h6-r2{font-size:12.5px;color:#9a9da3}.h6-r2.hidden{display:none}.h6-i{flex:none;width:14px;text-align:center}
+.h6-bar.h6-done .h6-i{color:#46bb68}
+body.h111-tools .tool-group,body.h111-tools .tool-result{display:none!important}

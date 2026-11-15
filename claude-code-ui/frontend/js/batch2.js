@@ -108,12 +108,38 @@ inputForm.before(strip);
 // '+N added'; the full progress box and the 'Added while working' list stay folded away until he taps the bar.
 const bar = mk('button', 'h6-bar hidden'); bar.type = 'button';
 const bDot = mk('span', 'h6-dot'), bStep = mk('b', ''), bNow = mk('span', 'h6-t'), bEst = mk('span', 'h6-e'), bMore = mk('span', 'h6-o');
-bar.append(bDot, bStep, bNow, bEst, bMore);
+// my111 (Michael's Look A, working-bar-tools-looks.html): 2 lines. Line 1 the step and time left; line 2 what Claude
+// is doing now and how many tools so far. The separate tool blocks in the chat are hidden; a tap on the bar shows them.
+const r1 = mk('span', 'h6-r1'), r2 = mk('span', 'h6-r2'), r2i = mk('span', 'h6-i'), r2t = mk('span', 'h6-t'), r2o = mk('span', 'h6-o');
+r1.append(bDot, bStep, bNow, bEst, bMore); r2.append(r2i, r2t, r2o);
+bar.append(r1, r2);
+document.body.classList.add('h111-tools');   // tool blocks folded into the bar
+function turnTools() {   // the tools of the last turn: everything after Michael's last message
+  const users = messagesEl.querySelectorAll('.bubble-user');
+  const lastU = users[users.length - 1];
+  const names = [...messagesEl.querySelectorAll('.tool-call-name')]
+    .filter((n) => !lastU || (lastU.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING)).map((n) => n.textContent || '');
+  const c = { all: names.length, cmd: 0, read: 0, changed: 0 };
+  for (const n of names) {
+    if (n === 'Bash') c.cmd++;
+    else if (n === 'Read' || n === 'Grep' || n === 'Glob') c.read++;
+    else if (/^(Edit|MultiEdit|Write|NotebookEdit)$/.test(n)) c.changed++;
+  }
+  return c;
+}
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+function toolsSummary(c) {
+  const parts = [c.cmd && plural(c.cmd, 'command', 'commands'), c.read && plural(c.read, 'file read', 'files read'), c.changed && plural(c.changed, 'file changed', 'files changed')].filter(Boolean);
+  const other = c.all - c.cmd - c.read - c.changed;
+  if (other) parts.push(plural(other, 'other', 'others'));
+  return `${plural(c.all, 'tool', 'tools')}${parts.length ? ': ' + parts.join(', ') : ''}`;
+}
 strip.before(bar);
 // my92 (Michael 13 Nov: the boxes took too much room all the time): the full box always starts folded, a tap opens it
 // for THIS job only, and it folds itself again when the job ends. The open state is no longer remembered.
 S.boxOpen = false; localStorage.removeItem('haai-box-open');
-bar.onclick = () => { if (!S.isRunning && !addedCount()) return;   // my111: nothing to open while it says Finished
+bar.onclick = () => { document.body.classList.toggle('h111-tools');   // my111: a tap shows or hides my tool blocks in the chat
+  if (!S.isRunning && !addedCount()) { drawFinished(); return; }
   S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
 // my111 (Michael 15 Nov): the bar always stays on screen; while Claude is not working it just says Finished
 // (with how long the last job took, when known), green dot instead of blue.
@@ -132,17 +158,25 @@ function drawFinished() {
   bStep.textContent = 'Finished';
   bNow.textContent = '';
   bEst.textContent = [lastTook ? `took ${mmss(lastTook)}` : '', turnCostText()].filter(Boolean).join(' · ');
-  bMore.textContent = add ? `· +${add} added ▾` : '';
+  bMore.textContent = add ? `· +${add} added` : '';
+  const c = turnTools();
+  r2.classList.toggle('hidden', !c.all);
+  r2i.textContent = '✓'; r2t.textContent = toolsSummary(c);
+  r2o.textContent = document.body.classList.contains('h111-tools') ? '▾' : '▴';
   strip.classList.add('h6-shut');
 }
 function drawBar(show, hasStep, n, t, now, est, took) {
   const add = addedCount();
   if (!show && !add) { drawFinished(); return; }
   bar.classList.remove('hidden', 'h6-done');
-  bStep.textContent = hasStep ? `${n} of ${t}` : 'Working';
-  bNow.textContent = now || '';
+  bStep.textContent = hasStep ? `Step ${n} of ${t}` : 'Working';
+  bNow.textContent = hasStep ? (stepData[2] || '') : '';   // my111 Look A: line 1 = the step
+  const act = plainAction(S.lastTool), c = turnTools();
+  r2.classList.remove('hidden');
+  r2i.textContent = '⏳'; r2t.textContent = act ? `Now: ${act}` : (now ? `Now: ${now}` : 'Thinking…');
+  r2o.textContent = `${plural(c.all, 'tool', 'tools')} · ${mmss(took)}`;
   const short = est.replace(/^Estimated time before I'll need you: /, '');
-  bEst.textContent = short === 'working it out' ? `${mmss(took)} so far` : short.replace(' (a guess)', '?');
+  bEst.textContent = short === 'working it out' || !short ? '' : short.replace(' (a guess)', '?');
   bMore.textContent = (add ? `· +${add} added ` : '') + (S.boxOpen ? '▴' : '▾');
   strip.classList.toggle('h6-shut', !S.boxOpen);
 }
@@ -223,7 +257,7 @@ function drawStep() {
   const took = Date.now() - runStart;
   if (!hasStep && took < 5000) {   // my111: the bar says Working at once (the full box still waits 5 s)
     strip.classList.add('hidden'); stepDrawn = '';
-    drawBar(true, false, 0, 0, plainAction(S.lastTool), '', took); bEst.textContent = `${mmss(took)} so far`; return;
+    drawBar(true, false, 0, 0, plainAction(S.lastTool), '', took); return;
   }
   const act = plainAction(S.lastTool);
   const live = [act ? `Now: ${act}` : '', `${mmss(took)} so far`].filter(Boolean).join(' · ');

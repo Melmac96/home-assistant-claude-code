@@ -72,6 +72,7 @@ export const jobCosts = () => cost.costs;
 const WHATS_NEW = {
   version: 'my111',
   items: [
+    { t: 'My tools inside the working bar', how: 'The separate command and file blocks are gone from the chat. The working bar now has 2 lines: the step and time left, then what I am doing now and how many tools so far. When I finish it lists them in one line, for example 9 tools: 5 commands, 3 files read, 1 file changed. Tap the bar to see them all in the chat.' },
     { t: 'Working bar always there', how: 'The working bar above the typing box now stays on the screen all the time. While I work it shows my progress; when I have finished it says Finished in green, with how long my last reply took and how much of your 5-hour allowance it used.' },
     { t: 'Replies stay one size', how: 'In Settings there is a new My replies text size. My replies stay at that size on the phone and tablet, and pinching no longer changes them. Pinching still changes your own messages. It starts at the size you have now.' },
     { t: 'No move while a question waits', how: 'A long chat no longer moves to a new one while a question of mine is waiting for you. haAi waits for your answer and my reply to it, then moves, taking the question and your answer along so the new chat just carries on.' },
