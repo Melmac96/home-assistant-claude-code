@@ -593,7 +593,8 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
         vlog(`rate_limit: status=${info.status} type=${info.rateLimitType} ` +
           `resetsAt=${info.resetsAt || 'n/a'} util=${info.utilization ?? 'n/a'}`);
         runtime.lastUsage = { status: info.status, rateLimitType: info.rateLimitType,
-          resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows };
+          resetsAt: info.resetsAt, utilization: info.utilization, unifiedWindows: info.unifiedWindows,
+          account: acct.free ? null : (String(acct.email || '').toLowerCase() || null) };   // my120: whose figure this is
         broadcast({ type: 'rate_limit', ...runtime.lastUsage });
         try { if (!acct.free) addChatCost(slot, acct.email, info.unifiedWindows); } catch (e) { log('WARN', `my77: chat cost failed: ${e?.message || e}`); }   // my77: cost so far on the chat's tab (before the store moves on)
         try { if (!acct.free) noteUsage(info.unifiedWindows, acct.email); } catch (e) { log('WARN', `my40: quota save failed: ${e?.message || e}`); }   // my40: Accounts quota, account in use; my77: this chat's own account

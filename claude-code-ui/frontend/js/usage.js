@@ -73,14 +73,43 @@ function draw() {
   panel.innerHTML = html || '<div class="up-sub">No usage figures yet.</div>';
 }
 
+// my120 (Michael 15 Nov): the bars always show the account in use (the header's). Every figure is kept under its own
+// account; after a move the new account's own figure is shown at once (its last saved one until its first reply).
+let curEmail = '';
+const figs = {};   // email -> { w, at }
+const lc = (e) => String(e || '').toLowerCase();
+function show(w) {
+  windows = w;
+  bars.classList.toggle('hidden', !w);
+  if (w) { draw(); return; }
+  for (const f of Object.values(fills)) f.style.width = '0%';
+  panel.innerHTML = '<div class="up-sub">No usage figures yet.</div>';
+}
 export function updateUsage(msg) {
   const w = msg && msg.unifiedWindows;
   if (!w || (!w.five_hour && !w.seven_day)) return;
-  windows = w;
+  const acc = lc(msg.account) || curEmail;
+  if (acc) figs[acc] = { w, at: Date.now() };
   window.dispatchEvent(new Event('haai-usage'));   // my54
-  bars.classList.remove('hidden');
-  draw();
+  if (!curEmail || !acc || acc === curEmail) show(w);
 }
+window.addEventListener('haai-accounts', (e) => {
+  const em = lc(e.detail && e.detail.cur && e.detail.cur.email);
+  if (!em || em === curEmail) return;
+  const first = !curEmail;
+  curEmail = em;
+  if (figs[em]) show(figs[em].w);
+  else if (!first) { show(null); window.dispatchEvent(new Event('haai-usage')); }   // ask for the saved figures (guard.js quota_get)
+});
+window.addEventListener('haai-quota', (e) => {
+  const q = (e && e.detail) || {};
+  const win = (x) => (x && x.used != null ? { utilization: x.used / 100, resetsAt: x.resetsAt || null } : null);
+  for (const [k, v] of Object.entries(q)) {
+    if (!v || !v.at || !(v.five_hour || v.seven_day)) continue;
+    if (!figs[k] || v.at > figs[k].at) figs[k] = { w: { five_hour: win(v.five_hour), seven_day: win(v.seven_day) }, at: v.at };
+  }
+  if (curEmail && figs[curEmail] && figs[curEmail].w !== windows) show(figs[curEmail].w);
+});
 
 function toggle() {
   panel.classList.toggle('hidden');

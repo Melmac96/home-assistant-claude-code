@@ -145,7 +145,17 @@ function greetFor(ws) {
   // My Claude Code UI: show the usage bars straight away on connect, from the
   // last update this run saw, or failing that the last one saved to disk.
   let lastUsage = runtime.lastUsage;
-  if (!lastUsage) {
+  // my120 (Michael 15 Nov): the bars show the account in use; another account's last figure is never sent as its own
+  const curE = String(listAccounts().current?.email || '').toLowerCase();
+  if (lastUsage && lastUsage.account && curE && lastUsage.account !== curE) lastUsage = null;
+  if (!lastUsage && curE) {
+    try {
+      const q = JSON.parse(readFileSync('/data/haai-quota.json', 'utf8'))[curE];
+      const win = (x) => (x && x.used != null ? { utilization: x.used / 100, resetsAt: x.resetsAt || null } : null);
+      if (q && (q.five_hour || q.seven_day)) lastUsage = { account: curE, unifiedWindows: { five_hour: win(q.five_hour), seven_day: win(q.seven_day) } };
+    } catch { /* no saved figures yet */ }
+  }
+  if (!lastUsage && !curE) {
     try {
       const lines = readFileSync('/data/usage-events.jsonl', 'utf8').trim().split('\n');
       const i = JSON.parse(lines[lines.length - 1]).event.rate_limit_info;
