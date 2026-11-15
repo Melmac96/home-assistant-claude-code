@@ -178,3 +178,11 @@ body.mc-many #input-form .composer{border-color:var(--mc-target)}
 
 /* my82: line at the top of a long chat while its older part is not drawn yet */
 .older-line { display: block; width: 100%; margin: 4px 0 10px; padding: 8px; background: none; border: 1px dashed #333; border-radius: 8px; color: #9a9da4; font: inherit; font-size: 13px; cursor: pointer; }
+
+/* my126 (Michael 15 Nov, Q1 C): the cards, buttons, chips, Working bar and typing box follow the "My replies' text size" slider,
+   so everything he reads from Claude is one size. (zoom scales the text and its box together.) Not on the TV. */
+html:not(.haai-tv) .chat-scroll .h2-card,
+html:not(.haai-tv) .chat-scroll .reply-foot,
+html:not(.haai-tv) .chat-scroll .reply-chips,
+html:not(.haai-tv) .h2-step,
+html:not(.haai-tv) .composer { zoom: var(--reply-ts, 1); }
