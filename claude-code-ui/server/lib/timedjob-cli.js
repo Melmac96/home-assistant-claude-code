@@ -17,7 +17,7 @@ function ukToEpoch(s) {
   }
   return guess;
 }
-const [cmd, a] = process.argv.slice(2);
+const [cmd, a, flag] = process.argv.slice(2);   // my129: third word 'own' = run in a NEW chat of its own
 if (cmd === 'list') {
   for (const j of read().sort((x, y) => x.at - y.at)) console.log(j.id, fmt.format(new Date(j.at)), j.status, j.text.slice(0, 100));
 } else if (cmd === 'cancel') {
@@ -33,6 +33,6 @@ if (cmd === 'list') {
   const l = read();
   if (l.filter((j) => j.status === 'wait').length >= 20) { console.error('FAILED: 20 jobs are already waiting; cancel one first'); process.exit(1); }
   const id = randomBytes(4).toString('hex');
-  l.push({ id, at, text, status: 'wait', setAt: Date.now() }); save(l);
+  l.push({ id, at, text, status: 'wait', setAt: Date.now(), ...(flag === 'own' ? { own: true } : {}) }); save(l);
   console.log(`OK id=${id} set for ${fmt.format(new Date(at))} UK time`);
 }

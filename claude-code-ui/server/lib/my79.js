@@ -13,7 +13,8 @@ import { SUPERVISOR_URL, DEFAULT_PERMISSION_MODE } from './config.js';
 import { log } from './log.js';
 import { broadcast } from './broadcast.js';
 import { getWaiting } from './handover.js';
-import { chats, view, inChat } from './chats.js';
+import { chats, view, inChat, makeSlot, MAX_RUNNING } from './chats.js';
+import { chatList, broadcastChats } from './chatlist.js';   // my129
 
 const readJson = (f, d) => { try { return JSON.parse(readFileSync(f, 'utf8')) ?? d; } catch { return d; } };
 const saveJson = (f, o) => { writeFileSync(f + '.tmp', JSON.stringify(o, null, 1)); renameSync(f + '.tmp', f); };
@@ -51,7 +52,23 @@ function timedTick() {
     if (keep.length !== l.length) dirty = true;
     const due = keep.find((j) => j.status === 'wait' && j.at <= now);
     if (due && runner) {
-      const slot = pickSlot();
+      let slot = null;
+      if (due.own) {   // my129 (Michael 16 Nov): a message from the Claude app gets its OWN chat in the Sessions list, never his chat
+        slot = due.slotId ? chats.get(due.slotId) : null;
+        if (!slot) {
+          if (chatList().length < MAX_RUNNING) {
+            slot = makeSlot(); slot.opened = true; due.slotId = slot.id;
+            const l0 = readTimed(); const j0 = l0.find((x) => x.id === due.id); if (j0) { j0.slotId = slot.id; saveJson(TIMED, l0); }
+            broadcastChats();
+          } else if (now - due.at > 30 * 60000) {   // no room for 30 minutes: tell him, do not use his chat
+            const l0 = readTimed(); const j0 = l0.find((x) => x.id === due.id);
+            if (j0) { j0.status = 'failed'; j0.ranAt = now; saveJson(TIMED, l0); }
+            broadcast({ type: 'handover_status', text: 'A message from your Claude app could not start: all three chats were open for 30 minutes. Ask me to do it again when one is free.' });
+            log('WARN', `my129: app chat ${due.id} dropped, no free chat slot for 30 min`);
+            timedChanged(); return;
+          }
+        }
+      } else slot = pickSlot();
       if (slot && !starting.has(due.id)) {
         // my115: marked 'ran' only once the run has really started; a refused run is tried again (3 tries, then he is told)
         starting.add(due.id);
