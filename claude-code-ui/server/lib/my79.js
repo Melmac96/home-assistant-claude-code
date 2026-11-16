@@ -59,7 +59,10 @@ function timedTick() {
           if (chatList().length < MAX_RUNNING) {
             slot = makeSlot(); slot.opened = true; due.slotId = slot.id;
             const l0 = readTimed(); const j0 = l0.find((x) => x.id === due.id); if (j0) { j0.slotId = slot.id; saveJson(TIMED, l0); }
+            slot.label = 'Claude'; slot.colour = { key: 'claude', name: 'Claude', hex: '#d97757' };   // my130: its own header 'Claude' and Claude orange
             broadcastChats();
+            broadcast({ type: 'chat_opened', id: slot.id });   // my130: every screen switches to it straight away
+            broadcast({ type: 'history', chat: slot.id, merge: true, items: [], running: false, background: false });
           } else if (now - due.at > 30 * 60000) {   // no room for 30 minutes: tell him, do not use his chat
             const l0 = readTimed(); const j0 = l0.find((x) => x.id === due.id);
             if (j0) { j0.status = 'failed'; j0.ranAt = now; saveJson(TIMED, l0); }

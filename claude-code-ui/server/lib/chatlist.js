@@ -24,7 +24,7 @@ export function chatList() {
     try { name = (s.sessionId && sessionTitle(s.sessionId)) || ''; } catch { /* no title yet */ }
     // my77: a reply that ends with a marked question also counts as "needs you" until he answers it.
     const status = needsYou(s.id) || (s.asks && !s.query) ? 'needs' : s.query ? 'working' : s.finishedUnseen ? 'finished' : 'idle';
-    out.push({ id: s.id, n: s.n, name: name || 'New chat', status, account: s.free ? 'Free' : (s.account || ''),
+    out.push({ id: s.id, n: s.n, name: s.label || name || 'New chat', status, account: s.free ? 'Free' : (s.account || ''),
       colour: s.colour ? s.colour.key : '', colourName: s.colour ? s.colour.name : '', hex: s.colour ? s.colour.hex : '',
       free: !!s.free, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '' });   // my78
   }
