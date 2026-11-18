@@ -9,7 +9,7 @@ import { enhanceQuestions } from './answers.js';   // my28
 import { decorateStar } from './extras.js';   // my40
 import { takeAdvice, adviceFound } from './advisor.js';   // my42
 import { prepareReply, pinFound } from './batch1.js';   // my45
-import { prepareCards, buildCards, stepFound } from './batch2.js';   // my46
+import { prepareCards, buildCards, stepFound, jobFound } from './batch2.js';   // my46
 import { S } from './state.js';
 import { messagesEl } from './dom.js';
 
@@ -166,7 +166,7 @@ export function renderMarkdown(el, raw) {
   decorateStar(el);   // my40
   if (adv.fields) adviceFound(el, adv.fields, adv.key);   // my42
   if (b1.pin) pinFound(el, b1.pin);   // my45
-  buildCards(el); if (b2.step) stepFound(el, b2.step);   // my46
+  buildCards(el); if (b2.step) stepFound(el, b2.step); if (b2.job) jobFound(el, b2.job);   // my131   // my46
 }
 
 // Copy text to the clipboard, with a fallback for non-secure contexts (the HA

@@ -16,15 +16,17 @@ import { filedLine } from './my93.js';   // my93 H3
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|FILED)\|([^⟧\n]*)⟧/g;
 const STEP = /⟦STEP\|([^⟧\n]*)⟧[ \t]*\n?/;
-const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|FILED|STEP)[^⟧]*$/;
+const PARTIAL = /⟦(?:DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|FILED|STEP|JOB)[^⟧]*$/;
+const JOB = /⟦JOB\|([^⟧\n]*)⟧[ \t]*\n?/g;   // my131 (Michael's Look C, job-line-looks.html, 18 Nov): the job in plain words
 
 export function prepareCards(raw) {
   const m = raw.match(STEP);
-  const text = raw.replace(STEP, '').replace(PARTIAL, '')
+  const jobs = [...String(raw).matchAll(JOB)].map((x) => x[1].trim()).filter(Boolean);   // my131
+  const text = raw.replace(STEP, '').replace(JOB, '').replace(PARTIAL, '')
     .replace(MARK, (_, k, f) => `\n<div class="h2c" data-k="${k}" data-f="${esc(JSON.stringify(f.split('|').map((s) => s.trim())))}"></div>\n`);
-  return { text, step: m ? m[1].split('|').map((s) => s.trim()) : null };
+  return { text, step: m ? m[1].split('|').map((s) => s.trim()) : null, job: jobs.length ? jobs[jobs.length - 1] : '' };
 }
-export const stripCards = (t) => String(t || '').replace(STEP, '').replace(PARTIAL, '').replace(MARK, '');
+export const stripCards = (t) => String(t || '').replace(STEP, '').replace(JOB, '').replace(PARTIAL, '').replace(MARK, '');
 
 function card(cls, title, titleCls) { const c = mk('div', 'h2-card ' + cls); if (title) c.append(mk('div', 'h2-title ' + (titleCls || ''), title)); return c; }
 function line(c, text) { if (text) c.append(mk('div', 'h2-line', text)); }
@@ -130,7 +132,11 @@ const bDot = mk('span', 'h6-dot'), bStep = mk('b', ''), bNow = mk('span', 'h6-t'
 // is doing now and how many tools so far. The separate tool blocks in the chat are hidden; a tap on the bar shows them.
 const r1 = mk('span', 'h6-r1'), r2 = mk('span', 'h6-r2'), r2i = mk('span', 'h6-i'), r2t = mk('span', 'h6-t'), r2o = mk('span', 'h6-o');
 r1.append(bDot, bStep, bNow, bEst, bMore); r2.append(r2i, r2t, r2o);
-bar.append(r1, r2);
+// my131 (Michael's Look C, 18 Nov): a small grey bottom line with the job in plain words, only while Claude works.
+// From my newest ⟦JOB|..⟧ since his last message; without one, the bold heading of my newest message in this turn.
+const r3 = mk('span', 'h6-r3 hidden'), r3i = mk('span', 'h6-i', '📋'), r3t = mk('span', 'h6-t');
+r3.append(r3i, r3t);
+bar.append(r1, r2, r3);
 document.body.classList.add('h111-tools');   // tool blocks folded into the bar
 // my115 (Michael C, 15 Nov): live lists (their length costs nothing) and a cached answer, so the once-a-second bar no
 // longer walks the whole chat when nothing has changed (it did, forever, growing with the chat)
@@ -206,6 +212,18 @@ function drawFinished() {
   r2i.textContent = '✓'; r2t.textContent = toolsSummary(c);
   r2o.textContent = document.body.classList.contains('h111-tools') ? '▾' : '▴';
   strip.classList.add('h6-shut');
+  r3.classList.add('hidden');   // my131: the job line is only for while Claude works
+}
+function jobText() {   // my131
+  if (jobData) return jobData;
+  const all = [...messagesEl.querySelectorAll('.bubble-user, .bubble-assistant')];
+  for (let i = all.length - 1; i >= 0; i--) {
+    if (all[i].classList.contains('bubble-user')) break;
+    const h = all[i].querySelector('.bubble-content strong, .bubble-content b');
+    const t = h ? (h.textContent || '').trim() : '';
+    if (t && t.length <= 90) return t;
+  }
+  return '';
 }
 function drawBar(show, hasStep, n, t, now, est, took) {
   const add = addedCount();
@@ -221,10 +239,12 @@ function drawBar(show, hasStep, n, t, now, est, took) {
   bEst.textContent = short === 'working it out' || !short ? '' : short.replace(' (a guess)', '?');
   bMore.textContent = (add ? `· +${add} added ` : '') + (S.boxOpen ? '▴' : '▾');
   strip.classList.toggle('h6-shut', !S.boxOpen);
+  const j = jobText(); r3.classList.toggle('hidden', !j); r3t.textContent = j ? `Job: ${j}` : '';   // my131
 }
-let stepData = null, stepTimer = null;
+let stepData = null, stepTimer = null, jobData = '';   // my131: jobData
 let estKey = '', estAt = 0;   // my86
 export function stepFound(contentEl, fields) { contentEl.dataset.step = JSON.stringify(fields); scanSteps(); }
+export function jobFound(contentEl, job) { contentEl.dataset.job = job; scanSteps(); }   // my131
 function scanSteps() {
   clearTimeout(stepTimer);
   stepTimer = setTimeout(() => {
@@ -233,6 +253,10 @@ function scanSteps() {
     const last = all[all.length - 1];
     stepData = null; try { stepData = last && !last.classList.contains('bubble-user') ? JSON.parse(last.dataset.step) : null; } catch { /* my115: a damaged step line is skipped */ }
     // my86: remember when this time-left guess first appeared, so it can count down
+    // my131: the newest job line written since Michael's last message
+    const allJ = [...messagesEl.querySelectorAll('.bubble-user, .bubble-assistant .bubble-content[data-job]')];
+    const lastJ = allJ[allJ.length - 1];
+    jobData = lastJ && !lastJ.classList.contains('bubble-user') ? lastJ.dataset.job || '' : '';
     const key = stepData ? JSON.stringify(stepData) : '';
     if (key !== estKey) { estKey = key; estAt = Date.now(); }
     drawStep();

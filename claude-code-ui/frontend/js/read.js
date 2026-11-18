@@ -17,7 +17,7 @@ const MIC = SVG('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a
 // ── Split a reply into pieces ────────────────────────────────────────────────
 export function splitReply(raw) {
   let t = String(raw || '')
-    .replace(/⟦ADVISE\|[^⟧\n]*⟧/g, '')
+    .replace(/⟦(?:ADVISE|JOB|STEP|PIN)\|[^⟧\n]*⟧/g, '')   // my131: JOB too
     .replace(/```[\s\S]*?```/g, '\n\n(a code block is skipped)\n\n')
     .replace(/^(?:🔹){8}[ \t]*$/gm, '')
     .replace(/[🟦🟥]?\s*⟦\/?QUESTION⟧/g, '')
