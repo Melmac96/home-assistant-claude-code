@@ -214,14 +214,38 @@ function endButton(c, cls, text) {
   x.onclick = (e) => {
     e.stopPropagation();
     if (c.ending) return;
+    confirmEnd(c, () => endNow(c, x));   // my133 (Michael 2026-11-18): an 'Are you sure?' box in the middle first
+  };
+  return x;
+}
+/** my133: the 'Are you sure?' box in the middle of the screen. Tapping outside it, or No, keeps the chat. */
+function confirmEnd(c, yes) {
+  document.querySelector('.mc-confirm')?.remove();
+  const bg = mk('div', 'mc-confirm'); bg.setAttribute('role', 'dialog'); bg.setAttribute('aria-modal', 'true');
+  const box = mk('div', 'mc-cbox');
+  box.append(mk('div', 'mc-ct', 'Are you sure?'),
+    mk('div', 'mc-cm', `End ${label(c)}? Its notes are saved first, then it closes.` + (c.status === 'working' ? ' It finishes the reply it is writing before it closes.' : '')));
+  const btns = mk('div', 'mc-cb');
+  const no = mk('button', 'mc-cno', 'No, keep it'); no.type = 'button';
+  const ok = mk('button', 'mc-cyes', 'Yes, end it'); ok.type = 'button';
+  const close = () => { bg.remove(); document.removeEventListener('keydown', key, true); };
+  const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+  no.onclick = (e) => { e.stopPropagation(); close(); };
+  ok.onclick = (e) => { e.stopPropagation(); close(); yes(); };
+  bg.onclick = (e) => { if (e.target === bg) close(); };
+  btns.append(no, ok); box.append(btns); bg.append(box);
+  document.body.append(bg); document.addEventListener('keydown', key, true);
+  no.focus();
+}
+function endNow(c, x) {
+  {
     if (c.status !== 'working' && S.chatList.length > 1) {
       if (c.id === S.chat) { const other = S.chatList.find((o) => o.id !== c.id); if (other) setTarget(other.id); }
       if (S.only === c.id) S.only = null;
     }
     x.textContent = c.status === 'working' ? 'Ending…' : 'Saving…';
     send({ type: 'end_chat', id: c.id });
-  };
-  return x;
+  }
 }
 
 const LABEL = { working: 'Working', needs: 'Needs you', finished: 'Finished', idle: 'Ready' };
@@ -229,6 +253,8 @@ const COLOUR = { working: '#4da3ff', needs: '#f3736c', finished: '#46bb68', idle
 const tabs = mk('div', 'mc-tabs hidden'); tabs.id = 'mc-tabs';
 (document.getElementById('usage-panel') || document.querySelector('.header')).after(tabs);
 const row = mk('div', 'mc-send hidden'); row.id = 'mc-send';
+// my133 (Michael 2026-11-18): one chat open = End this chat at the TOP LEFT of the chat window (was bottom right above the typing box)
+const topEnd = mk('div', 'mc-topend hidden'); topEnd.id = 'mc-topend'; tabs.after(topEnd);
 document.querySelector('#input-form .composer').before(row);
 
 const shortAcct = (a) => (a === 'Free' ? 'Free' : a ? shortName(a) : 'Main');   // my78: Main / 2nd, not the start of the email
@@ -237,7 +263,8 @@ const service = (c) => (c.free ? (c.service || 'Free') : `Claude${c.account ? ' 
 
 function renderBars() {
   const on = merged();
-  tabs.classList.toggle('hidden', !on); row.classList.toggle('hidden', !on && S.chatList.length !== 1);   // my132: one chat = its End this chat button
+  tabs.classList.toggle('hidden', !on); row.classList.toggle('hidden', !on);
+  topEnd.classList.toggle('hidden', on || S.chatList.length !== 1);   // my133: one chat = End this chat top left
   document.body.classList.toggle('mc-many', on);
   applyOnly();
   const target = byId(S.chat);
@@ -286,7 +313,8 @@ function renderBars() {
     a.onclick = () => { S.only = null; renderBars(); };
     row.append(a);
   }
-  else if (S.chatList.length === 1) row.append(endButton(S.chatList[0], 'mc-end mc-endone', 'End this chat'));   // my132: one chat open
+  topEnd.textContent = '';
+  if (!on && S.chatList.length === 1) topEnd.append(endButton(S.chatList[0], 'mc-end mc-endone', 'End this chat'));   // my133: one chat open, top left
   // my78: the pinned "needs your answer" line was removed at Michael's request (the tab shows Needs you)
 }
 
