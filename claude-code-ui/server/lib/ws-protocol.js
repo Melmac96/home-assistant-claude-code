@@ -207,6 +207,27 @@ function startFresh() {
   broadcastSessions();
 }
 
+/** my132: save the chat's notes (behind the scenes, only if it has something new), then close it. */
+function endChatNow(slot) {
+  slot.endWhenDone = false;
+  const sid = inChat(slot, () => runtime.activeSessionId) || slot.sessionId;
+  if (sid) handover.saveInBackground(sid);
+  if (chats.size > 1) {
+    chats.delete(slot.id);
+    const next = [...chats.values()][0];
+    for (const c of connections) if (c.chat === slot.id) { c.chat = next.id; send(c, { type: 'chat_opened', id: next.id }); }
+    if (view.last === slot.id) view.last = next.id;
+    log('INFO', `my132: chat ${slot.id} ended (notes saved, closed)`);
+    broadcastChats();
+    return;
+  }
+  inChat(slot, () => { abortActive(); startFresh(); });
+  slot.asks = false; slot.cost = 0; slot.costLast = {}; slot.finishedAt = 0; slot.finishedUnseen = false;
+  for (const c of connections) if (c.chat === slot.id) send(c, { type: 'history', chat: slot.id, items: [], running: false, background: false });
+  log('INFO', `my132: last chat ${slot.id} ended (notes saved, a fresh chat in its place)`);
+  broadcastChats();
+}
+
 const seenCids = new Set();   // my115: receipt numbers of the last few hundred messages
 
 /** my115: which chat is busy and what he can do about it (was only 'Claude is busy'). */
@@ -387,6 +408,26 @@ const handlers = {
     if (view.last === slot.id) view.last = next.id;
     log('INFO', `my78: chat ${slot.id} closed from its tab`);
     broadcastChats();
+  },
+
+  // my132 (Michael 2026-11-18, Q1 A + Q2 A): End this chat = save the chat's notes, then close it by itself.
+  // A working chat finishes its reply first. The last chat open becomes a fresh empty chat (it stays in Sessions).
+  end_chat(ws, msg) {
+    const slot = chats.get(String(msg.id || ''));
+    if (!slot) return;
+    if (slot.query) {
+      if (slot.endWhenDone) return;
+      slot.endWhenDone = true;
+      log('INFO', `my132: chat ${slot.id} will end when its reply has finished`);
+      send(ws, { type: 'handover_status', text: `Chat ${slot.n} will save its notes and close as soon as its reply has finished.` });
+      broadcastChats();
+      const t = setInterval(() => {
+        if (!chats.has(slot.id) || !slot.endWhenDone) { clearInterval(t); return; }
+        if (!slot.query) { clearInterval(t); endChatNow(slot); }
+      }, 3000);
+      return;
+    }
+    endChatNow(slot);
   },
 
   // my77: the other chats' messages for the all-in-one view (each shown in its own colour box).

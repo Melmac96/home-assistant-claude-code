@@ -26,7 +26,7 @@ export function chatList() {
     const status = needsYou(s.id) || (s.asks && !s.query) ? 'needs' : s.query ? 'working' : s.finishedUnseen ? 'finished' : 'idle';
     out.push({ id: s.id, n: s.n, name: s.label || name || 'New chat', status, account: s.free ? 'Free' : (s.account || ''),
       colour: s.colour ? s.colour.key : '', colourName: s.colour ? s.colour.name : '', hex: s.colour ? s.colour.hex : '',
-      free: !!s.free, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '' });   // my78
+      free: !!s.free, ending: !!s.endWhenDone, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '' });   // my78
   }
   return out;
 }

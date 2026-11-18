@@ -186,3 +186,8 @@ html:not(.haai-tv) .chat-scroll .reply-foot,
 html:not(.haai-tv) .chat-scroll .reply-chips,
 html:not(.haai-tv) .h2-step,
 html:not(.haai-tv) .composer { zoom: var(--reply-ts, 1); }
+
+/* my132: End chat on every tab, and End this chat above the typing box when only one chat is open */
+.mc-tab .mc-end{position:absolute;top:2px;right:3px;padding:1px 7px;border-radius:10px;color:#f3736c;background:#1c1d20;border:1px solid #f3736c;font-size:11px;line-height:16px;white-space:nowrap}
+.mc-tab .mc-end:active,.mc-endone:active{background:#3a3c41}
+.mc-endone{margin-left:auto;padding:3px 12px;border-radius:12px;color:#f3736c;background:#1c1d20;border:1px solid #f3736c;font-size:12px;cursor:pointer}

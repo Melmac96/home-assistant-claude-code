@@ -207,6 +207,23 @@ export function setTarget(id) {   // my115: every message also names its chat, s
 }
 
 // ── tabs under the top bar ───────────────────────────────────────────────────
+/** my132 (Michael 2026-11-18): End this chat = save its notes, then close it. A working chat closes once its reply is finished. */
+function endButton(c, cls, text) {
+  const x = mk('span', cls, c.ending ? 'Ending…' : (text || 'End chat'));
+  x.setAttribute('role', 'button'); x.setAttribute('aria-label', `End ${label(c)}: save its notes, then close it`);
+  x.onclick = (e) => {
+    e.stopPropagation();
+    if (c.ending) return;
+    if (c.status !== 'working' && S.chatList.length > 1) {
+      if (c.id === S.chat) { const other = S.chatList.find((o) => o.id !== c.id); if (other) setTarget(other.id); }
+      if (S.only === c.id) S.only = null;
+    }
+    x.textContent = c.status === 'working' ? 'Ending…' : 'Saving…';
+    send({ type: 'end_chat', id: c.id });
+  };
+  return x;
+}
+
 const LABEL = { working: 'Working', needs: 'Needs you', finished: 'Finished', idle: 'Ready' };
 const COLOUR = { working: '#4da3ff', needs: '#f3736c', finished: '#46bb68', idle: '#8a8d91' };
 const tabs = mk('div', 'mc-tabs hidden'); tabs.id = 'mc-tabs';
@@ -220,7 +237,7 @@ const service = (c) => (c.free ? (c.service || 'Free') : `Claude${c.account ? ' 
 
 function renderBars() {
   const on = merged();
-  tabs.classList.toggle('hidden', !on); row.classList.toggle('hidden', !on);
+  tabs.classList.toggle('hidden', !on); row.classList.toggle('hidden', !on && S.chatList.length !== 1);   // my132: one chat = its End this chat button
   document.body.classList.toggle('mc-many', on);
   applyOnly();
   const target = byId(S.chat);
@@ -242,16 +259,7 @@ function renderBars() {
       st.append(mk('span', 'mc-acct', c.free ? 'Free' : shortAcct(c.account)));
       if (!c.free) st.append(mk('span', 'mc-cost', `${c.cost || 0}%`));
       t.append(top, st);
-      if (c.status !== 'working') {   // my78: close a finished chat (it stays in Sessions)
-        const x = mk('span', 'mc-x', '×'); x.setAttribute('role', 'button'); x.setAttribute('aria-label', `Close ${label(c)}`);
-        x.onclick = (e) => {
-          e.stopPropagation();
-          if (c.id === S.chat) { const other = S.chatList.find((o) => o.id !== c.id); if (other) setTarget(other.id); }
-          if (S.only === c.id) S.only = null;
-          send({ type: 'close_chat', id: c.id });
-        };
-        t.append(x);
-      }
+      t.append(endButton(c, 'mc-end'));   // my132: End chat on every tab (was the my78 x, finished chats only)
       t.title = `${label(c)}: ${LABEL[c.status] || ''}`;
       t.onclick = () => { setTarget(c.id); S.only = c.id; renderBars(); messagesEl.scrollTop = messagesEl.scrollHeight; };
       tabs.append(t);
@@ -278,6 +286,7 @@ function renderBars() {
     a.onclick = () => { S.only = null; renderBars(); };
     row.append(a);
   }
+  else if (S.chatList.length === 1) row.append(endButton(S.chatList[0], 'mc-end mc-endone', 'End this chat'));   // my132: one chat open
   // my78: the pinned "needs your answer" line was removed at Michael's request (the tab shows Needs you)
 }
 
