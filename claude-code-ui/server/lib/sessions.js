@@ -296,8 +296,11 @@ function findTitle(body, whole) {
       const c = obj.message?.content;
       const text = typeof c === 'string' ? c : Array.isArray(c) ? (c.find((b) => b.type === 'text')?.text || '') : '';
       if (isHarnessEcho(text) || parseTaskNotification(text)) continue;
-      const t = (text || '').replace(/\s+/g, ' ').trim();
+      let t = (text || '').replace(/\s+/g, ' ').trim();
       if (!t) continue;
+      // my134: a chat haAi moved on by itself starts "Continue this job: <job name> Read the notes at ..."; the title is the job name
+      const cj = t.match(/^Continue this job:\s*(.*?)(?:\s*Read the notes at\b.*)?$/i);
+      if (cj) { t = cj[1].replace(/…+$/, '').replace(/\s*Read the note\S*$/i, '').trim() || t; }
       const shown = t.length > 80 ? t.slice(0, 80) + '…' : t;
       // my28: a bare greeting makes a useless title, so use the first real message when there is one.
       if (/^(hi|hello|hey)( claude| there)?[\s!.,]*$/i.test(t)) { greeting = greeting || shown; continue; }
