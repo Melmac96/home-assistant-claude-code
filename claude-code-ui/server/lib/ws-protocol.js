@@ -340,6 +340,10 @@ const handlers = {
     }
     delete msg.attachments;   // do not carry the base64 payload any further
     if (!canStartRun()) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `${MAX_RUNNING} chats are already working. Wait for one to finish, or stop one, then send this again.` }); return; }
+    // my136 (Michael B, 20 Nov 2026): a typed message can never abort a running turn by accident. If this chat's turn is
+    // running but the screen did not flag the message "add" (its Working state was a moment behind), treat it as an add.
+    // Only the Stop button / abort message aborts now.
+    if (!msg.add && runtime.activeQuery && runtime.activeRun?.phase === 'turn') { msg.add = true; log('INFO', 'my136: message sent without the add flag while a turn was running: added, not aborted'); }
     runQuery(ws, msg);
   },
 
