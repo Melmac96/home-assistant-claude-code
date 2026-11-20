@@ -23,7 +23,9 @@ import { log } from './log.js';
 
 export const WARN_AT = 75;   // my122: the warning level (was a 95% hold)
 export const SWITCH_AT = WARN_AT, MAIN_CAP = WARN_AT;
-export const BALANCE_GAP = 10;   // my122: a chat only moves for balance when another account is this many points less used
+export const BALANCE_GAP = 25;   // cache-opt phase 2 (Michael 2026-11-20, was 10): a chat only moves for balance when another account is this many points less used (a move = cold cache)
+export const BIG_CHAT_TOKENS = 45000;   // cache-opt phase 2: above this a chat never hops accounts before a reply (re-reading it on a cold cache costs too much)
+export const HARD_STOP_AT = 95;
 const MAIN_DEFAULT = 'thereades@gmail.com';
 const STATE = path.join(DATA_DIR, 'haai-cycle.json');
 const QUOTA = path.join(DATA_DIR, 'haai-quota.json');
@@ -133,6 +135,20 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
   const cur = current && open.find((x) => lc(x.a.email) === lc(current));
   if (cur && cur.load <= open[0].load + BALANCE_GAP) return cur.a;   // level enough: a move costs a long re-read, so stay
   return open[0].a;
+}
+
+/**
+ * cache-opt phase 2 (Michael 2026-11-20): a chat bigger than BIG_CHAT_TOKENS stays on its account for balance, unless that account has reached
+ * the 95% hard stop (5 hours or 7 days). His own Accounts-menu pick (manual / pending) still wins. A refused reply still moves on (checkRun).
+ */
+export function holdBigChat(email, tokens) {
+  if (!email || !(tokens > BIG_CHAT_TOKENS)) return false;
+  const st = cycleState();
+  if (st.manual?.email || st.pending?.email) return false;
+  const q = readJson(QUOTA) || {};
+  const f = five(email, q), w = week(email, q);
+  if (f.used == null && w.used == null) return false;
+  return (f.used ?? 0) < HARD_STOP_AT && (w.used ?? 0) < HARD_STOP_AT;
 }
 
 /** my123 (Michael 2026-11-15): he picked an account while haAi was busy: the switch happens right after the current turn. { id, email, at } */

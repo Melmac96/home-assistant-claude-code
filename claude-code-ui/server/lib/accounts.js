@@ -13,7 +13,7 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
-import { chooseAccount, tidyState, takeWarning, getPending, setPending } from './my90.js';   // my122   // my90
+import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat } from './my90.js';   // my122   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
@@ -227,6 +227,11 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   // my90/my95 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on BEFORE a reply that would pass 95%; none with room = stop.
   tidyState(saved);
   const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
+  // cache-opt phase 2 (Michael 2026-11-20): a chat over ~45k tokens does not hop accounts (cold cache) unless its account is at the 95% hard stop.
+  if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && holdBigChat(slot.account, slot.ctx.tokens)) {
+    const stayBig = saved.find((x) => x.email === slot.account);
+    if (stayBig) { log('INFO', `cache-opt: chat is ${Math.round(slot.ctx.tokens / 1000)}k tokens, stays on ${slot.account} (no cold-cache hop)`); return as(stayBig); }
+  }
   const pick = chooseAccount(saved, used, on) || chooseAccount(saved, new Set(), on);
   // my122 (Michael 2026-11-15): every account at 75% or more = NO stop and NO move: the chat stays on its account and a red warning is shown.
   if (!pick) {
