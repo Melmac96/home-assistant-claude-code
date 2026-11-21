@@ -1,9 +1,9 @@
 /*
  * my122 (Michael 2026-11-15, REPLACES the 95% hold below): 75% is only a WARNING, never a stop. haAi still moves a chat between the
- * paid accounts by itself, but always to the one that keeps the three as equal as possible (5-hour AND 7-day left, and when each
+ * paid accounts by itself, but always to the one that keeps all saved accounts as equal as possible (5-hour AND 7-day left, and when each
  * resets). When EVERY account is at 75% or more it never moves or holds: it shows a red warning (cycle_warn) with all the figures
  * and a recommendation of which account to go over 75% on. No carry on / stop any more.
- * my90 (Michael 2026-11-13): the three Claude Pro accounts take turns by themselves.
+ * my90 (Michael 2026-11-13): all saved Claude Pro accounts (four since 2026-11-21) take turns by themselves.
  *  - The account whose 5-HOUR allowance resets soonest is used first (an account with no 5 hours running counts last).
  *  - my95 (Michael 2026-11-13): a reply is never stopped part-way just to move. Before each reply haAi checks whether
  *    the account would go past 95% during it (estimate = the most any of the last 5 replies used, at least 3%);

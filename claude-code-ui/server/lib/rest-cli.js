@@ -1,5 +1,5 @@
 // my102: Claude runs this to rest / wake a saved Claude account.
-//   node rest-cli.js status | rest <main|2nd|3rd|email-part> <6h|90m|2d|"YYYY-MM-DD HH:MM" UK> | wake <account|all>
+//   node rest-cli.js status | rest <main|2nd|3rd|4th|email-part> <6h|90m|2d|"YYYY-MM-DD HH:MM" UK> | wake <account|all>
 import { readFileSync } from 'fs';
 import { restedMap, setRest } from './my90.js';
 const acctDir = '/data/claude-accounts';
@@ -9,7 +9,7 @@ const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hourCy
 const all = emails();
 function pick(w) {
   w = String(w || '').toLowerCase();
-  if (w === '2nd') w = 'thereades.uk@gmail.com'; if (w === '3rd') w = 'rf.mike@gmail.com';
+  if (w === '2nd') w = 'thereades.uk@gmail.com'; if (w === '3rd') w = 'rf.mike@gmail.com'; if (w === '4th') w = 'readerufus@gmail.com';
   if (w === 'main') w = (JSON.parse(readFileSync('/data/haai-prefs.json', 'utf8')).mainAccount || 'thereades@gmail.com').toLowerCase();
   const hit = all.filter((e) => e.toLowerCase() === w);
   const part = hit.length ? hit : all.filter((e) => e.toLowerCase().includes(w));

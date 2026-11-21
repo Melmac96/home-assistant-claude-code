@@ -243,7 +243,7 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   // A lone chat moves the live sign-in too, so the header and the Accounts menu show the account really in use.
   if (alone && !used.size && pick.email !== cur.email) {
     const r = switchTo(pick.id);
-    if (r.ok) { if (getPending()?.email === pick.email) setPending(null); log('INFO', `my90: moved to ${pick.email} (keeps the three accounts level: 5-hour and 7-day use, my122)`); return { email: pick.email, dir: null, moved: true }; }
+    if (r.ok) { if (getPending()?.email === pick.email) setPending(null); log('INFO', `my90: moved to ${pick.email} (keeps all saved accounts level: 5-hour and 7-day use, my122)`); return { email: pick.email, dir: null, moved: true }; }
   }
   return as(pick);
 }

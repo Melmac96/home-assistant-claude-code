@@ -3,7 +3,7 @@
  *  1. my91 (Michael 2026-11-13): the "chat nearly full" pop-up is GONE. Once a chat has passed 150k tokens, the server
  *     moves it to a new chat by itself when the reply has finished (my87.js autoMove); the colour bar at the bottom stays.
  *  2. my90 (Michael 2026-11-13): the 75% pop-up and the page's own 90% switch are GONE. The server now moves a chat
- *     between the three accounts by itself (my90.js); this page only shows what happened: a small bar when a chat
+ *     between all saved accounts by itself (my90.js); this page only shows what happened: a small bar when a chat
  *     moved account. my122 (Michael 2026-11-15): there is no stop any more; when every account is at 75% or more a red centre
  *     warning shows each account's 5-hour and 7-day figures with reset times and a recommendation (cycle_warn).
  * Not used in Free mode (the paid allowance does not apply) or while Claude is already working (adds go in as before).
