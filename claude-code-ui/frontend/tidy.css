@@ -184,8 +184,8 @@ body.mc-many #input-form .composer{border-color:var(--mc-target)}
 html:not(.haai-tv) .chat-scroll .h2-card,
 html:not(.haai-tv) .chat-scroll .reply-foot,
 html:not(.haai-tv) .chat-scroll .reply-chips,
-html:not(.haai-tv) .h2-step,
-html:not(.haai-tv) .composer { zoom: var(--reply-ts, 1); }
+html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
+/* my139 (Michael 21 Nov): the typing box stays the same size whatever the text size is */
 
 /* my132: End chat on every tab, and End this chat above the typing box when only one chat is open */
 .mc-tab .mc-end{position:absolute;top:2px;left:3px;right:auto;padding:1px 7px;border-radius:10px;color:#f3736c;background:#1c1d20;border:1px solid #f3736c;font-size:11px;line-height:16px;white-space:nowrap}
