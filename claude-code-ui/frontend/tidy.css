@@ -234,3 +234,8 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .h7-m{margin-left:auto;flex:none;font-size:11px;color:#888;padding-left:6px}
 .h7-bar{height:5px;border-radius:3px;background:#1c1d20;margin:3px 0 2px 24px;overflow:hidden}
 .h7-bar i{display:block;height:100%;background:var(--c)}
+
+/* my140 (Michael 21 Nov): the send button stays on the same row as the other typing-box buttons when the text/display gets bigger; the token label shrinks (ends in ...) instead */
+.composer-actions{flex-wrap:nowrap!important;min-width:0}
+.composer-actions>button{flex:none}
+.composer-actions .tidy-tk{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right}
