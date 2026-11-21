@@ -206,3 +206,31 @@ html:not(.haai-tv) .composer { zoom: var(--reply-ts, 1); }
 .mc-cno{color:#9cc8ff;border:1px solid #4da3ff}
 .mc-cyes{color:#f3736c;border:1px solid #f3736c}
 .mc-cb button:active{background:#3a3c41}
+
+/* my138 (Michael 21 Nov, whats-going-on-looks.html): End buttons say just 'End' at size 1, "plenty big enough" */
+.mc-tab .mc-end,.mc-endone{font-size:10px!important;line-height:12px!important;padding:0 6px!important;border-radius:7px!important}
+.mc-tab:has(.mc-end){padding-top:17px}
+
+/* my138: the What's going on box. Small = Look D (4 lines), opened = Version 2 (groups with coloured edges).
+   Always the full width of the screen; the separate 'Background task running' box is gone (it is an icon now). */
+#bg-tasks-strip{display:none!important}
+.h6-bar,.h2-step{width:100%!important;margin-left:0!important;margin-right:0!important;border-radius:0!important;border-left:0!important;border-right:0!important}
+.h7-trk{display:inline-flex;gap:3px;flex:none;align-items:center}
+.h7-trk:empty{display:none}
+.h7-trk i{width:14px;height:5px;border-radius:3px;background:#3a3c41}
+.h7-trk i.d{background:#46bb68}.h7-trk i.n{background:#4da3ff}
+.h7-l2{display:block;font-size:12.5px;color:#cfd0d4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.h7-l2.hidden,.h7-icons.hidden{display:none}
+.h7-icons{display:flex;align-items:center;gap:12px;border-top:1px solid #26282d;padding-top:4px;margin-top:2px}
+.h7-ic{display:inline-flex;align-items:center;gap:2px}
+.h7-ic svg{width:19px;height:19px}
+.h7-ic em{font:700 12px/1 system-ui,sans-serif;font-style:normal;color:#e4e4e4}
+.h2-step.h7-open{padding:4px 10px 6px!important;text-align:left}
+.h7-g{border-left:3px solid var(--c);padding:6px 8px 5px;margin:5px 0;background:#141416;border-radius:0 8px 8px 0}
+.h7-gh{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:var(--c);margin-bottom:2px}
+.h7-gh svg{width:18px;height:18px;flex:none}
+.h7-gn{margin-left:auto;font-size:11px;color:#888;font-weight:400}
+.h7-it{display:flex;gap:6px;padding:1px 0 1px 24px;color:#d6d6d6;font-size:13px}
+.h7-m{margin-left:auto;flex:none;font-size:11px;color:#888;padding-left:6px}
+.h7-bar{height:5px;border-radius:3px;background:#1c1d20;margin:3px 0 2px 24px;overflow:hidden}
+.h7-bar i{display:block;height:100%;background:var(--c)}

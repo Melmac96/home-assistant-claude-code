@@ -76,6 +76,7 @@ function draw() {
 // my120 (Michael 15 Nov): the bars always show the account in use (the header's). Every figure is kept under its own
 // account; after a move the new account's own figure is shown at once (its last saved one until its first reply).
 let curEmail = '';
+export const allowanceNow = () => ({ w: windows, email: curEmail });   // my138: the What's going on box reads the figures in use
 const figs = {};   // email -> { w, at }
 const lc = (e) => String(e || '').toLowerCase();
 function show(w) {

@@ -12,6 +12,7 @@ import { undoText, addedCount } from './batch4.js';   // my48, my89
 import { costKey, costText, saveJobText } from './my74.js';   // my74
 import { timedCard, clashCard } from './my79.js';   // my79 H17 + H5
 import { filedLine } from './my93.js';   // my93 H3
+import { drawIcons, drawGroups, replyStarted, usedThisReply, wgoData } from './wgo.js';   // my138
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = /⟦(DONE|ERR|ASK|SHOW|MEM|WEEK|RULE|TIMED|CLASH|FILED)\|([^⟧\n]*)⟧/g;
@@ -136,7 +137,18 @@ r1.append(bDot, bStep, bNow, bEst, bMore); r2.append(r2i, r2t, r2o);
 // From my newest ⟦JOB|..⟧ since his last message; without one, the bold heading of my newest message in this turn.
 const r3 = mk('span', 'h6-r3 hidden'), r3i = mk('span', 'h6-i', '📋'), r3t = mk('span', 'h6-t');
 r3.append(r3i, r3t);
-bar.append(r1, r2, r3);
+// my138 (Michael 21 Nov, Look D): the What's going on box, 4 lines, full width. 1 the step, stage bar and stage name;
+// 2 time left and how much of the 5 hours this reply used; 3 what I am doing now and the tools; 4 our own icons with counts.
+// The job line (r3) moves into the opened box. The opened box (the strip) holds every group under its own icon.
+const trk = mk('span', 'h7-trk'), l2 = mk('span', 'h7-l2 hidden'), r4 = mk('span', 'h7-icons hidden');
+r1.replaceChildren(bDot, bStep, trk, bNow, bMore);
+bar.append(r1, l2, r2, r4);
+strip.classList.add('h7-open');
+function drawTrack(n, t) {
+  const k = `${n}/${t}`; if (trk.dataset.k === k) return; trk.dataset.k = k; trk.textContent = '';
+  for (let i = 1; i <= t && i <= 12; i++) trk.append(mk('i', i < n ? 'd' : i === n ? 'n' : ''));
+}
+const setL2 = (t) => { l2.textContent = t; l2.classList.toggle('hidden', !t); };
 document.body.classList.add('h111-tools');   // tool blocks folded into the bar
 // my115 (Michael C, 15 Nov): live lists (their length costs nothing) and a cached answer, so the once-a-second bar no
 // longer walks the whole chat when nothing has changed (it did, forever, growing with the chat)
@@ -170,8 +182,7 @@ strip.before(bar);
 // for THIS job only, and it folds itself again when the job ends. The open state is no longer remembered.
 S.boxOpen = false; localStorage.removeItem('haai-box-open');
 bar.onclick = () => { document.body.classList.toggle('h111-tools');   // my111: a tap shows or hides my tool blocks in the chat
-  if (!S.isRunning && !addedCount()) { drawFinished(); return; }
-  S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };
+  S.boxOpen = !S.boxOpen; const q = document.querySelector('.h4-queue'); if (q) q.classList.toggle('h6-shut', !S.boxOpen); stepDrawn = ''; drawStep(); };   // my138: opens when finished too
 // my111 (Michael 15 Nov): the bar always stays on screen; while Claude is not working it just says Finished
 // (with how long the last job took, when known), green dot instead of blue.
 let lastTook = 0;
@@ -203,16 +214,21 @@ function drawFinished() {
   const add = addedCount();
   bar.classList.remove('hidden'); bar.classList.add('h6-done');
   bStep.textContent = 'Finished';
-  bNow.textContent = '';
+  bNow.textContent = ''; drawTrack(0, 0);
   const took = lastTookMs() || lastTook;   // my112: the server's time for the last turn, else this page's own
-  bEst.textContent = [took ? `took ${mmss(took)}` : '', turnCostText()].filter(Boolean).join(' · ');
-  bMore.textContent = add ? `· +${add} added` : '';
+  setL2([took ? `⏱ Took ${mmss(took)}` : '', turnCostText()].filter(Boolean).join(' · '));   // my138: line 2
+  bMore.textContent = S.boxOpen ? '▴' : '▾';
+  void add;
   const c = turnTools();
   r2.classList.toggle('hidden', !c.all);
   r2i.textContent = '✓'; r2t.textContent = toolsSummary(c);
   r2o.textContent = document.body.classList.contains('h111-tools') ? '▾' : '▴';
-  strip.classList.add('h6-shut');
   r3.classList.add('hidden');   // my131: the job line is only for while Claude works
+  drawIcons(r4);   // my138
+  if (S.boxOpen) {   // my138: opened after a job: the groups, with how the last reply went
+    strip.classList.remove('hidden', 'h6-shut');
+    drawGroups(strip, [{ t: 'Finished', m: took ? `took ${mmss(took)}` : '' }], turnCostText() ? `Last reply: ${turnCostText()}` : '');
+  } else strip.classList.add('h6-shut');
 }
 function jobText() {   // my131
   if (jobData) return jobData;
@@ -231,15 +247,19 @@ function drawBar(show, hasStep, n, t, now, est, took) {
   bar.classList.remove('hidden', 'h6-done');
   bStep.textContent = hasStep ? `Step ${n} of ${t}` : 'Working';
   bNow.textContent = hasStep ? (stepData[2] || '') : '';   // my111 Look A: line 1 = the step
+  drawTrack(hasStep ? n : 0, hasStep ? t : 0);   // my138
   const act = plainAction(S.lastTool), c = turnTools();
   r2.classList.remove('hidden');
   r2i.textContent = '⏳'; r2t.textContent = act ? `Now: ${act}` : (now ? `Now: ${now}` : 'Thinking…');
   r2o.textContent = `${plural(c.all, 'tool', 'tools')} · ${mmss(took)}`;
   const short = est.replace(/^Estimated time before I'll need you: /, '');
-  bEst.textContent = short === 'working it out' || !short ? '' : short.replace(' (a guess)', '?');
-  bMore.textContent = (add ? `· +${add} added ` : '') + (S.boxOpen ? '▴' : '▾');
+  // my138 line 2: time left and how much of the 5 hours this reply has used
+  const left = short === 'working it out' || !short ? '' : /^about /.test(short) ? `About ${short.slice(6).replace(' (a guess)', '?')} left` : short.charAt(0).toUpperCase() + short.slice(1).replace(' (a guess)', '?');
+  setL2([left ? `⏱ ${left}` : '', usedThisReply()].filter(Boolean).join(' · '));
+  bMore.textContent = S.boxOpen ? '▴' : '▾';   // my138: waiting messages are an icon on line 4 now
+  void add;
   strip.classList.toggle('h6-shut', !S.boxOpen);
-  const j = jobText(); r3.classList.toggle('hidden', !j); r3t.textContent = j ? `Job: ${j}` : '';   // my131
+  drawIcons(r4);
 }
 let stepData = null, stepTimer = null, jobData = '';   // my131: jobData
 let estKey = '', estAt = 0;   // my86
@@ -318,7 +338,7 @@ function foldIfEnded() { if (!wasRunning && S.isRunning) document.body.classList
 function drawStep() {
   foldIfEnded();
   if (!S.isRunning) { runStart = 0; hideStrip(); return; }
-  if (!runStart) runStart = Date.now();
+  if (!runStart) { runStart = Date.now(); replyStarted(); }   // my138: the 5-hour figure at the start of this reply
   const n = Number(stepData && stepData[0]), t = Number(stepData && stepData[1]);
   const hasStep = !!stepData && t >= 2 && n >= 1;
   const took = Date.now() - runStart;
@@ -331,19 +351,16 @@ function drawStep() {
   let est = estText(hasStep ? stepData[4] : '');
   if (est.endsWith('working it out')) est = guessText(took);   // my103
   drawBar(true, hasStep, n, t, (hasStep && stepData[2]) || act, est, took);   // my89
-  const sig = JSON.stringify([hasStep ? stepData : null, live, est]);
-  if (sig === stepDrawn && !strip.classList.contains('hidden')) return;
-  stepDrawn = sig;
+  // my138 (Version 2): the opened box = every group under its own icon and colour; This job first
   strip.classList.remove('hidden');
-  bars.textContent = '';
-  bars.style.display = hasStep ? '' : 'none';
-  if (hasStep) for (let i = 1; i <= t && i <= 12; i++) bars.append(mk('i', i < n ? 'd' : i === n ? 'n' : ''));
-  sNow.textContent = '';
-  if (hasStep) sNow.append(mk('b', '', `Step ${n} of ${t}`), document.createTextNode(stepData[2] ? ` – ${stepData[2]}` : ''));
-  else sNow.append(mk('b', '', 'Working'));
-  sLive.textContent = live;
-  sEst.textContent = est;
-  sNext.textContent = hasStep && stepData[3] ? `Next: ${stepData[3]}` : '';
+  const j = jobText(), c = turnTools(), job = [];
+  if (j) job.push({ t: j });
+  job.push(hasStep ? { t: `Step ${n} of ${t}: ${stepData[2] || ''}`.replace(/: $/, ''), m: est.replace(/^Estimated time before I'll need you: /, '') } : { t: 'Working', m: est.replace(/^Estimated time before I'll need you: /, '') });
+  job.push({ t: live, m: plural(c.all, 'tool', 'tools') });
+  if (hasStep && stepData[3]) job.push({ t: `Next: ${stepData[3]}` });
+  const used = usedThisReply();
+  drawGroups(strip, job, `This reply: ${mmss(took)}${used ? ' · ' + used : ''}`);
+  void wgoData; void bars; void sNow; void sLive; void sEst; void sNext; void stepDrawn;
 }
 every(1000, drawStep);   // my115: the one shared page timer   // my84: every second, for the ticking time (was 2 s)
 new MutationObserver(() => { scanSteps(); }).observe(messagesEl, { childList: true });

@@ -209,7 +209,7 @@ export function setTarget(id) {   // my115: every message also names its chat, s
 // ── tabs under the top bar ───────────────────────────────────────────────────
 /** my132 (Michael 2026-11-18): End this chat = save its notes, then close it. A working chat closes once its reply is finished. */
 function endButton(c, cls, text) {
-  const x = mk('span', cls, c.ending ? 'Ending…' : (text || 'End chat'));
+  const x = mk('span', cls, c.ending ? 'Ending…' : 'End');   // my138 (Michael 21 Nov): just 'End', small
   x.setAttribute('role', 'button'); x.setAttribute('aria-label', `End ${label(c)}: save its notes, then close it`);
   x.onclick = (e) => {
     e.stopPropagation();
