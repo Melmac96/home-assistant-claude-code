@@ -45,6 +45,7 @@ import { startMy93, getMessages, getNowTv } from './my93.js';   // my93
 import { awayState, setAway, startMy96 } from './my96.js';   // my96
 import { lotsState, setLots } from './my96.js';   // my97 (my115: lives in my96.js now)
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
+import { answerTyped, addWaitingAnswers } from './my146.js';   // my146
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
 // my88: a page that is still open and only reconnects says what it already has (ws.have, from the address it
@@ -340,6 +341,9 @@ const handlers = {
     }
     delete msg.attachments;   // do not carry the base64 payload any further
     if (!canStartRun()) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `${MAX_RUNNING} chats are already working. Wait for one to finish, or stop one, then send this again.` }); return; }
+    // my146: answers he typed under a question that did not go with this message are added to it, never lost
+    msg.text = addWaitingAnswers(String(msg.text || ''), msg.answersSent);
+    delete msg.answersSent;
     // my136 (Michael B, 20 Nov 2026): a typed message can never abort a running turn by accident. If this chat's turn is
     // running but the screen did not flag the message "add" (its Working state was a moment behind), treat it as an add.
     // Only the Stop button / abort message aborts now.
@@ -499,6 +503,7 @@ const handlers = {
   scrollpos_set(_ws, msg) { scrollmem.setPos(msg); },   // my73
   timed_cancel(_ws, msg) { cancelTimed(String(msg.id || '')); },   // my79 H17
   draft(_ws, msg) { setDraft(msg); },   // my79 H9
+  answer_typed(_ws, msg) { answerTyped(msg); },   // my146
   waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
   waiting_done(_ws, msg) {
     handover.waitingDone(String(msg.id || ''));

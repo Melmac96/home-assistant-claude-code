@@ -19,6 +19,7 @@ import { appendErrorBubble, appendInfoLine, appendUserBubble } from './transcrip
 import { joinKept, keepItems, keepSettled, updateKeepBtn } from './keep.js';   // my35
 import { queueOffline } from './my74.js';   // my74
 import { sendPromptFrame, setSendHooks } from './send.js';   // my115
+import { waitingAnswers, answersWent } from './answers.js';   // my146
 
 // my115: the send path (send.js) draws the bubble and the Working state through these, for button messages too
 setSendHooks({
@@ -63,13 +64,16 @@ inputForm.onsubmit = async (e) => {
   }
   const kept = useKeep ? keepItems.slice() : [];
   const boxText = promptInput.value.trim();
-  const text = joinKept(kept, boxText);
+  // my146: answers picked or typed under the questions go with every message, whichever Send he uses (never left behind)
+  const wa = boxText.startsWith('/') ? { ids: [], text: '' } : waitingAnswers();
+  const text = [wa.text, joinKept(kept, boxText)].filter(Boolean).join('\n\n');
   const hasAtt = attachments.some((a) => useKeep || !a.cid);
   if (!text && !hasAtt && !kept.length) return;
   if (!S.isConnected) {   // my74 H8: no connection: the words wait and go by themselves when haAi is back
     if (hasAtt || kept.length || !text || text.startsWith('/')) { appendInfoLine('No connection. Photos and commands cannot wait, so nothing was sent. Press Send again when haAi is back.'); return; }
     // my115: the box is only cleared once the message is safely in the waiting list
     if (!queueOffline(text)) { appendInfoLine('No connection, and this phone has no room left to keep the message, so it is still in the box. Press Send again when haAi is back.'); return; }
+    answersWent(wa.ids);   // my146
     restoreBox();
     resizeTextarea();
     updateSendBtn();
@@ -119,8 +123,10 @@ inputForm.onsubmit = async (e) => {
     model: localStorage.getItem('model') || undefined,
     effort: localStorage.getItem('effort') || undefined,
     add: adding || undefined,
+    answersSent: wa.ids.length ? wa.ids : undefined,   // my146
   }, text);
-  if (!cid) { appendInfoLine('The link to haAi dropped just as you pressed Send, so nothing went. Your message is still in the box: press Send again in a moment.'); updateSendBtn(); return; }
+  if (!cid) { appendInfoLine('The link to haAi dropped just as you pressed Send, so nothing went. Your message and answers are still here: press Send again in a moment.'); updateSendBtn(); return; }
+  answersWent(wa.ids);   // my146
 
   if (adding) noteAdded(text);   // my48
   appendUserBubble(text, undefined, bubbleAtts);
