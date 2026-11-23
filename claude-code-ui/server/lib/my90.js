@@ -143,6 +143,7 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
  */
 export function holdBigChat(email, tokens) {
   if (!email || !(tokens > BIG_CHAT_TOKENS)) return false;
+  if (isRested(email)) return false;   // my141 (Michael 2026-11-23): a rested (held) account is never kept, even for a big chat
   const st = cycleState();
   if (st.manual?.email || st.pending?.email) return false;
   const q = readJson(QUOTA) || {};
