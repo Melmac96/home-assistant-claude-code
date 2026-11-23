@@ -17,8 +17,8 @@ if (q) { try { localStorage.setItem('haai-tvlayout', q[1]); } catch { /* ignore 
 const forced = (() => { try { return localStorage.getItem('haai-tvlayout'); } catch { return null; } })();
 const isTv = forced === '1' || (forced !== '0' && /Android ?TV|SHIELD|AFT[A-Z]|BRAVIA|Google ?TV/i.test(navigator.userAgent));
 
-const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd' };
-const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com'];
+const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd', 'readerufus@gmail.com': '4th' };
+const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com', 'readerufus@gmail.com'];
 
 if (isTv) {
   document.documentElement.classList.add('haai-tv');

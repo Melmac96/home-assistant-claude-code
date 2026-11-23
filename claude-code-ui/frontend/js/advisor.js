@@ -27,7 +27,7 @@ let accts = { cur: null, saved: [], free: false };
 let quota = {};
 window.addEventListener('haai-accounts', (e) => { accts = e.detail || accts; if (card) draw(); });
 window.addEventListener('haai-quota', (e) => { quota = e.detail || {}; if (card) draw(); });
-const SHORTN = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd' };
+const SHORTN = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd', 'readerufus@gmail.com': '4th' };
 const used5 = (email) => { const w = (quota[String(email).toLowerCase()] || {}).five_hour; if (!w) return null; return w.resetsAt && w.resetsAt * 1000 <= Date.now() ? 0 : w.used; };
 function otherPaid() {
   const cur = accts.cur && accts.cur.email;

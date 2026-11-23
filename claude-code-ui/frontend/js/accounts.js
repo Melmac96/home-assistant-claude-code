@@ -17,10 +17,10 @@ const label = document.getElementById('account-label');
 const cancelBtn = document.getElementById('login-cancel');
 
 // Header shows a short name; the full email is in Settings > Accounts.
-const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd' };
+const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd', 'readerufus@gmail.com': '4th' };
 // my19: paid accounts listed Main first, with a white PAID line under a grey email.
-const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account', 'rf.mike@gmail.com': 'PAID - 3rd Claude Pro Account' };
-const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com'];
+const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account', 'rf.mike@gmail.com': 'PAID - 3rd Claude Pro Account', 'readerufus@gmail.com': 'PAID - 4th Claude Pro Account' };
+const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com', 'readerufus@gmail.com'];
 const rank = (e) => { const i = ORDER.indexOf(String(e).toLowerCase()); return i < 0 ? 99 : i; };
 export const shortName = (email) => SHORT[String(email).toLowerCase()] || String(email).split('@')[0];   // my78: also used by the chat tabs
 
