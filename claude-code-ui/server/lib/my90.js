@@ -63,6 +63,43 @@ export function setRest(email, untilMs) {
 }
 export const mainEmail = () => lc(readJson('/data/haai-prefs.json')?.mainAccount || MAIN_DEFAULT);
 export const isMain = (email) => lc(email) === mainEmail();
+// ── my143 (Michael 2026-11-23): per-account limits and the 4th account's turn ─────────────────────────────
+// Main: never past 75% of its 5 hours OR its 7 days (he uses it in the Claude app on his phone too), used last.
+// 4th (readerufus, week resets Tuesday 22:00 UK): NEVER used from its weekly reset until 1 minute after the later of the
+// 2nd and 3rd accounts' weekly resets (Sunday afternoon); from then until 1 minute before its own reset it is used all the
+// time it has room, and a chat goes straight back to it as soon as its 5 hours reset. The others may go up to 95%.
+// Otherwise "use it before it resets": the account whose week resets soonest comes first.
+const FOURTH_DEFAULT = 'readerufus@gmail.com';
+export const fourthEmail = () => lc(readJson('/data/haai-prefs.json')?.fourthAccount || FOURTH_DEFAULT);
+const WEEK_MS = 7 * 86400000;
+/** my143: the highest 5-hour and 7-day % an account may reach. */
+export const capFor = (email) => (isMain(email) ? MAIN_CAP : HARD_STOP_AT);
+/** my143: the next weekly reset (ms), rolled on by whole weeks when the saved one has passed; null when unknown. */
+function nextWeekReset(email, q) {
+  let t = (q[lc(email)]?.seven_day?.resetsAt || 0) * 1000;
+  if (!t) return null;
+  while (t <= Date.now()) t += WEEK_MS;
+  return t;
+}
+/** my143: the 4th account's turn { open, close, on } (ms), or null when its weekly reset time is not known yet. */
+export function fourthWindow(saved, q = readJson(QUOTA) || {}) {
+  const e4 = fourthEmail(), reset = nextWeekReset(e4, q);
+  if (!reset) return null;
+  const start = reset - WEEK_MS;
+  let open = start;
+  for (const a of saved || []) {
+    const e = lc(a.email);
+    if (e === e4 || isMain(e)) continue;
+    let t = nextWeekReset(e, q);
+    if (!t) continue;
+    while (t >= reset) t -= WEEK_MS;
+    while (t < start) t += WEEK_MS;
+    open = Math.max(open, t);
+  }
+  open += 60000;
+  const close = reset - 60000, now = Date.now();
+  return { open, close, on: now >= open && now < close };
+}
 
 /** 5-hour figures for an account: { used, resetsAt } (used 0 and resetsAt null once the 5 hours have run out). */
 export function five(email, q = readJson(QUOTA) || {}) {
@@ -82,7 +119,7 @@ export function week(email, q = readJson(QUOTA) || {}) {
 /** my122: how loaded an account is (the week counts a little more than the 5 hours; no week figure = the 5 hours alone). */
 export const loadOf = (f, w) => (w.used == null ? (f.used ?? 0) : 0.6 * w.used + 0.4 * (f.used ?? 0));
 /** my122: is this account at the warning level (5 hours or 7 days at 75% or more)? */
-export const isHit = (email, q = readJson(QUOTA) || {}) => Math.max(five(email, q).used ?? 0, week(email, q).used ?? 0) >= WARN_AT;
+export const isHit = (email, q = readJson(QUOTA) || {}) => Math.max(five(email, q).used ?? 0, week(email, q).used ?? 0) >= capFor(email);   // my143: own limit
 
 /** my95: how much of the 5 hours the next reply may use: the most of the last 5 replies, at least 3%, at most 20%. */
 export function nextReplyCost(st = cycleState()) {
@@ -121,19 +158,21 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
   const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st), mv = Math.max(est, moveCost(st));
   const need = (a) => (current && lc(a.email) === lc(current) ? est : mv);
   const rested = restedMap();
-  const under = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)])
-    .map((a) => { const f = five(a.email, q), w = week(a.email, q); return { a, f, w, load: loadOf(f, w), fresh: f.used != null && (isFresh(a.email, q) || !!(current && lc(a.email) === lc(current))) }; })
-    .filter((x) => (x.f.used ?? 0) < WARN_AT && (x.w.used ?? 0) < WARN_AT);
-  // never move on a stale or unknown figure while an account with a fresh one has room
-  const fresh = under.some((x) => x.fresh) ? under.filter((x) => x.fresh) : under;
-  // prefer an account with room for the whole next reply under 75%; if none, any under 75% (going a little over is only a warning)
-  const roomy = fresh.filter((x) => (x.f.used ?? 0) + need(x.a) < WARN_AT);
-  const open = roomy.length ? roomy : fresh;
+  const e4 = fourthEmail(), win = fourthWindow(saved, q), fourthOff = !!(win && !win.on);
+  // my143: the 4th outside its turn, a held account and a busy one are never picked; each account stays under its own limit
+  const rows = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)] && !(fourthOff && lc(a.email) === e4))
+    .map((a) => { const f = five(a.email, q), w = week(a.email, q);
+      return { a, f, w, cap: capFor(a.email), rank: lc(a.email) === e4 ? 0 : isMain(a.email) ? 2 : 1, reset: nextWeekReset(a.email, q) || Infinity }; })
+    .filter((x) => (x.f.used ?? 0) < x.cap && (x.w.used ?? 0) < x.cap);
+  // prefer an account with room for the whole next reply; if none, any under its limit (Main never: it must stay under 75%)
+  const roomy = rows.filter((x) => (x.f.used ?? 0) + need(x.a) < x.cap);
+  const open = roomy.length ? roomy : rows.filter((x) => x.rank !== 2);
   if (!open.length) return null;
   if (st.manual?.email) { const m = open.find((x) => lc(x.a.email) === lc(st.manual.email)); if (m) return m.a; }
-  open.sort((x, y) => x.load - y.load || (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity));
+  // 4th (in its turn) first, Main last; between the others the week that resets soonest first
+  open.sort((x, y) => x.rank - y.rank || x.reset - y.reset || (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity));
   const cur = current && open.find((x) => lc(x.a.email) === lc(current));
-  if (cur && cur.load <= open[0].load + BALANCE_GAP) return cur.a;   // level enough: a move costs a long re-read, so stay
+  if (cur && cur.rank === 1 && open[0].rank === 1) return cur.a;   // between the 2nd and 3rd a chat stays put (a move = a long re-read)
   return open[0].a;
 }
 
@@ -141,7 +180,7 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
  * cache-opt phase 2 (Michael 2026-11-20): a chat bigger than BIG_CHAT_TOKENS stays on its account for balance, unless that account has reached
  * the 95% hard stop (5 hours or 7 days). His own Accounts-menu pick (manual / pending) still wins. A refused reply still moves on (checkRun).
  */
-export function holdBigChat(email, tokens) {
+export function holdBigChat(email, tokens, saved = null) {
   if (!email || !(tokens > BIG_CHAT_TOKENS)) return false;
   if (isRested(email)) return false;   // my141 (Michael 2026-11-23): a rested (held) account is never kept, even for a big chat
   const st = cycleState();
@@ -149,7 +188,13 @@ export function holdBigChat(email, tokens) {
   const q = readJson(QUOTA) || {};
   const f = five(email, q), w = week(email, q);
   if (f.used == null && w.used == null) return false;
-  return (f.used ?? 0) < HARD_STOP_AT && (w.used ?? 0) < HARD_STOP_AT;
+  if ((f.used ?? 0) >= capFor(email) || (w.used ?? 0) >= capFor(email)) return false;   // my143: own limit (Main 75%)
+  if (saved) {   // my143: moving to the 4th in its turn, off the 4th after it, and off Main always win over staying put
+    const best = chooseAccount(saved, new Set(), email), e4 = fourthEmail();
+    if (best && lc(best.email) !== lc(email) && (lc(best.email) === e4 || lc(email) === e4 || isMain(email))) return false;
+    if (!best && (lc(email) === e4 || isMain(email))) return false;
+  }
+  return true;
 }
 
 /** my123 (Michael 2026-11-15): he picked an account while haAi was busy: the switch happens right after the current turn. { id, email, at } */
@@ -180,7 +225,9 @@ export function tidyState(saved) {
  * Returns null (carry on) or { move: account }.
  */
 export function checkRun(email, used, saved, busy = new Set(), rejected = false) {
-  if (!rejected) return null;
+  const q = readJson(QUOTA) || {};
+  const mainOver = isMain(email) && Math.max(used ?? 0, week(email, q).used ?? 0) >= MAIN_CAP;   // my143: Main never past 75%
+  if (!rejected && !mainOver) return null;
   const next = chooseAccount(saved, new Set([...busy, email])) || chooseAccount(saved.filter((a) => a.email !== email), new Set([email]));
   return next ? { move: next } : null;
 }
@@ -195,7 +242,7 @@ export function warnState(saved) {
   if (!saved || !saved.length) return null;
   const rows = saved.map((a, i) => ({ a, i, f: five(a.email, q), w: week(a.email, q) }));
   if (rows.some((r) => r.f.used == null && r.w.used == null)) return null;
-  if (rows.some((r) => Math.max(r.f.used ?? 0, r.w.used ?? 0) < WARN_AT)) return null;
+  if (chooseAccount(saved)) return null;   // my143: an account is still usable under its own limit
   const room = (r) => Math.min(100 - (r.f.used ?? 0), 100 - (r.w.used ?? 0));
   const best = [...rows].sort((x, y) => room(y) - room(x) || (x.f.resetsAt || Infinity) - (y.f.resetsAt || Infinity))[0];
   const r0 = (n) => (n == null ? 'unknown' : `${Math.round(n)}%`);

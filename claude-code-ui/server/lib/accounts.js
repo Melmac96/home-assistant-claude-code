@@ -13,7 +13,8 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
-import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat } from './my90.js';   // my122   // my90
+import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat, isMain, fourthEmail, fourthWindow, five, week } from './my90.js';   // my143
+const lc4 = (e) => String(e || '').toLowerCase();   // my122   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
 const BACKUPS = path.join(DIR, 'backups');
@@ -228,14 +229,19 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   tidyState(saved);
   const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
   // cache-opt phase 2 (Michael 2026-11-20): a chat over ~45k tokens does not hop accounts (cold cache) unless its account is at the 95% hard stop.
-  if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && holdBigChat(slot.account, slot.ctx.tokens)) {
+  if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && holdBigChat(slot.account, slot.ctx.tokens, saved)) {
     const stayBig = saved.find((x) => x.email === slot.account);
     if (stayBig) { log('INFO', `cache-opt: chat is ${Math.round(slot.ctx.tokens / 1000)}k tokens, stays on ${slot.account} (no cold-cache hop)`); return as(stayBig); }
   }
   const pick = chooseAccount(saved, used, on) || chooseAccount(saved, new Set(), on);
   // my122 (Michael 2026-11-15): every account at 75% or more = NO stop and NO move: the chat stays on its account and a red warning is shown.
   if (!pick) {
-    const stay = saved.find((a) => a.email === on) || saved.find((a) => a.email === cur.email) || saved[0];
+    // my143: never stay on Main past 75% or on the 4th outside its turn; then the other account with the most left
+    const okStay = (a) => a && !isMain(a.email) && !(lc4(a.email) === fourthEmail() && !(fourthWindow(saved)?.on ?? true));
+    const left = (a) => { const f = five(a.email), w = week(a.email); return Math.min(100 - (f.used ?? 0), 100 - (w.used ?? 0)); };
+    const spare = saved.filter(okStay).sort((x, y) => left(y) - left(x))[0];
+    const first = saved.find((a) => a.email === on) || saved.find((a) => a.email === cur.email);
+    const stay = (okStay(first) ? first : spare) || first || saved[0];
     const r = as(stay);
     r.warn = takeWarning(saved);
     return r;
