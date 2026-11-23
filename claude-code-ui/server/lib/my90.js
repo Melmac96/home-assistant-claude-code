@@ -158,15 +158,20 @@ export function chooseAccount(saved, exclude = new Set(), current = null) {
   const st = cycleState(), q = readJson(QUOTA) || {}, est = nextReplyCost(st), mv = Math.max(est, moveCost(st));
   const need = (a) => (current && lc(a.email) === lc(current) ? est : mv);
   const rested = restedMap();
-  const e4 = fourthEmail(), win = fourthWindow(saved, q), fourthOff = !!(win && !win.on);
-  // my143: the 4th outside its turn, a held account and a busy one are never picked; each account stays under its own limit
+  const e4 = fourthEmail(), win = fourthWindow(saved, q);
+  // my143: the 4th outside its turn, a held account and a busy one are never picked; each account stays under its own limit.
+  // my144 (Michael 2026-11-23, B): outside its turn the 4th is used only when every other account is full (Main at 75%).
+  const pickFrom = (fourthOff) => {
   const rows = saved.filter((a) => !exclude.has(a.email) && !rested[lc(a.email)] && !(fourthOff && lc(a.email) === e4))
     .map((a) => { const f = five(a.email, q), w = week(a.email, q);
       return { a, f, w, cap: capFor(a.email), rank: lc(a.email) === e4 ? 0 : isMain(a.email) ? 2 : 1, reset: nextWeekReset(a.email, q) || Infinity }; })
     .filter((x) => (x.f.used ?? 0) < x.cap && (x.w.used ?? 0) < x.cap);
   // prefer an account with room for the whole next reply; if none, any under its limit (Main never: it must stay under 75%)
   const roomy = rows.filter((x) => (x.f.used ?? 0) + need(x.a) < x.cap);
-  const open = roomy.length ? roomy : rows.filter((x) => x.rank !== 2);
+  return roomy.length ? roomy : rows.filter((x) => x.rank !== 2);
+  };
+  let open = pickFrom(!!(win && !win.on));
+  if (!open.length && win && !win.on) open = pickFrom(false);   // my144: the 4th only as the last resort outside its turn
   if (!open.length) return null;
   if (st.manual?.email) { const m = open.find((x) => lc(x.a.email) === lc(st.manual.email)); if (m) return m.a; }
   // 4th (in its turn) first, Main last; between the others the week that resets soonest first
