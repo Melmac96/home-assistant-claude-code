@@ -6,7 +6,7 @@
  * set of messages the client may send is a list you can read.
  */
 import { sendPip } from './tvpip.js';   // my113
-import { setManual, setCarryOn, setPending } from './my90.js';   // my90
+import { setManual, setCarryOn, setPending, setRest, HOLD_FOREVER } from './my90.js';   // my90; hold buttons
 import { readFileSync } from 'fs';
 import { DEFAULT_PERMISSION_MODE } from './config.js';
 import { log } from './log.js';
@@ -260,6 +260,17 @@ const handlers = {
   },
 
   // my123: he changed his mind about a switch that was waiting for the turn to end
+  // Hold buttons (Michael 23 Nov 2026): holds or frees ONE account only, the one whose button was tapped. Stays until tapped off.
+  account_hold(ws, msg) {
+    const email = String(msg.email || '').toLowerCase();
+    const a = listAccounts().saved.find((x) => x.email.toLowerCase() === email);
+    if (!a) { send(ws, { type: 'account_result', ok: false, error: 'That account is not saved, so nothing was held.' }); return; }
+    setRest(a.email, msg.on ? HOLD_FOREVER : 0);
+    log('INFO', `hold button: ${a.email} ${msg.on ? 'held until tapped off' : 'hold taken off'}`);
+    send(ws, { type: 'account_result', ok: true, held: !!msg.on, email: a.email });
+    broadcast({ type: 'accounts', ...listAccounts() });
+  },
+
   account_switch_cancel(ws) {
     setPending(null); setManual(null);
     send(ws, { type: 'account_result', ok: true, cancelled: true });

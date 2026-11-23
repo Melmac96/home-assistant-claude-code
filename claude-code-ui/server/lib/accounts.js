@@ -13,7 +13,7 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
-import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat, isMain, fourthEmail, fourthWindow, five, week } from './my90.js';   // my143
+import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat, isMain, fourthEmail, fourthWindow, five, week, isRested, restedMap, capFor } from './my90.js';   // my143; hold buttons
 const lc4 = (e) => String(e || '').toLowerCase();   // my122   // my90
 
 const DIR = path.join(DATA_DIR, 'claude-accounts');
@@ -142,7 +142,10 @@ export function listAccounts() {
   } catch { /* nothing saved yet */ }
   saved.sort((a, b) => a.email.localeCompare(b.email));
   const pend = getPending();   // my123: a switch he asked for while haAi was busy, due after the current turn
-  return { current: cur, saved, mode: modeState(), pending: pend ? { id: pend.id, email: pend.email } : null };
+  // Hold buttons (Michael 23 Nov 2026): which accounts are held, each one's own limit, and the 4th account's turn
+  for (const a of saved) a.cap = capFor(a.email);
+  let turn = null; try { const w = fourthWindow(saved); if (w) turn = { email: fourthEmail(), ...w }; } catch { /* no turn known */ }
+  return { current: cur, saved, mode: modeState(), pending: pend ? { id: pend.id, email: pend.email } : null, held: restedMap(), turn };
 }
 
 /** Switch the live sign-in to a saved account. Returns { ok, error? }. */
@@ -229,7 +232,7 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   tidyState(saved);
   const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
   // cache-opt phase 2 (Michael 2026-11-20): a chat over ~45k tokens does not hop accounts (cold cache) unless its account is at the 95% hard stop.
-  if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && holdBigChat(slot.account, slot.ctx.tokens, saved)) {
+  if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && !isRested(slot.account) && holdBigChat(slot.account, slot.ctx.tokens, saved)) {   // hold buttons: a held account never keeps a big chat
     const stayBig = saved.find((x) => x.email === slot.account);
     if (stayBig) { log('INFO', `cache-opt: chat is ${Math.round(slot.ctx.tokens / 1000)}k tokens, stays on ${slot.account} (no cold-cache hop)`); return as(stayBig); }
   }

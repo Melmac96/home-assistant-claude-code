@@ -17,10 +17,10 @@ const label = document.getElementById('account-label');
 const cancelBtn = document.getElementById('login-cancel');
 
 // Header shows a short name; the full email is in Settings > Accounts.
-const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd', 'readerufus@gmail.com': '4th' };
+const SHORT = { 'thereades@gmail.com': 'Main', 'thereades.uk@gmail.com': '2nd', 'rf.mike@gmail.com': '3rd', 'readerufus@gmail.com': '4th', 'rufusreade1969@gmail.com': '5th' };
 // my19: paid accounts listed Main first, with a white PAID line under a grey email.
-const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account', 'rf.mike@gmail.com': 'PAID - 3rd Claude Pro Account', 'readerufus@gmail.com': 'PAID - 4th Claude Pro Account' };
-const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com', 'readerufus@gmail.com'];
+const PAID = { 'thereades@gmail.com': 'PAID - Main Claude Pro Account', 'thereades.uk@gmail.com': 'PAID - 2nd Claude Pro Account', 'rf.mike@gmail.com': 'PAID - 3rd Claude Pro Account', 'readerufus@gmail.com': 'PAID - 4th Claude Pro Account', 'rufusreade1969@gmail.com': 'PAID - 5th Claude Pro Account' };
+const ORDER = ['thereades@gmail.com', 'thereades.uk@gmail.com', 'rf.mike@gmail.com', 'readerufus@gmail.com', 'rufusreade1969@gmail.com'];
 const rank = (e) => { const i = ORDER.indexOf(String(e).toLowerCase()); return i < 0 ? 99 : i; };
 export const shortName = (email) => SHORT[String(email).toLowerCase()] || String(email).split('@')[0];   // my78: also used by the chat tabs
 
@@ -53,6 +53,83 @@ function setBadge(cur, m) {
   }
 }
 
+// ── Hold buttons + Look D tiles (Michael 23 Nov 2026, Q1 D, Q2 A) ─────────────────────────────
+// Main across the top, the other accounts in a 2 by 2 grid. Each Hold button holds ONLY its own account, until tapped off.
+let lastMsg = null, lastQuota = {};
+const UKT = { timeZone: 'Europe/London' };
+const hmT = (d) => d.toLocaleTimeString('en-GB', { ...UKT, hour: '2-digit', minute: '2-digit' });
+const dayT = (d) => d.toLocaleDateString('en-GB', { ...UKT, day: 'numeric', month: 'short' });
+const when = (ms) => { const d = new Date(ms); return dayT(d) === dayT(new Date()) ? hmT(d) + ' today' : d.toLocaleDateString('en-GB', { ...UKT, weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + hmT(d); };
+const lvl = (p, cap) => (p >= cap ? 'r' : p >= 50 ? 'a' : 'g');
+function fig(q, key) {   // { p, reset } or null; a window that has reset since counts as 0
+  const w = q && q[key]; if (!w || w.used == null) return null;
+  const reset = w.resetsAt ? w.resetsAt * 1000 : 0;
+  return reset && reset <= Date.now() ? { p: 0, reset: 0 } : { p: Math.round(w.used), reset };
+}
+function tbar(label, f, cap, wide) {
+  const d = mk('div', 'acc-tbar');
+  const top = mk('div', 'acc-tlbl'); top.append(mk('span', '', label), mk('b', f ? 'acc-' + lvl(f.p, cap) + 'tx' : '', f ? f.p + '%' : 'no figure yet'));
+  const t = mk('div', 'acc-track'), fill = mk('i', f ? 'acc-' + lvl(f.p, cap) + 'bg' : '');
+  fill.style.width = (f ? Math.min(f.p, 100) : 0) + '%'; t.append(fill);
+  d.append(top, t);
+  if (wide && f && f.reset) d.append(mk('div', 'acc-tnote', 'Resets ' + when(f.reset)));
+  return d;
+}
+function holdButton(a, held) {
+  const b = mk('button', 'settings-btn acc-hold' + (held ? ' active' : ''), held ? 'ACTIVE' : 'Hold'); b.type = 'button';
+  b.onclick = () => { b.disabled = send({ type: 'account_hold', email: a.email, on: !held }); };   // this one account only
+  return b;
+}
+function drawTiles() {
+  const msg = lastMsg; if (!msg) return;
+  list.innerHTML = '';
+  const saved = (msg.saved || []).slice().sort((x, y) => rank(x.email) - rank(y.email));
+  if (!saved.length) return;
+  const held = msg.held || {}, turn = msg.turn;
+  const tile = (a, wide) => {
+    const e = a.email.toLowerCase(), q = lastQuota[e], isHeld = !!held[e], cap = a.cap || 95;
+    const f5 = fig(q, 'five_hour'), f7 = fig(q, 'seven_day');
+    const t = mk('div', 'acc-tile' + (wide ? ' acc-wide' : '') + (isHeld ? ' acc-held' : a.active ? ' acc-on' : ''));
+    t.append(mk('div', 'acc-big', shortName(a.email)), mk('div', 'acc-temail', wide ? a.email : a.email.split('@')[0]));
+    const due = msg.pending && msg.pending.email === a.email;
+    const myTurn = turn && turn.email === e && turn.on;
+    let chip;
+    if (isHeld) chip = mk('span', 'acc-chip acc-r', 'On hold');
+    else if (due) chip = mk('span', 'acc-chip acc-b', 'Switch due');
+    else if (a.active) chip = mk('span', 'acc-chip acc-b', 'Signed in');
+    else if (f5 && f5.p >= cap) chip = mk('span', 'acc-chip acc-a', f5.reset ? 'Full till ' + hmT(new Date(f5.reset)) : 'Full');
+    else if (myTurn) chip = mk('span', 'acc-chip acc-g', 'Its turn');
+    else chip = mk('span', 'acc-chip acc-g', 'Room');
+    t.append(chip, tbar('5 hours', f5, cap, wide), tbar('7 days', f7, cap, wide));
+    if (wide) {
+      let note = isMain_(e) ? 'Used last. Never past 75%, because you use it in the Claude app too.' : 'Used before it resets. Can go up to 95%.';
+      if (turn && turn.email === e) note = turn.on ? `Its turn now, until ${when(turn.close)}.` : `Its turn opens ${when(turn.open)}.`;
+      if (isHeld) note = 'On hold: haAi will not use it until you tap ACTIVE. A reply already running finishes first.';
+      t.append(mk('div', 'acc-tnote acc-center', note));
+      if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', q.forecast));
+    } else if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', 'May run out before it resets'));
+    const btns = mk('div', 'acc-tbtns');
+    if (due) { const c = mk('button', 'settings-btn', 'Cancel'); c.type = 'button'; c.onclick = () => { c.disabled = send({ type: 'account_switch_cancel' }); }; btns.append(c); }
+    else { const s = mk('button', 'settings-btn', 'Switch'); s.type = 'button'; if (a.active) s.disabled = true; else s.onclick = () => askSwitch(a); btns.append(s); }
+    btns.append(holdButton(a, isHeld));
+    t.append(btns);
+    return t;
+  };
+  const first = saved[0];
+  list.appendChild(tile(first, true));
+  const g = mk('div', 'acc-grid2'); for (const a of saved.slice(1)) g.appendChild(tile(a, false)); list.appendChild(g);
+}
+const isMain_ = (e) => rank(e) === 0;
+window.addEventListener('haai-quota', (ev) => { lastQuota = ev.detail || {}; drawTiles(); });
+// the 3 page buttons: Claude Pro, Other Paid, Free
+const tabs = document.getElementById('acc-tabs');
+if (tabs) tabs.addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-page]'); if (!b) return;
+  ev.stopPropagation();
+  for (const x of tabs.querySelectorAll('button')) x.classList.toggle('on', x === b);
+  for (const pg of document.querySelectorAll('#accounts-panel .acc-page')) pg.classList.toggle('hidden', pg.dataset.page !== b.dataset.page);
+});
+
 export function showAccounts(msg) {
   setTimeout(() => { if (lastStats) showStats(lastStats); }, 0);
   const cur = msg.current;
@@ -64,26 +141,7 @@ export function showAccounts(msg) {
   list.innerHTML = ''; freeList.innerHTML = '';
   const saved = (msg.saved || []).slice().sort((x, y) => rank(x.email) - rank(y.email));
   window.dispatchEvent(new CustomEvent('haai-accounts', { detail: { cur, saved, free } }));   // my54
-  for (const a of saved) {
-    const row = mk('div', 'acc-row' + (a.active ? ' acc-on' : ''));
-    const who = mk('div', 'acc-who acc-email', a.email);
-    who.appendChild(mk('small', 'acc-paid', PAID[a.email.toLowerCase()] || 'PAID - Claude account'));
-    row.appendChild(who);
-    const due = msg.pending && msg.pending.email === a.email;   // my123: his pick is waiting for the current turn to end
-    if (a.active) { row.appendChild(mk('span', 'acc-tag', 'Signed in')); if (msg.pending) who.appendChild(mk('small', 'acc-paid', 'Switching to ' + shortName(msg.pending.email) + ' right after this turn')); }
-    else if (due) {
-      row.appendChild(mk('span', 'acc-tag', 'Switch due after this turn'));
-      const c = mk('button', 'settings-btn', 'Cancel'); c.type = 'button';
-      c.onclick = () => { c.disabled = send({ type: 'account_switch_cancel' }); };
-      row.appendChild(c);
-    } else {
-      const b = mk('button', 'settings-btn', 'Switch');
-      b.type = 'button';
-      b.onclick = () => askSwitch(a);
-      row.appendChild(b);
-    }
-    list.appendChild(row);
-  }
+  lastMsg = msg; drawTiles();
   if (!(msg.saved || []).length) list.appendChild(mk('div', 'settings-hint', 'No accounts saved yet.'));
   // my16: the Free / Paid model choice, one more option under the accounts.
   if (msg.mode) {
@@ -243,17 +301,22 @@ export function showStats(msg) {
   paidProv.innerHTML = ''; freeProv.innerHTML = '';
   if (msg.error) { freeProv.appendChild(mk('div', 'settings-hint', msg.error)); return; }
   const freeOn = !!document.querySelector('#accounts-free .acc-free .acc-tag-free');
+  // Look D (Michael 23 Nov 2026): the first service across the top, the rest in a 2 by 2 grid, on its own page
+  const AB = { openrouter: 'OR', huggingface: 'HF', sambanova: 'SN', google: 'GA', cerebras: 'CB', mistral: 'MA', groq: 'GQ', cloudflare: 'CF', nvidia: 'NV', github: 'GH' };
+  const tiles = { paid: [], free: [] };
   for (const p of msg.providers || []) {
-    const row = mk('div', 'acc-prov' + (p.active ? ' acc-on' : '') + (p.ready ? '' : ' acc-off'));
-    const top = mk('div', 'acc-prov-top');
-    const nm = mk('div', 'acc-who', (p.paid ? 'PAID - ' : '') + p.label);
-    if (p.model) nm.appendChild(mk('small', '', p.model.replace(/^[^/]+\//, '')));
-    top.appendChild(nm);
-    if (p.active) top.appendChild(mk('span', 'acc-tag', 'In use'));
-    else if (p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = send({ type: 'provider_use', id: p.id }); }; top.appendChild(b); }
-    else top.appendChild(mk('span', 'acc-tag acc-tag-off', p.ready ? 'Ready' : 'Not ready'));
-    row.appendChild(top);
-    for (const l of p.lines || []) row.appendChild(mk('div', 'acc-stat', l));
-    (p.paid ? paidProv : freeProv).appendChild(row);
+    const t = mk('div', 'acc-tile' + (p.active ? ' acc-on' : '') + (p.ready ? '' : ' acc-off'));
+    t.append(mk('div', 'acc-big', AB[p.id] || String(p.label || '?').slice(0, 2).toUpperCase()), mk('div', 'acc-tname', p.label));
+    if (p.model) t.append(mk('div', 'acc-temail', p.model.replace(/^[^/]+\//, '')));
+    if (p.active) t.append(mk('span', 'acc-chip acc-b', 'In use'));
+    else t.append(mk('span', 'acc-chip ' + (p.ready ? 'acc-g' : 'acc-r'), p.ready ? 'Ready' : 'Not ready'));
+    const lines = mk('div', 'acc-lines'); for (const l of p.lines || []) lines.append(mk('div', '', l)); t.append(lines);
+    if (!p.active && p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = send({ type: 'provider_use', id: p.id }); }; const bb = mk('div', 'acc-tbtns acc-one'); bb.append(b); t.append(bb); }
+    tiles[p.paid ? 'paid' : 'free'].push(t);
+  }
+  for (const [k, box] of [['paid', paidProv], ['free', freeProv]]) {
+    const ts = tiles[k]; if (!ts.length) continue;
+    ts[0].classList.add('acc-wide'); box.appendChild(ts[0]);
+    if (ts.length > 1) { const g = mk('div', 'acc-grid2'); for (const t of ts.slice(1)) g.appendChild(t); box.appendChild(g); }
   }
 }

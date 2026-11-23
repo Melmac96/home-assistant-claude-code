@@ -1325,3 +1325,41 @@ html { touch-action: pan-x pan-y; }
 .chat-st { flex: none; font-size: calc(12px * var(--ts, 1)); }
 .chat-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
 .chat-note { padding: 10px 14px; font-size: calc(12px * var(--ts, 1)); color: var(--text-muted); }
+
+/* ── Hold buttons + Look D tiles (Michael 23 Nov 2026, Q1 D): 3 pages, Main across the top, the rest 2 by 2. No white text. ── */
+.acc-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 12px; }
+.acc-tabs button { min-height: 44px; font: inherit; font-size: 13px; font-weight: 700; color: #9c9d9e; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.acc-tabs button.on { color: #46bb68; border-color: #46bb68; }
+.acc-page.hidden { display: none; }
+.acc-page .accounts-list { display: flex; flex-direction: column; gap: 12px; }
+.acc-page .accounts-list:empty { display: none; }
+.acc-page + .acc-page, .acc-page > * + * { margin-top: 12px; }
+.acc-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.acc-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: #9c9d9e; }
+.acc-tile.acc-on { border-color: #6b9fd4; }
+.acc-tile.acc-held { border-color: #e05252; }
+.acc-tile.acc-off { opacity: .8; }
+.acc-big { font-size: 20px; font-weight: 700; color: #6b9fd4; text-align: center; line-height: 1.2; }
+.acc-tname { font-weight: 700; color: #6b9fd4; text-align: center; overflow-wrap: anywhere; }
+.acc-temail { font-size: 11px; color: #707172; text-align: center; overflow-wrap: anywhere; }
+.acc-chip { align-self: center; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+.acc-chip.acc-g { color: #46bb68; border-color: #46bb68; }
+.acc-chip.acc-r { color: #e05252; border-color: #e05252; }
+.acc-chip.acc-a { color: #e0a030; border-color: #e0a030; }
+.acc-chip.acc-b { color: #6b9fd4; border-color: #6b9fd4; }
+.acc-tlbl { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; color: #9c9d9e; }
+.acc-tlbl b { font-weight: 700; }
+.acc-track { height: 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; }
+.acc-track i { display: block; height: 100%; }
+.acc-gbg { background: #46bb68; } .acc-abg { background: #e0a030; } .acc-rbg { background: #e05252; }
+.acc-gtx { color: #46bb68; } .acc-atx { color: #e0a030; } .acc-rtx { color: #e05252; }
+.acc-tnote { font-size: 12px; color: #707172; margin-top: 4px; }
+.acc-center { text-align: center; margin-top: 0; }
+.acc-lines { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #9c9d9e; overflow-wrap: anywhere; }
+.acc-tbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; }
+.acc-tbtns.acc-one { grid-template-columns: 1fr; }
+.acc-tbtns .settings-btn { min-height: 40px; width: 100%; font-weight: 700; color: #9c9d9e; padding: 0 4px; }
+.acc-tbtns .settings-btn:disabled { opacity: .45; }
+.acc-tbtns .acc-hold.active { background: #3a1515; border-color: #e05252; color: #e05252; }
+.acc-page .acc-row, .acc-page .acc-row small, .acc-page .settings-btn { color: #9c9d9e; }
+.acc-page .settings-row .settings-btn { width: 100%; }

@@ -185,15 +185,25 @@
 
     <div id="accounts-panel" class="accounts-panel hidden">
       <div class="sessions-head">Accounts</div>
-      <div id="account-confirm" class="account-confirm hidden"></div>
-      <div id="accounts-list" class="accounts-list"></div>
-      <div id="accounts-paid-prov" class="accounts-list"></div>
-      <div class="settings-row">
-        <button type="button" id="account-add" class="settings-btn">Sign in to another account</button>
+      <div class="acc-tabs" id="acc-tabs">
+        <button type="button" data-page="pro" class="on">Claude Pro</button>
+        <button type="button" data-page="paid">Other Paid</button>
+        <button type="button" data-page="free">Free</button>
       </div>
-      <div class="blue-rule" role="separator"></div>
-      <div id="accounts-free" class="accounts-list"></div>
-      <div id="accounts-prov" class="accounts-list"></div>
+      <div id="account-confirm" class="account-confirm hidden"></div>
+      <div class="acc-page" data-page="pro">
+        <div id="accounts-list" class="accounts-list"></div>
+        <div class="settings-row">
+          <button type="button" id="account-add" class="settings-btn">Sign in to another account</button>
+        </div>
+      </div>
+      <div class="acc-page hidden" data-page="paid">
+        <div id="accounts-paid-prov" class="accounts-list"></div>
+      </div>
+      <div class="acc-page hidden" data-page="free">
+        <div id="accounts-free" class="accounts-list"></div>
+        <div id="accounts-prov" class="accounts-list"></div>
+      </div>
     </div>
 
     <div id="login-screen" class="login-screen hidden">

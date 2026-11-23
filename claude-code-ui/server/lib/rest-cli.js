@@ -9,7 +9,7 @@ const fmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hourCy
 const all = emails();
 function pick(w) {
   w = String(w || '').toLowerCase();
-  if (w === '2nd') w = 'thereades.uk@gmail.com'; if (w === '3rd') w = 'rf.mike@gmail.com'; if (w === '4th') w = 'readerufus@gmail.com';
+  if (w === '2nd') w = 'thereades.uk@gmail.com'; if (w === '3rd') w = 'rf.mike@gmail.com'; if (w === '4th') w = 'readerufus@gmail.com'; if (w === '5th') w = 'rufusreade1969@gmail.com';
   if (w === 'main') w = (JSON.parse(readFileSync('/data/haai-prefs.json', 'utf8')).mainAccount || 'thereades@gmail.com').toLowerCase();
   const hit = all.filter((e) => e.toLowerCase() === w);
   const part = hit.length ? hit : all.filter((e) => e.toLowerCase().includes(w));
@@ -23,7 +23,7 @@ function ukToEpoch(s) {
   return g;
 }
 const [cmd, who, len] = process.argv.slice(2);
-const show = () => { const m = restedMap(); const k = Object.keys(m); console.log(k.length ? k.map((e) => `${e} rests until ${fmt.format(new Date(m[e]))} UK time`).join('\n') : 'No account is resting.'); };
+const show = () => { const m = restedMap(); const k = Object.keys(m); console.log(k.length ? k.map((e) => m[e] >= 8e15 ? `${e} is on hold until he taps it off` : `${e} rests until ${fmt.format(new Date(m[e]))} UK time`).join('\n') : 'No account is resting.'); };
 if (cmd === 'status' || !cmd) show();
 else if (cmd === 'wake') {
   if (who === 'all') for (const e of Object.keys(restedMap())) setRest(e, 0); else { const e = pick(who); if (!e) { console.error('FAILED: which account?'); process.exit(1); } setRest(e, 0); }

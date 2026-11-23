@@ -54,6 +54,8 @@ export function restedMap() {
   return out;
 }
 export const isRested = (email) => !!restedMap()[lc(email)];
+// Hold buttons (Michael 23 Nov 2026, Q2 A): a hold from the Accounts page lasts until he taps it off.
+export const HOLD_FOREVER = 8.64e15;
 export function setRest(email, untilMs) {
   const m = restedMap();
   if (untilMs) m[lc(email)] = untilMs; else delete m[lc(email)];
@@ -89,7 +91,7 @@ export function fourthWindow(saved, q = readJson(QUOTA) || {}) {
   let open = start;
   for (const a of saved || []) {
     const e = lc(a.email);
-    if (e === e4 || isMain(e)) continue;
+    if (e === e4 || isMain(e) || e === 'rufusreade1969@gmail.com') continue;   // 5th (23 Nov): the 4th's turn still opens after the 2nd and 3rd only
     let t = nextWeekReset(e, q);
     if (!t) continue;
     while (t >= reset) t -= WEEK_MS;
