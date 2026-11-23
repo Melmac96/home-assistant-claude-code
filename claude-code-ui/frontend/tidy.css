@@ -239,3 +239,8 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .composer-actions{flex-wrap:nowrap!important;min-width:0}
 .composer-actions>button{flex:none}
 .composer-actions .tidy-tk{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right}
+
+/* my145 (Michael 23 Nov): the weekly prediction sits on its own line under a thin rule; a warning sign shows when it will run out before the reset */
+.acc-quota .aq-forecast{display:flex;align-items:flex-start;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #2a2b30;color:#9c9d9e}
+.acc-quota .aq-forecast.aq-warn{color:#e87777}
+.acc-quota .aq-wi{width:14px;height:14px;flex:none;margin-top:2px}

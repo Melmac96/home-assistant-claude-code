@@ -261,7 +261,13 @@ function drawQuota() {
         box.append(line, bar, mk('div', 'aq-sub', over ? 'Has reset since these figures were seen' : reset ? `Resets ${whenText(reset)} (UK time)` : ''));
       }
       if (!q.live && q.at) box.append(mk('div', 'aq-note', `Last seen ${whenText(q.at)} (UK time). Live figures show again once this account is used.`));
-      if (q.forecast) box.append(mk('div', 'aq-note aq-forecast', q.forecast));   // my90: weekly forecast
+      if (q.forecast) {   // my90: weekly forecast; my145 (Michael 23 Nov): on its own line, warning sign when it will run out before the reset
+        const warn = /I predict you will use up/.test(q.forecast);
+        const fc = mk('div', 'aq-note aq-forecast' + (warn ? ' aq-warn' : ''));
+        if (warn) fc.insertAdjacentHTML('beforeend', '<svg class="aq-wi" viewBox="0 0 24 24" aria-label="Warning"><path d="M12 3 22 20H2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.2" fill="currentColor"/></svg>');
+        fc.append(mk('span', '', q.forecast));
+        box.append(fc);
+      }
     }
     row.append(box);
   }
