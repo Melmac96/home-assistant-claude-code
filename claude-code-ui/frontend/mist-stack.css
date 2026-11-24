@@ -1,0 +1,134 @@
+/* haAi Look E "Mist Stack" (Michael's pick 24 Nov 2026). Loaded LAST, after tidy.css.
+   Stack layout: a raised top panel, framed cards stacked below, framed message box at the bottom.
+   Mist colours, Space Grotesk headings, Inter text. No white text (lightest #989da1),
+   no line thicker than 1px, focus and chosen = green #46bb68. */
+@font-face{font-family:'MS Inter';src:url(fonts/Inter.woff2) format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:'MS Grotesk';src:url(fonts/SpaceGrotesk.ttf) format('truetype');font-weight:300 700;font-display:block}
+
+:root{
+  --bg:#0a0c0e; --surface:#101418; --surface-2:#171c21; --border:#202830; --border-2:#27303a;
+  --text:#989da1; --text-muted:#78808a; --ms-t3:#56606a;
+  --accent:#8aa4b5; --accent-bg:rgba(138,164,181,.12); --lite:#95aab8;
+  --ms-pri:#6e8391;            /* the accent at 80% on black, like the mock-up's main button */
+  --ms-ok:#46bb68;             /* his focus / chosen green */
+  --user-bg:#171c21; --user-border:#202830; --tool-bg:#101418; --tool-border:#202830;
+  --error-bg:#16100f; --error-border:#3a2826; --error-text:#bd847d;
+  --radius:14px; --radius-sm:12px; --radius-xs:10px; --line-blue:#202830;
+  --ms-head:'MS Grotesk',system-ui,sans-serif;
+  --mono:'MS Grotesk',ui-monospace,monospace;
+}
+html,body{background:var(--bg)}
+body{font-family:var(--ui-font,'MS Inter',system-ui,sans-serif);color:var(--text)}
+:focus-visible{outline:1px solid var(--ms-ok)!important;outline-offset:2px}
+
+/* ── the raised top panel ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);border-radius:0 0 26px 26px;
+  padding:10px 14px 12px 16px;max-height:none;min-height:60px}
+.brand-name,.title-row .tl-name{font-family:var(--ms-head)}
+.icon-group{gap:6px}
+.icon-group .icon-btn{width:36px;height:36px;border-radius:11px;border:1px solid var(--border)!important;
+  background:transparent;color:var(--text-muted)}
+.icon-group .icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.icon-group .icon-btn.active{color:var(--accent);border-color:var(--accent)!important;background:var(--accent-bg)}
+.icon-group #new-session-btn,.icon-group #new-session-btn.active{background:var(--ms-pri);border-color:transparent!important;color:var(--bg)}
+.icon-group #new-session-btn:hover{background:var(--accent);color:var(--bg)}
+.svc-badge{border:1px solid var(--border);border-radius:11px;background:var(--bg);padding:5px 12px}
+.svc-badge .sb-a{color:var(--text);font-family:var(--ms-head);font-weight:600}
+.svc-badge .sb-m{color:var(--ms-t3);font-family:var(--ms-head)}
+.status-dot.connected{background:var(--ms-ok);box-shadow:none}
+.subbar,.usage-bars,.find-bar{background:var(--bg)}
+.ctx-chip{border-radius:11px}
+
+/* ── chat: framed cards stacked below ── */
+.messages{padding:14px 14px 8px}
+.bubble{border-radius:var(--radius)}
+.bubble-user{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:11px 14px}
+.bubble-assistant{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.bubble-assistant .bubble-content :is(h1,h2,h3,h4){font-family:var(--ms-head);font-weight:600;color:var(--text)}
+.bubble-assistant .bubble-content hr{border:0;border-top:1px solid var(--border);margin:14px 0}
+.bubble-assistant .bubble-content code{background:var(--bg);border:1px solid var(--border);color:var(--lite);border-radius:6px}
+.bubble-assistant .bubble-content pre{background:var(--bg);border:1px solid var(--border);border-radius:12px}
+.bubble-assistant .bubble-content th{background:var(--surface-2);font-family:var(--ms-head);font-weight:600}
+.bubble-assistant .bubble-content :is(th,td){border-color:var(--border)}
+.bubble-assistant .bubble-content a{color:var(--accent)}
+.tool-call,.tool-group{background:var(--surface);border:1px solid var(--border);border-radius:12px}
+.tool-call-input,.tool-call-result,.tool-result pre{background:var(--bg);border-color:var(--border);color:var(--text-muted)}
+.error-bubble{background:var(--error-bg);border:1px solid var(--error-border);border-radius:var(--radius)}
+.thinking-dots i{background:var(--accent)}
+
+/* question options: one framed list, square letter boxes (mock-up .qb) */
+.answer-card{border:0;border-bottom:1px solid var(--border);border-radius:0;padding:11px 2px;gap:12px;color:var(--text)}
+.answer-card .ans-l{width:26px;height:26px;border-radius:8px;border:1px solid var(--border-2);color:var(--accent);
+  font-family:var(--ms-head);font-weight:600}
+.answer-card .ans-t{padding-top:3px}
+.answer-card.picked{background:rgba(70,187,104,.08);border-radius:10px;border-bottom-color:transparent}
+.answer-card.picked .ans-l{border-color:var(--ms-ok);color:var(--ms-ok)}
+.answer-send,.answer-other{border-radius:12px}
+
+/* haAi cards in replies (finished, change a setting, timed job, reminder, waiting, ideas…) */
+.h2-card{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:12px 14px;color:var(--text);font-family:inherit}
+.h2-title{font-family:var(--ms-head);font-weight:600}
+.h2-btn{border-radius:12px}
+.h2-card.slim{border-left-width:1px;border-radius:12px}
+
+/* ── panels: sessions, settings, accounts, usage ── */
+.settings-panel,.sessions-panel,.accounts-panel,.usage-panel{background:var(--surface)!important;
+  border:1px solid var(--border)!important;border-radius:var(--radius)!important;box-shadow:0 24px 60px rgba(0,0,0,.8)}
+.blue-rule{height:1px;background:var(--border);border-radius:0;margin:14px 0}
+.sessions-head,.sessions-section{font-family:var(--ms-head);font-weight:600;font-size:calc(10.5px * var(--ts,1));
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ms-t3)}
+.session-item{border-radius:12px}
+.session-item:hover{background:var(--surface-2)}
+.session-item.active{background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--border)}
+.settings-row label{color:var(--text)}
+.settings-select,.settings-btn,.find-input,.login-code-input,.sessions-search,.perm-mode-select,.ts-btn,.ts-preview{
+  background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text)}
+.settings-select:focus,.find-input:focus,.login-code-input:focus,.sessions-search:focus{border-color:var(--ms-ok)}
+.settings-toggle{border-color:var(--border-2)}
+.settings-toggle:checked{background:var(--ms-pri);border-color:var(--ms-pri)}
+.acc-row{background:var(--surface-2);border:1px solid var(--border);border-radius:12px}
+.acc-row.acc-on,.acc-row.acc-free{border-color:var(--accent);background:var(--accent-bg)}
+.acc-email .acc-paid{color:var(--text)}
+.account-confirm{background:var(--surface-2);border:1px solid var(--accent);border-radius:var(--radius)}
+
+/* ── buttons and pop-ups ── */
+.btn{border-radius:12px;min-height:44px;font-family:var(--ms-head);font-weight:600}
+.btn-allow,.acc-yes,.ac-banner-action{background:var(--ms-pri);border-color:transparent;color:var(--bg)}
+.btn-deny{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn-always{background:transparent;border:1px solid var(--accent);color:var(--accent)}
+.permission-card,.login-card,.cmd-menu{background:var(--surface);border:1px solid var(--border);border-radius:20px}
+.dialog-option{border:1px solid var(--border);border-radius:12px}
+.dialog-option.selected{border-color:var(--ms-ok);background:rgba(70,187,104,.08)}
+.dialog-letter{border-radius:8px;background:var(--surface);border:1px solid var(--border-2)}
+.dialog-option.selected .dialog-letter{background:transparent;border-color:var(--ms-ok);color:var(--ms-ok)}
+.question-strip{background:var(--surface);border-top:1px solid var(--border)}
+.haai-toast{background:var(--surface-2);border:1px solid var(--ms-ok);border-radius:12px}
+mark.find-hit{color:var(--text)}
+mark.find-hit.find-current{background:var(--accent);color:var(--bg)}
+
+/* ── the framed message box at the bottom ── */
+.input-form{background:var(--bg)}
+.composer{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 8px 8px 14px}
+.composer:focus-within{border-color:var(--border-2)}
+.prompt-input{color:var(--text)}
+.prompt-input::placeholder{color:var(--ms-t3)}
+.attach-btn{border:1px solid var(--border);border-radius:11px;color:var(--text-muted)}
+.send-btn{background:var(--ms-pri);color:var(--bg);border-radius:11px}
+.send-btn:hover:not(:disabled){background:var(--accent)}
+.send-btn:disabled{background:var(--surface-2);color:var(--ms-t3)}
+.send-btn.stop{background:#5e423e;color:var(--text)}
+.attach-chip,.prompt-nav{background:var(--surface-2);border:1px solid var(--border);border-radius:12px}
+
+/* ── same calm outline on every normal button (mock-up), colour only when chosen ── */
+.composer-actions .attach-btn,.composer-actions .tidy-morebtn,.composer-actions .keep-btn,.composer .attach-btn{
+  border:1px solid var(--border)!important;border-radius:11px!important;color:var(--text-muted);background:transparent}
+.composer .send-btn{border-radius:11px!important}
+.icon-group .icon-btn{border-color:var(--border)!important;color:var(--text-muted)!important}
+.icon-group .icon-btn.active,.icon-group .icon-btn.sel{border-color:var(--accent)!important;color:var(--accent)!important;background:var(--accent-bg)!important}
+.icon-group #new-session-btn{color:var(--bg)!important}
+#tidy-chips button{border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--accent);font-family:var(--ms-head);font-weight:600}
+#tidy-chips button.other{color:var(--text-muted)}
+.tidy-jl{border:1px solid var(--border);border-radius:11px;background:var(--surface);color:var(--text-muted)}
+input[type=checkbox],input[type=radio],input[type=range]{accent-color:var(--ms-pri)}
+.sessions-panel .day-bar{padding:10px 10px 12px;gap:8px}

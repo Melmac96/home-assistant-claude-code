@@ -11,8 +11,8 @@ import { modelSelect, effortSelect } from './dom.js';
 import { allowanceNow } from './usage.js';
 import { addedCount } from './batch4.js';
 
-export const COL = { job: '#6b9fd4', task: '#e0a84f', model: '#b48ce0', msg: '#5fc47a', chat: '#4fc3c8', alarm: '#e87ea1',
-  upd: '#f0904a', brain: '#9fb3c8', allow: '#d9c45a', conn: '#7fd0a0' };
+export const COL = { job: '#859eaf', task: '#bfa06c', model: '#a98fb0', msg: '#86a98e', chat: '#768c9b', alarm: '#bd847d',
+  upd: '#bfa06c', brain: '#8aa4b5', allow: '#bfa06c', conn: '#86a98e' };
 export const NAMES = { job: 'This job', task: 'Background tasks', model: 'Other models helping', msg: 'Your messages',
   chat: 'Other chats', alarm: 'Reminders and timed jobs', upd: 'haAi update', brain: 'This chat', allow: 'Allowance', conn: 'Connection' };
 const P = {

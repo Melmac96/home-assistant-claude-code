@@ -12,18 +12,18 @@ import { sendText } from './quick.js';
 
 const css = mk('style');
 css.textContent = `
-.h93-rem{display:block;margin:4px 0 0 auto;background:none;border:1px solid #33363c;color:#7d8087;border-radius:9px;padding:2px 9px;font:600 12px system-ui,sans-serif;cursor:pointer}
+.h93-rem{display:block;margin:4px 0 0 auto;background:none;border:1px solid #27303a;color:#78808a;border-radius:9px;padding:2px 9px;font:600 12px system-ui,sans-serif;cursor:pointer}
 .h93-rem:disabled{color:#46bb68;border-color:#46bb68}
 .h93-filed{color:#46bb68;font-size:13px;margin-top:6px}
-.h93-tv{display:none;align-items:center;gap:6px;margin:0;padding:4px 12px;font-size:12.5px;color:#9cc8ff;background:#0b0c0e;border-bottom:1px solid #1e2024;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h93-tv{display:none;align-items:center;gap:6px;margin:0;padding:4px 12px;font-size:12.5px;color:#8aa4b5;background:#171c21;border-bottom:1px solid #27303a;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .h93-tv.on{display:flex}.tv-view .h93-tv{display:none!important}
-.h93-page{position:fixed;inset:0;z-index:9000;background:#000;color:#ececee;overflow:auto;padding:12px 12px 40px;font-family:inherit}
+.h93-page{position:fixed;inset:0;z-index:9000;background:#0a0c0e;color:#989da1;overflow:auto;padding:12px 12px 40px;font-family:inherit}
 .h93-page h3{margin:4px 0 10px;font-size:17px;display:flex;justify-content:space-between;align-items:center}
-.h93-page h4{margin:16px 0 6px;font-size:14px;color:#4da3ff}
-.h93-m{border:1.5px solid #26282d;border-radius:12px;padding:8px 11px;margin-top:6px}
-.h93-m b{display:block;font-size:13.5px}.h93-m span{display:block;font-size:13px;color:#c9cbd0;margin-top:2px}
-.h93-m i{display:block;font-style:normal;font-size:11.5px;color:#7d8087;margin-top:3px}
-.h93-none{color:#7d8087;font-size:13px}`;
+.h93-page h4{margin:16px 0 6px;font-size:14px;color:#8aa4b5}
+.h93-m{border:1px solid #27303a;border-radius:12px;padding:8px 11px;margin-top:6px}
+.h93-m b{display:block;font-size:13.5px}.h93-m span{display:block;font-size:13px;color:#989da1;margin-top:2px}
+.h93-m i{display:block;font-style:normal;font-size:11.5px;color:#78808a;margin-top:3px}
+.h93-none{color:#78808a;font-size:13px}`;
 document.head.append(css);
 
 // ── H3 Remember this ─────────────────────────────────────────────────────────

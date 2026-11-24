@@ -234,7 +234,7 @@ if (appBtn) appBtn.onclick = () => { asked = true; appOut.textContent = 'Checkin
 // ── 6. Accounts: 5-hour and weekly use for each paid account ─────────────────
 let quota = {};
 const NAMES = { five_hour: '5 hours', seven_day: 'Weekly' };
-const colour = (key, p) => (p >= 95 ? '#e87777' : p >= 80 ? '#e0a93b' : key === 'five_hour' ? '#6bbf8a' : '#6b9fd4');   // same as the top bars
+const colour = (key, p) => (p >= 95 ? '#bd847d' : p >= 80 ? '#bfa06c' : key === 'five_hour' ? '#86a98e' : '#859eaf');   // same as the top bars
 function drawQuota() {
   for (const row of document.querySelectorAll('#accounts-list .acc-row')) {
     const email = (row.querySelector('.acc-email')?.firstChild?.textContent || '').trim().toLowerCase();

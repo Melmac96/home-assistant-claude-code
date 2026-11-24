@@ -20,7 +20,7 @@ const $ = (id) => document.getElementById(id);
 
 const LIM = 150;   // thousand tokens: where a chat counts as long (same number as the chat length strip)
 const EFF = { low: 'L', medium: 'M', high: 'H', xhigh: 'X', max: 'Max' };
-const colour = (p) => (p < 60 ? '#46bb68' : p < 85 ? '#e8b84a' : '#f3736c');
+const colour = (p) => (p < 60 ? '#46bb68' : p < 85 ? '#bfa06c' : '#bd847d');
 const cls = (p) => (p < 60 ? 'cg' : p < 85 ? 'cy' : 'cr');
 
 let version = '';
@@ -288,7 +288,7 @@ function drawBars() {
   }
   const k = tokensK();
   tb.style.display = k ? '' : 'none';
-  const pc = Math.min(100, k / LIM * 100), nx = Math.min(100, (k + growth) / LIM * 100), c = pc < 50 ? '#46bb68' : pc < 75 ? '#e8b84a' : '#f3736c';   // my54: amber at 50%, red at 75%
+  const pc = Math.min(100, k / LIM * 100), nx = Math.min(100, (k + growth) / LIM * 100), c = pc < 50 ? '#46bb68' : pc < 75 ? '#bfa06c' : '#bd847d';   // my54: amber at 50%, red at 75%
   tbi.style.width = pc + '%'; tbi.style.background = c;
   tbg.style.left = pc + '%'; tbg.style.width = Math.max(0, nx - pc) + '%'; tbg.style.color = c; tbg.style.opacity = nx > pc ? 1 : 0;
 }

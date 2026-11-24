@@ -5,7 +5,7 @@
  */
 import { S } from './state.js';
 
-const G = '#46bb68', R = '#e05252', A = '#e0a030', B = '#6b9fd4', M = '#6f7072';
+const G = '#46bb68', R = '#a6746f', A = '#ba9c69', B = '#859eaf', M = '#78808a';
 const TABS = ['Allowance', 'Tokens', 'Helpers', 'Account'];
 let page = null, want = null, info = null, tab = 'Allowance';
 
@@ -41,7 +41,7 @@ function graph(a, now) {
   const last = pts[pts.length - 1];
   const fx = a.forecast ? `<line x1="${x(last[0])}" y1="${y(last[1])}" x2="${x(t1)}" y2="${y(fc.at_reset ?? nw.seven_day ?? 0)}" stroke="${A}" stroke-width="1" stroke-dasharray="4 3"/>` : '';
   return `<svg viewBox="0 -4 ${w} ${h + 8}" class="ap-g"><line x1="0" y1="${y(100)}" x2="${w}" y2="${y(100)}" stroke="${R}" stroke-width="1" stroke-dasharray="2 3"/>` +
-    `<line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="#383838" stroke-width="1"/><line x1="${x(now)}" y1="0" x2="${x(now)}" y2="${h}" stroke="${M}" stroke-width="1" stroke-dasharray="2 3"/>` +
+    `<line x1="0" y1="${h}" x2="${w}" y2="${h}" stroke="#27303a" stroke-width="1"/><line x1="${x(now)}" y1="0" x2="${x(now)}" y2="${h}" stroke="${M}" stroke-width="1" stroke-dasharray="2 3"/>` +
     `<polyline points="${pts.map(([t, p]) => x(t) + ',' + y(p)).join(' ')}" fill="none" stroke="${B}" stroke-width="1.5"/>${fx}</svg>` +
     `<div class="ap-gx"><span>7 days ago</span><span>Now, then the forecast to the reset at ${uk(nw.seven_reset, false)}</span></div>`;
 }

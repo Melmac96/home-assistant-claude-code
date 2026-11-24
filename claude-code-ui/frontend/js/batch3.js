@@ -101,7 +101,7 @@ window.haaiPhoto = (b64) => {
     const g = cv.getContext('2d'); let circle = null, start = null;
     const draw = () => {
       g.clearRect(0, 0, w, h); g.drawImage(base, 0, 0);
-      if (circle) { g.strokeStyle = '#f3736c'; g.lineWidth = Math.max(4, w / 160); g.beginPath(); g.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2); g.stroke(); }
+      if (circle) { g.strokeStyle = '#bd847d'; g.lineWidth = Math.max(4, w / 160); g.beginPath(); g.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2); g.stroke(); }
     };
     const pos = (ev) => { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) * w / r.width, y: (ev.clientY - r.top) * h / r.height }; };
     cv.addEventListener('pointerdown', (ev) => { ev.preventDefault(); cv.setPointerCapture(ev.pointerId); start = pos(ev); circle = { ...start, r: 1 }; });

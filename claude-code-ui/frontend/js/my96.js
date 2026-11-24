@@ -11,10 +11,10 @@ import { appendInfoLine } from './transcript.js';   // my115
 
 const css = mk('style');
 css.textContent = `
-.h96-back{display:flex;align-items:center;gap:10px;margin:6px 10px;padding:10px 12px;border:1.5px solid #4da3ff;border-radius:14px;background:#0b1522;color:#9cc8ff;font-size:13.5px}
+.h96-back{display:flex;align-items:center;gap:10px;margin:6px 10px;padding:10px 12px;border:1px solid #8aa4b5;border-radius:14px;background:#202830;color:#8aa4b5;font-size:13.5px}
 .h96-back.hidden{display:none}
 .h96-back span{flex:1;min-width:0}
-.h96-back button{flex:none;background:#4da3ff;color:#000;border:0;border-radius:11px;padding:9px 16px;font:700 15px system-ui,sans-serif;cursor:pointer}
+.h96-back button{flex:none;background:#8aa4b5;color:#0a0c0e;border:0;border-radius:11px;padding:9px 16px;font:700 15px system-ui,sans-serif;cursor:pointer}
 .tv-view .h96-back{display:none!important}`;
 document.head.append(css);
 

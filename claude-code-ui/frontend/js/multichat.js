@@ -249,7 +249,7 @@ function endNow(c, x) {
 }
 
 const LABEL = { working: 'Working', needs: 'Needs you', finished: 'Finished', idle: 'Ready' };
-const COLOUR = { working: '#4da3ff', needs: '#f3736c', finished: '#46bb68', idle: '#8a8d91' };
+const COLOUR = { working: '#8aa4b5', needs: '#bd847d', finished: '#46bb68', idle: '#78808a' };
 const tabs = mk('div', 'mc-tabs hidden'); tabs.id = 'mc-tabs';
 (document.getElementById('usage-panel') || document.querySelector('.header')).after(tabs);
 const row = mk('div', 'mc-send hidden'); row.id = 'mc-send';
@@ -279,7 +279,7 @@ function renderBars() {
     tabs.append(all);
     for (const c of S.chatList) {
       const t = mk('button', 'mc-tab' + (S.only === c.id ? ' sel' : '') + (c.id === S.chat ? ' target' : '') + (c.free ? ' free' : '')); t.type = 'button';
-      t.style.setProperty('--mc', c.hex || '#8a8d91');
+      t.style.setProperty('--mc', c.hex || '#78808a');
       const top = mk('span', 'mc-t1'); top.append(mk('b', 'mc-n', String(c.n)), mk('span', 'mc-name', c.name || 'New chat'));
       const st = mk('span', 'mc-t2');
       const s = mk('span', 'mc-st', LABEL[c.status] || ''); s.style.color = COLOUR[c.status] || ''; st.append(s);
@@ -298,7 +298,7 @@ function renderBars() {
     row.append(mk('span', 'mc-to', 'Send to'));
     for (const c of S.chatList) {
       const b = mk('button', 'mc-btn' + (c.id === S.chat ? ' sel' : '') + (S.only === c.id ? ' only' : '')); b.type = 'button';
-      b.style.setProperty('--mc', c.hex || '#8a8d91');
+      b.style.setProperty('--mc', c.hex || '#78808a');
       b.append(mk('b', null, String(c.n)), mk('span', null, c.free ? 'Free' : c.colourName || ''));
       b.setAttribute('aria-label', `Send to ${label(c)}${c.id === S.chat ? ' (tap again to see only this chat)' : ''}`);
       b.onclick = () => {

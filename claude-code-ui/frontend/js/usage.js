@@ -13,7 +13,7 @@ let windows = null;
 let timer = null;
 
 const pctOf = (u) => Math.max(0, Math.min(100, Math.round(u <= 1 ? u * 100 : u)));
-const colour = (key, p) => (p >= 95 ? '#e87777' : p >= 80 ? '#e0a93b' : key === 'five_hour' ? '#6bbf8a' : '#6b9fd4');
+const colour = (key, p) => (p >= 95 ? '#bd847d' : p >= 80 ? '#bfa06c' : key === 'five_hour' ? '#86a98e' : '#859eaf');
 const hm = (d) => d.toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' });
 const day = (d) => d.toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short' });
 

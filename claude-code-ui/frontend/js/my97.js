@@ -19,8 +19,8 @@ const TICK = '<path d="M20 6 9 17l-5-5"/>';
 const css = mk('style');
 css.textContent = `
 .h97{display:inline-flex;align-items:center;gap:6px;flex:none}
-.h97 .h97-done{border-color:#46bb68!important;background:rgba(70,187,104,.14)!important;color:#9ad6a6!important;width:auto!important;padding:0 10px!important;font:700 13px system-ui,sans-serif;gap:5px;display:inline-flex;align-items:center}
-.h97-strip{display:flex;align-items:center;gap:10px;margin:6px 10px;padding:8px 12px;border:1.5px solid #4da3ff;border-radius:14px;background:#0b1522;color:#9cc8ff;font-size:13px}
+.h97 .h97-done{border-color:#46bb68!important;background:rgba(70,187,104,.14)!important;color:#86a98e!important;width:auto!important;padding:0 10px!important;font:700 13px system-ui,sans-serif;gap:5px;display:inline-flex;align-items:center}
+.h97-strip{display:flex;align-items:center;gap:10px;margin:6px 10px;padding:8px 12px;border:1px solid #8aa4b5;border-radius:14px;background:#202830;color:#8aa4b5;font-size:13px}
 .h97-strip.hidden{display:none}.h97-strip span{flex:1;min-width:0}
 .tv-view .h97,.tv-view .h97-strip{display:none!important}`;
 document.head.append(css);

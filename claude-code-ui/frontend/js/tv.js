@@ -24,28 +24,28 @@ if (isTv) {
   document.documentElement.classList.add('haai-tv');
   const css = mk('style');
   css.textContent = `
-.haai-tv{--text:#7d8087}
-.haai-tv body,.haai-tv .bubble-content,.haai-tv .bubble-user .bubble-content,.haai-tv .svc-badge .sb-a,.haai-tv strong,.haai-tv b,.haai-tv h1,.haai-tv h2,.haai-tv h3,.haai-tv h4,.haai-tv #prompt-input,.haai-tv .way-chip,.haai-tv .tv-acct{color:#7d8087}
+.haai-tv{--text:#78808a}
+.haai-tv body,.haai-tv .bubble-content,.haai-tv .bubble-user .bubble-content,.haai-tv .svc-badge .sb-a,.haai-tv strong,.haai-tv b,.haai-tv h1,.haai-tv h2,.haai-tv h3,.haai-tv h4,.haai-tv #prompt-input,.haai-tv .way-chip,.haai-tv .tv-acct{color:#78808a}
 .haai-tv #app{max-width:none!important;width:100%}
 .haai-tv .icon-group,.haai-tv #tidy-menu-btn,.haai-tv #tidy-sbar,.haai-tv .h93-tv,.haai-tv .header-left>.svc-badge{display:none!important}
 .haai-tv .header{min-height:0!important;height:34px;padding:0 8px!important;border-bottom:1px solid var(--border)}
 .haai-tv .header-left{flex:1;min-width:0;gap:10px;display:flex;align-items:center}
 .haai-tv .tidy-star{flex:none}
-.tv-tick{flex:1;min-width:0;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#000 24px,#000 calc(100% - 24px),transparent)}
+.tv-tick{flex:1;min-width:0;overflow:hidden;white-space:nowrap;-webkit-mask-image:linear-gradient(90deg,transparent,#0a0c0e 24px,#0a0c0e calc(100% - 24px),transparent);mask-image:linear-gradient(90deg,transparent,#0a0c0e 24px,#0a0c0e calc(100% - 24px),transparent)}
 .tv-run{display:inline-flex;white-space:nowrap;animation:tv-tick linear infinite;will-change:transform}
 .tv-grp{display:inline-flex;align-items:center;gap:14px;padding-right:14px;font-size:13px;color:var(--lite)}
 .tv-grp .tv-dot{color:var(--border-2)}
-.tv-grp .tv-badge{display:inline-flex;align-items:center;justify-content:center;background:#f3736c;color:#000;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700}
+.tv-grp .tv-badge{display:inline-flex;align-items:center;justify-content:center;background:#bd847d;color:#0a0c0e;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:700}
 .tv-acct{border:1px solid var(--accent);border-radius:8px;padding:1px 8px;font-weight:600}
 .tv-qbox{border:1px solid;border-radius:8px;padding:1px 8px}
 .tv-acct small{color:var(--text-muted);font-weight:400;margin-left:5px;font-size:1em}
-.tv-grp .cy{color:#e8b84a}.tv-grp .cr{color:#f3736c}
+.tv-grp .cy{color:#bfa06c}.tv-grp .cr{color:#bd847d}
 @keyframes tv-tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-.haai-tv .bubble-user{align-self:stretch!important;width:100%;max-width:100%!important;box-sizing:border-box;background:transparent!important;border:0!important;border-top:2px solid var(--line-blue,#1f5fae)!important;border-bottom:2px solid var(--line-blue,#1f5fae)!important;border-radius:0!important}
+.haai-tv .bubble-user{align-self:stretch!important;width:100%;max-width:100%!important;box-sizing:border-box;background:transparent!important;border:0!important;border-top:1px solid var(--line-blue,#596a75)!important;border-bottom:1px solid var(--line-blue,#596a75)!important;border-radius:0!important}
 /* my105 (Michael 15 Nov): no buttons under replies or his messages on the TV - Broke a rule, Explain it, Another way, speaker, star, time and Remember are tablet only */
 .haai-tv .bubble-assistant>.reply-foot,.haai-tv .bubble-assistant>.reply-chips,.haai-tv .bubble-assistant>.read-top,.haai-tv .bubble-assistant>.msg-time,.haai-tv .bubble-user>.h93-rem,.haai-tv .bubble-user>.msg-time{display:none!important}
 /* my105: questions = one line on the TV (gone once answered); no answer buttons, no card buttons; Claude's working shows again since my107 */
-.haai-tv .q-tv{display:block!important;margin:6px 0;padding:6px 12px;border:1px solid var(--accent);border-radius:8px;color:#9cc8ff;font-weight:600}
+.haai-tv .q-tv{display:block!important;margin:6px 0;padding:6px 12px;border:1px solid var(--accent);border-radius:8px;color:#8aa4b5;font-weight:600}
 .haai-tv .q-tv.q-done,.haai-tv .q-part,.haai-tv #tidy-chips,.haai-tv .bubble-assistant .h2-btn,.haai-tv .bubble-assistant .h2-row{display:none!important}
 /* my107 (Michael 15 Nov, Q2 B): the working panel (my steps, thinking, progress bar) shows on the TV all the time, like the phone and tablet - my105's hide removed */
 .haai-tv #attach-btn,.haai-tv .tidy-morebtn,.haai-tv #keep-btn,.haai-tv #send-btn,.haai-tv .h97-hand,.haai-tv .h97-lots:not(.h97-done){display:none!important}`;
@@ -70,7 +70,7 @@ if (isTv) {
     return ' (' + new Date(w.resetsAt * 1000).toLocaleString('en-GB', o).replace(',', '') + ')';
   };
   // my128 (Michael 15 Nov): each account's box takes the colour of its fuller bar, the same colours as the usage bars (extras.js colour())
-  const boxCol = (v) => { const u = (w) => (w && w.used != null ? Math.round(w.used) : 0), f = Math.max(u(v.five_hour), u(v.seven_day)); return f >= 95 ? '#e87777' : f >= 80 ? '#e0a93b' : u(v.seven_day) > u(v.five_hour) ? '#6b9fd4' : '#6bbf8a'; };
+  const boxCol = (v) => { const u = (w) => (w && w.used != null ? Math.round(w.used) : 0), f = Math.max(u(v.five_hour), u(v.seven_day)); return f >= 95 ? '#bd847d' : f >= 80 ? '#bfa06c' : u(v.seven_day) > u(v.five_hour) ? '#859eaf' : '#86a98e'; };
   const tone = (p) => (p == null ? '' : p <= 15 ? 'cr' : p <= 40 ? 'cy' : '');
 
   function parts() {
