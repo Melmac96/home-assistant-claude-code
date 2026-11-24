@@ -132,7 +132,7 @@ export function renderSessions() {
         });
         if (!ok) return;   // stay put, panel still open, nothing sent
       }
-      if (!(S.ws && S.isConnected)) { appendInfoLine('No connection, so the chat was not opened. Try again when haAi is back.'); return; }   // my115: panel stays open
+      if (!(S.ws && S.isConnected)) { appendInfoLine('No connection, so the chat was not opened. Try again when Alf Ai is back.'); return; }   // my115: panel stays open
       S.ws.send(JSON.stringify({ type: 'session_switch', id: s.id }));
       closeSessions();
     };

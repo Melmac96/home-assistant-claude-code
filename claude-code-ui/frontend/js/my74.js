@@ -32,7 +32,7 @@ export function ruleButton(getRaw) {
   b.onclick = (e) => {
     e.stopPropagation();
     const snip = getRaw().replace(/🔹+/g, '').replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 240);
-    if (!S.isConnected) { appendInfoLine('No connection, so nothing was sent. Try again when haAi is back.'); return; }
+    if (!S.isConnected) { appendInfoLine('No connection, so nothing was sent. Try again when Alf Ai is back.'); return; }
     wsSend({ type: 'rule_broken', text: snip });
     sendText(`That broke a rule. The reply that starts: "${snip}". Please find which of my rules it broke and suggest a fix.`);
   };

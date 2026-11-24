@@ -426,6 +426,6 @@ let warnedAt = 0;
 if (upd) upd.addEventListener('click', (e) => {
   if (S.chatsWorking > 0 && Date.now() - warnedAt > 8000) {
     e.preventDefault(); warnedAt = Date.now();
-    toast(`${S.chatsWorking} chat${S.chatsWorking > 1 ? 's are' : ' is'} still working. Updating restarts haAi and stops them. Tap Update again to go ahead anyway.`);
+    toast(`${S.chatsWorking} chat${S.chatsWorking > 1 ? 's are' : ' is'} still working. Updating restarts Alf Ai and stops them. Tap Update again to go ahead anyway.`);
   }
 }, true);

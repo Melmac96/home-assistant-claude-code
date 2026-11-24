@@ -70,9 +70,9 @@ inputForm.onsubmit = async (e) => {
   const hasAtt = attachments.some((a) => useKeep || !a.cid);
   if (!text && !hasAtt && !kept.length) return;
   if (!S.isConnected) {   // my74 H8: no connection: the words wait and go by themselves when haAi is back
-    if (hasAtt || kept.length || !text || text.startsWith('/')) { appendInfoLine('No connection. Photos and commands cannot wait, so nothing was sent. Press Send again when haAi is back.'); return; }
+    if (hasAtt || kept.length || !text || text.startsWith('/')) { appendInfoLine('No connection. Photos and commands cannot wait, so nothing was sent. Press Send again when Alf Ai is back.'); return; }
     // my115: the box is only cleared once the message is safely in the waiting list
-    if (!queueOffline(text)) { appendInfoLine('No connection, and this phone has no room left to keep the message, so it is still in the box. Press Send again when haAi is back.'); return; }
+    if (!queueOffline(text)) { appendInfoLine('No connection, and this phone has no room left to keep the message, so it is still in the box. Press Send again when Alf Ai is back.'); return; }
     answersWent(wa.ids);   // my146
     restoreBox();
     resizeTextarea();
@@ -125,7 +125,7 @@ inputForm.onsubmit = async (e) => {
     add: adding || undefined,
     answersSent: wa.ids.length ? wa.ids : undefined,   // my146
   }, text);
-  if (!cid) { appendInfoLine('The link to haAi dropped just as you pressed Send, so nothing went. Your message and answers are still here: press Send again in a moment.'); updateSendBtn(); return; }
+  if (!cid) { appendInfoLine('The link to Alf Ai dropped just as you pressed Send, so nothing went. Your message and answers are still here: press Send again in a moment.'); updateSendBtn(); return; }
   answersWent(wa.ids);   // my146
 
   if (adding) noteAdded(text);   // my48
@@ -144,7 +144,7 @@ inputForm.onsubmit = async (e) => {
 // my26: "What were you doing?" button: one tap asks Claude to repeat its last full report.
 const repeatBtn = document.getElementById('repeat-btn');
 if (repeatBtn) repeatBtn.onclick = () => {
-  if (!S.isConnected) { appendInfoLine('No connection, so nothing was sent. Try again when haAi is back.'); return; }   // my115: never a silent nothing
+  if (!S.isConnected) { appendInfoLine('No connection, so nothing was sent. Try again when Alf Ai is back.'); return; }   // my115: never a silent nothing
   const ask = 'What were you doing? Please repeat your last full report: what you did, and any question still waiting.';
   promptInput.value = promptInput.value.trim() ? promptInput.value.trim() + '\n\n' + ask : ask;
   promptInput.dispatchEvent(new Event('input'));

@@ -61,7 +61,7 @@ export function appendUserBubble(text, ts, atts) {
     // not for him - his screen shows one short line instead, on every device (the full note still goes to Claude).
     const moved = /^Continue this job:/.test(text) && text.includes('[haAi moved this chat to a new one by itself');
     if (moved) div.classList.add('h107-moved');
-    t.textContent = moved ? 'haAi moved to a new chat because the old one was long' : text;
+    t.textContent = moved ? 'Alf Ai moved to a new chat because the old one was long' : text;
     content.appendChild(t);
   }
   addTime(div, ts);

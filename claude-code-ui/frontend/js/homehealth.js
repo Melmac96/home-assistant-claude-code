@@ -32,8 +32,8 @@ function fillPanel() {
   const lost = lostTouch();
   let ask = null;
   if (lost) {
-    add('hh-title', 'haAi has lost touch');
-    add('hh-line', 'I cannot tell you if your home is alright until haAi reconnects.');
+    add('hh-title', 'Alf Ai has lost touch');
+    add('hh-line', 'I cannot tell you if your home is alright until Alf Ai reconnects.');
   } else if (data.status === 'stale') {
     add('hh-title', 'The home check has stopped updating');
     add('hh-line', 'I cannot tell you if your home is alright until it runs again.');
@@ -49,7 +49,7 @@ function fillPanel() {
   const own = Array.isArray(data.haai) ? data.haai : [];   // my79 H12 (Look A): haAi's own checks at the bottom
   if (own.length) {
     const nBad = own.filter((c) => !c.ok).length;
-    add('hh-group', nBad ? `haAi: ${nBad} need${nBad === 1 ? 's' : ''} a look` : 'haAi: all fine');
+    add('hh-group', nBad ? `Alf Ai: ${nBad} need${nBad === 1 ? 's' : ''} a look` : 'Alf Ai: all fine');
     for (const c of own) add('hh-line ' + (c.ok ? 'hh-ok' : 'hh-bad'), (c.ok ? '✓ ' : '✗ ') + c.text);
     const badOwn = own.filter((c) => !c.ok).map((c) => c.text);
     if (badOwn.length && !ask) ask = `The haAi part of the Home health heart shows a problem. Please find out why and tell me in plain English:\n${badOwn.join('\n')}`;

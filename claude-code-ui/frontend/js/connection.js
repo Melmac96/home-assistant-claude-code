@@ -118,7 +118,7 @@ export function connect() {
     if (S.ws !== ws) return;
     lastHeard = Date.now();
     let msg;
-    try { msg = JSON.parse(e.data); } catch { console.warn('haAi sent something this page could not read'); return; }   // my115
+    try { msg = JSON.parse(e.data); } catch { console.warn('Alf Ai sent something this page could not read'); return; }   // my115
     try { handleServerMessage(msg); } catch (err) { console.error(`showing a ${msg && msg.type} message failed`, err); }   // my115: one bad message never stops the rest
   };
 }

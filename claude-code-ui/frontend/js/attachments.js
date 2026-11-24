@@ -65,7 +65,7 @@ export async function persistAttachments() {
     const db = await idb();
     const tx = db.transaction(ST, 'readwrite');
     tx.objectStore(ST).put(attachments.map((a) => ({ name: a.name, type: a.mediaType, blob: a.file })), 'list');
-  } catch (e) { console.warn('photos not kept for a reload', e); if (attachments.length) appendInfoLine('Your photos could not be kept on this device, so send them before closing haAi.'); }   // my115
+  } catch (e) { console.warn('photos not kept for a reload', e); if (attachments.length) appendInfoLine('Your photos could not be kept on this device, so send them before closing Alf Ai.'); }   // my115
 }
 async function restoreAttachments() {
   try {

@@ -72,15 +72,15 @@ const nameByEmail = (email) => { const i = acc.saved.findIndex((x) => x.email ==
 window.addEventListener('haai-cycle', (e) => {
   const m = e.detail || {};
   if (m.type === 'cycle_moved') {
-    toast(m.used ? `Your account reached ${m.used}% of its 5 hours, so haAi moved this chat to ${nameByEmail(m.to)} and carried on by itself.`
-      : `haAi is using ${nameByEmail(m.to)} now, as its 5 hours run out soonest.`);
+    toast(m.used ? `Your account reached ${m.used}% of its 5 hours, so Alf Ai moved this chat to ${nameByEmail(m.to)} and carried on by itself.`
+      : `Alf Ai is using ${nameByEmail(m.to)} now, as its 5 hours run out soonest.`);
     send({ type: 'quota_get', force: true });
   } else if (m.type === 'cycle_warn') {   // my122: every account at 75% or more: a red warning, nothing moves
     if (document.querySelector('.guard-pop')) return;
     const ov = mk('div', 'start-check guard-pop'); ov.setAttribute('role', 'alertdialog'); ov.setAttribute('aria-modal', 'true');
     const card = mk('div', 'sc-card'); card.style.cssText = 'border:1px solid #bd847d;box-shadow:0 0 24px #f3736c66';
     const t = mk('div', 'sc-title', 'All your Claude accounts are at 75% or more'); t.style.color = '#bd847d';
-    card.append(t, mk('div', 'sc-q', 'haAi will not switch or stop. Here is where each one stands:'));
+    card.append(t, mk('div', 'sc-q', 'Alf Ai will not switch or stop. Here is where each one stands:'));
     const r0 = (n) => (n == null ? 'unknown' : Math.round(n) + '%');
     (m.accounts || []).forEach((a, i) => {
       const row = mk('div', 'sc-q', `${a.name}${i === m.recommend ? ' (recommended)' : ''}: 5 hours ${r0(a.five)} used, resets ${a.fiveText}. 7 days ${r0(a.week)} used, resets ${a.weekText}.`);

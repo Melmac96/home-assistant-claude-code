@@ -23,7 +23,7 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
  */
 export function sendText(t, opts = {}) {
   if (opts.withPhotos) {
-    if (!S.isConnected) { appendInfoLine('No connection, so the photo was not sent. It is still attached: press Send when haAi is back.'); return false; }
+    if (!S.isConnected) { appendInfoLine('No connection, so the photo was not sent. It is still attached: press Send when Alf Ai is back.'); return false; }
     S.keepDraft = promptInput.value;
     promptInput.value = t;
     inputForm.dispatchEvent(new Event('submit'));

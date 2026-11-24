@@ -34,13 +34,13 @@ function draw() {
 
 export function goAway() {
   if (away) return;
-  if (!S.isConnected) { appendInfoLine('No connection, so U decide was not sent. Try again when haAi is back.'); return; }   // my115
+  if (!S.isConnected) { appendInfoLine('No connection, so U decide was not sent. Try again when Alf Ai is back.'); return; }   // my115
   away = true; since = Date.now(); draw();
   wsSend({ type: 'away_set', on: true });
   sendText("U decide: I'm going away from haAi for a while. Get on by yourself with jobs I have already said yes to, plus checks and tidy-ups (back up first). Anything new waits for me: list it in the I'm back report.");
 }
 back.onclick = () => {
-  if (!S.isConnected) { appendInfoLine("No connection, so I'm back was not sent. Try again when haAi is back."); return; }   // my115
+  if (!S.isConnected) { appendInfoLine("No connection, so I'm back was not sent. Try again when Alf Ai is back."); return; }   // my115
   away = false; draw();
   wsSend({ type: 'away_set', on: false });
   sendText("I'm back. Finish the step you are on, then tell me what you did while I was away, what is waiting for me, and that you are ready for me.");

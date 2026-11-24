@@ -144,7 +144,7 @@ export function onScreenShot(msg) {
 
 // ── Shared from Android's Share menu: text and files arrive from the app ─────
 window.haaiShared = (json) => {
-  let d; try { d = typeof json === 'string' ? JSON.parse(json) : json; } catch { toast('Something was shared with haAi but could not be read. Please share it again.'); return; }   // my115
+  let d; try { d = typeof json === 'string' ? JSON.parse(json) : json; } catch { toast('Something was shared with Alf Ai but could not be read. Please share it again.'); return; }   // my115
   const n = native(); let count = 0, lost = 0;
   if (d.text) { promptInput.value = (promptInput.value ? promptInput.value + '\n' : '') + d.text; promptInput.dispatchEvent(new Event('input', { bubbles: true })); count++; }
   (d.files || []).forEach((f, i) => { try { addFiles([b64ToFile(n.sharedFile(i), f.name || `shared-${i}`, f.mime || 'application/octet-stream')]); count++; } catch { lost++; } });

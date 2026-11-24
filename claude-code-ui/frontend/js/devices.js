@@ -11,7 +11,7 @@ const list = document.getElementById('devices-list');
 // my115: says whether it went; with no link he is told and the button is not left greyed out
 const send = (o) => {
   if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
-  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when haAi is back.';
+  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when Alf Ai is back.';
   t.onclick = () => t.remove(); document.body.append(t); setTimeout(() => t.remove(), 6000);
   return false;
 };

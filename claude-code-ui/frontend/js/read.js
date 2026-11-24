@@ -100,7 +100,7 @@ export function openReader(raw) {
   sheet.classList.remove('hidden');
   const head = mk('div', 'read-title', 'Choose what to hear');
   sheet.append(head);
-  if (!canSpeak()) { sheet.append(mk('p', 'read-hint', 'This device cannot read aloud yet. In the haAi phone app it needs app version 11.')); const c = mk('button', 'read-btn2', 'Close'); c.type = 'button'; c.onclick = closeSheet; sheet.append(c); return; }
+  if (!canSpeak()) { sheet.append(mk('p', 'read-hint', 'This device cannot read aloud yet. In the Alf Ai phone app it needs app version 11.')); const c = mk('button', 'read-btn2', 'Close'); c.type = 'button'; c.onclick = closeSheet; sheet.append(c); return; }
   if (!pieces.length) { sheet.append(mk('p', 'read-hint', 'Nothing to read in this reply.')); const c = mk('button', 'read-btn2', 'Close'); c.type = 'button'; c.onclick = closeSheet; sheet.append(c); return; }
   const list = mk('div', 'read-pieces');
   const els = pieces.map((p, i) => { const d = mk('div', 'read-piece', p); d.onclick = () => { d.classList.toggle('sel'); upd(); }; list.append(d); return d; });

@@ -60,5 +60,6 @@ if (draft) { promptInput.value = draft; resizeTextarea(); updateSendBtn(); }
 // my51: the tidy screen rearranges the others, so it loads last, and if it ever fails the plain app still runs.
 import('./js/midtext.js').catch((e) => console.error('mid-text hide failed', e));   // my106: only the final reply of each turn shows
 import('./js/tidy.js').then(() => import('./js/tv.js')).catch((e) => console.error('tidy screen failed', e));   // my104: TV layout after tidy
+import('./js/alf.js').catch((e) => console.error('Alf failed', e));   // my151: Alf in the working bar
 
 connect();

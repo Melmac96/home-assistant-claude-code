@@ -221,10 +221,10 @@ let asked = false;
 function drawApp() {
   if (!appOut || !asked) return;
   appOut.innerHTML = '';
-  if (!latest) { appOut.append(mk('span', '', 'I could not find a published haAi app just now.')); return; }
+  if (!latest) { appOut.append(mk('span', '', 'I could not find a published Alf Ai app just now.')); return; }
   const mine = appVersion();
-  if (mine && mine >= latest.versionCode) { appOut.append(mk('span', '', `You have the newest haAi app (version ${mine}).`)); return; }
-  appOut.append(mk('span', '', mine ? `A newer haAi app is ready: version ${latest.versionCode} (you have ${mine}). ` : `The newest haAi app is version ${latest.versionCode}. `));
+  if (mine && mine >= latest.versionCode) { appOut.append(mk('span', '', `You have the newest Alf Ai app (version ${mine}).`)); return; }
+  appOut.append(mk('span', '', mine ? `A newer Alf Ai app is ready: version ${latest.versionCode} (you have ${mine}). ` : `The newest Alf Ai app is version ${latest.versionCode}. `));
   const a = mk('a', 'settings-btn app-get', `Install version ${latest.versionCode}`);
   a.href = latest.url; a.target = '_blank'; a.rel = 'noopener';
   appOut.append(a);
@@ -243,7 +243,7 @@ function drawQuota() {
     const box = mk('div', 'acc-quota');
     const q = quota[email];
     if (!q || (!q.five_hour && !q.seven_day)) {
-      box.append(mk('div', 'aq-note', 'No figures yet. They show once this account has been used in haAi.'));
+      box.append(mk('div', 'aq-note', 'No figures yet. They show once this account has been used in Alf Ai.'));
     } else {
       for (const key of ['five_hour', 'seven_day']) {
         const w = q[key];

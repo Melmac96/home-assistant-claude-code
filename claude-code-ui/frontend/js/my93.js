@@ -78,7 +78,7 @@ function drawPage() {
   const x = mk('button', 'h2-btn sm', 'Close'); x.type = 'button'; x.onclick = () => { page.remove(); page = null; };
   h.append(x); page.append(h);
   page.append(mk('div', 'h93-none', 'Messages sent to your phone and tablet in the last 7 days, newest first.'));
-  if (!list.length) { page.append(mk('div', 'h93-none', 'None yet. haAi starts keeping them from this update on.')); return; }
+  if (!list.length) { page.append(mk('div', 'h93-none', 'None yet. Alf Ai starts keeping them from this update on.')); return; }
   for (const k of KINDS) {
     const items = list.filter((m) => (m.kind || 'Home') === k).sort((a, b) => b.at - a.at);
     if (!items.length) continue;

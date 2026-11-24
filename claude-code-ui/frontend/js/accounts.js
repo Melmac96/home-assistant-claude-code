@@ -28,7 +28,7 @@ export const shortName = (email) => SHORT[String(email).toLowerCase()] || String
 // my115: says whether it went; with no link he is told and the button is not left greyed out
 const send = (o) => {
   if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
-  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when haAi is back.';
+  const t = document.createElement('div'); t.className = 'guard-toast'; t.textContent = 'No connection, so nothing was changed. Try again when Alf Ai is back.';
   t.onclick = () => t.remove(); document.body.append(t); setTimeout(() => t.remove(), 6000);
   return false;
 };
@@ -105,7 +105,7 @@ function drawTiles() {
     if (wide) {
       let note = isMain_(e) ? 'Used last. Never past 75%, because you use it in the Claude app too.' : 'Used before it resets. Can go up to 95%.';
       if (turn && turn.email === e) note = turn.on ? `Its turn now, until ${when(turn.close)}.` : `Its turn opens ${when(turn.open)}.`;
-      if (isHeld) note = 'On hold: haAi will not use it until you tap ON HOLD to take the hold off. A reply already running finishes first.';
+      if (isHeld) note = 'On hold: Alf Ai will not use it until you tap ON HOLD to take the hold off. A reply already running finishes first.';
       t.append(mk('div', 'acc-tnote acc-center', note));
       if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', q.forecast));
     } else if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', 'May run out before it resets'));
@@ -233,7 +233,7 @@ export function showAccountResult(msg) {
   }
   if (msg.ok && msg.pending) {   // my123
     confirmBox.appendChild(mk('b', '', 'Done: switching to ' + shortName(msg.email) + ' right after this turn'));
-    confirmBox.appendChild(mk('div', 'settings-hint', 'haAi is busy, so nothing is cut off. It switches as soon as the current reply ends, and the account list above says so until then.'));
+    confirmBox.appendChild(mk('div', 'settings-hint', 'Alf Ai is busy, so nothing is cut off. It switches as soon as the current reply ends, and the account list above says so until then.'));
     confirmBox.classList.remove('hidden');
     return;
   }

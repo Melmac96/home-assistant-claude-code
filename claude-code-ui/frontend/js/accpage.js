@@ -89,7 +89,7 @@ function paneHtml(name, a, now) {
   const x = info || {};
   const facts = [['Name', a.name || ''], ['Email', x.email || ''], ['Plan', a.plan || 'not known'], ['Opened', date(a.opened)], ['Plan started', date(a.plan_started)],
     ['Paid by', a.billing === 'stripe_subscription' ? 'Card subscription' : (a.billing || 'not known')], ['Extra usage', a.extra_usage ? 'On' : 'Off'],
-    ['Limit haAi keeps to', (x.cap || 95) + '%'], ['On hold', x.held ? 'Yes, until you tap ON HOLD' : 'No'], ['Name in haAi', x.label || ''], ['Now', x.chip || ''],
+    ['Limit Alf Ai keeps to', (x.cap || 95) + '%'], ['On hold', x.held ? 'Yes, until you tap ON HOLD' : 'No'], ['Name in Alf Ai', x.label || ''], ['Now', x.chip || ''],
     ['Figures checked', uk(nw.checked) + ' UK time']];
   return card('The account', facts.filter((f) => f[1]).map(([k, v]) => `<div class="ap-bl"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''));
 }
@@ -105,7 +105,7 @@ function provPane(name, p, f) {   // his Q2 A (24 Nov): Other Paid / Free accoun
       `<small>Last used ${uk(f.last)} UK time. The free helpers' record keeps sizes and times only, never what was read.</small>`;
   }
   const facts = [['Name', p.label], ['Kind', p.paid ? 'Paid' : 'Free'], ['Ready to use', p.ready ? 'Yes' : 'No'], ['In use now', p.active ? 'Yes' : 'No'],
-    ['Model', p.model ? p.model.replace(/^[^/]+\//, '') : 'none set'], ['Its id in haAi', p.id]];
+    ['Model', p.model ? p.model.replace(/^[^/]+\//, '') : 'none set'], ['Its id in Alf Ai', p.id]];
   return card('The account', facts.map(([k, v]) => `<div class="ap-bl"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''));
 }
 
@@ -146,7 +146,7 @@ export function openAccountPage(a, extra) {
   try { history.pushState({ apPage: 1 }, ''); } catch { /* not needed */ }
   draw();
   if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'account_details', email: a.email }));
-  else { want = { error: 'haAi is not connected just now, so I could not get the figures.' }; draw(); }
+  else { want = { error: 'Alf Ai is not connected just now, so I could not get the figures.' }; draw(); }
 }
 
 // his Q2 A: the Other Paid / Free tiles open a page too. p = the provider from the stats message
@@ -162,7 +162,7 @@ export function openProviderPage(p) {
   try { history.pushState({ apPage: 1 }, ''); } catch { /* not needed */ }
   draw();
   if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'account_details', email: info.email }));
-  else want = { error: 'haAi is not connected just now, so I could not get the figures.' };
+  else want = { error: 'Alf Ai is not connected just now, so I could not get the figures.' };
 }
 
 export function showAccountDetails(msg) {

@@ -59,8 +59,8 @@ function lost(cid, why) {
   }
   if (u.text && hooks.queueOffline) hooks.queueOffline(u.text, cid);
   hooks.info?.(u.hasAtt
-    ? 'Your last message may not have reached haAi, and its photos could not be kept. The words will be sent again by themselves; please attach the photos again.'
-    : 'Your last message may not have reached haAi, so it will be sent again by itself when the link is back.');
+    ? 'Your last message may not have reached Alf Ai, and its photos could not be kept. The words will be sent again by themselves; please attach the photos again.'
+    : 'Your last message may not have reached Alf Ai, so it will be sent again by itself when the link is back.');
   hooks.ended?.();
 }
 
@@ -77,7 +77,7 @@ export function sendForButton(text, opts = {}) {
   if (!t) return 'failed';
   if (!linkOpen()) {
     if (hooks.queueOffline) { hooks.queueOffline(t); return 'queued'; }
-    hooks.info?.('No connection, so nothing was sent. Try again when haAi is back.');
+    hooks.info?.('No connection, so nothing was sent. Try again when Alf Ai is back.');
     return 'failed';
   }
   if (popupOpen()) {

@@ -14,7 +14,7 @@ import { addedCount } from './batch4.js';
 export const COL = { job: '#859eaf', task: '#bfa06c', model: '#a98fb0', msg: '#86a98e', chat: '#768c9b', alarm: '#bd847d',
   upd: '#bfa06c', brain: '#8aa4b5', allow: '#bfa06c', conn: '#86a98e' };
 export const NAMES = { job: 'This job', task: 'Background tasks', model: 'Other models helping', msg: 'Your messages',
-  chat: 'Other chats', alarm: 'Reminders and timed jobs', upd: 'haAi update', brain: 'This chat', allow: 'Allowance', conn: 'Connection' };
+  chat: 'Other chats', alarm: 'Reminders and timed jobs', upd: 'Alf Ai update', brain: 'This chat', allow: 'Allowance', conn: 'Connection' };
 const P = {
   job: '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M8.5 10h7M8.5 14h7M8.5 18h4"/>',
   task: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/><circle cx="12" cy="12" r="6.2"/>',

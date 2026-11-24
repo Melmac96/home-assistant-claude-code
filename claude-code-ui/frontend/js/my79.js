@@ -67,7 +67,7 @@ function drawChecks() {
     const r = mk('div', 'h79-check');
     r.append(mk('div', 'h2-line', w.text));
     const ok = w.found && /✓\s*$/.test(w.found), bad = w.found && /✗\s*$/.test(w.found);
-    r.append(mk('div', 'h2-line ' + (ok ? 'green' : bad ? 'red' : 'grey'), w.found ? `haAi found: ${w.found}` : 'haAi could not check this by itself'));
+    r.append(mk('div', 'h2-line ' + (ok ? 'green' : bad ? 'red' : 'grey'), w.found ? `Alf Ai found: ${w.found}` : 'Alf Ai could not check this by itself'));
     const agree = mk('button', 'h2-btn g sm', w.found ? 'Agree' : 'It is fine'); agree.type = 'button';
     agree.onclick = (e) => { e.stopPropagation(); if (wsSend({ type: 'waiting_done', id: w.id })) { agree.disabled = true; again.disabled = true; } };
     const again = mk('button', 'h2-btn sm', w.found ? 'Look again' : 'Look at it'); again.type = 'button';

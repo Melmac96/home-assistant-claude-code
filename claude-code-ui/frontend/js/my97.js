@@ -45,7 +45,7 @@ function draw() {
   hand.style.display = isAway() ? 'none' : '';
 }
 lots.onclick = () => {
-  if (!S.isConnected) { appendInfoLine('No connection, so Lots to send was not changed. Try again when haAi is back.'); return; }   // my115
+  if (!S.isConnected) { appendInfoLine('No connection, so Lots to send was not changed. Try again when Alf Ai is back.'); return; }   // my115
   if (!on) {
     on = true; count = 0; draw(); wsSend({ type: 'lots_set', on: true });
     sendText("Lots to send: I'm listing changes. Work on each one quietly in the background, ask me no questions, and keep your questions until I press Done.");

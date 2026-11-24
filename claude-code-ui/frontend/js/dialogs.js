@@ -21,7 +21,7 @@ import { dialogBack, dialogBody, dialogLater, dialogOverlay, dialogProgress, dia
 // my115: an answer only leaves the screen once it has really gone; with no link he is told and the card stays
 function wsOut(o) {
   if (S.ws && S.isConnected && S.ws.readyState === 1) { try { S.ws.send(JSON.stringify(o)); return true; } catch { /* below */ } }
-  appendInfoLine('No connection, so your answer was not sent. It is still on screen: press it again when haAi is back.');
+  appendInfoLine('No connection, so your answer was not sent. It is still on screen: press it again when Alf Ai is back.');
   return false;
 }
 

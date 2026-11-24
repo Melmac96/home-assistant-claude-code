@@ -8,7 +8,7 @@ import { mk, wsSend } from './util.js';   // my115: shared helpers
 
 const panel = mk('div', 'haai-ideas hidden');
 const head = mk('div', 'haai-ideas-head');
-const title = mk('div', 'haai-ideas-title', 'haAi ideas');
+const title = mk('div', 'haai-ideas-title', 'Alf Ai ideas');
 const close = mk('button', 'haai-ideas-btn', 'Close'); close.type = 'button';
 head.append(title, close);
 const formBox = mk('div', 'haai-ideas-form');
@@ -78,6 +78,6 @@ close.onclick = () => panel.classList.add('hidden');
 
 const mic = document.getElementById('mic-btn');
 const btn = mk('button', 'attach-btn h3-btn', '💡'); btn.type = 'button'; btn.id = 'ideas-btn';
-btn.title = 'haAi ideas'; btn.setAttribute('aria-label', btn.title);
+btn.title = 'Alf Ai ideas'; btn.setAttribute('aria-label', btn.title);
 if (mic) mic.after(btn); else document.querySelector('.composer-actions')?.append(btn);
 btn.onclick = openPanel;

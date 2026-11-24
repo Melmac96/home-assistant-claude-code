@@ -192,7 +192,7 @@ function fillSheet() {
   sheet.append(mk('h4', null, 'Status'));
   const k = tokensK();
   if (lost || (health && health.status !== 'good' && health.status !== 'wait')) {
-    const text = lost ? '● haAi has lost touch with the home check' : health.status === 'stale' ? '● The home check has stopped updating' : `● ${health.count} ${health.count === 1 ? 'thing needs' : 'things need'} a look`;
+    const text = lost ? '● Alf Ai has lost touch with the home check' : health.status === 'stale' ? '● The home check has stopped updating' : `● ${health.count} ${health.count === 1 ? 'thing needs' : 'things need'} a look`;
     const r = row(text, null, 'r', mk('span', null, '›')); r.onclick = () => { closeAll(); $('health-btn').click(); };
     sheet.append(r);
   }
@@ -228,7 +228,7 @@ stb.onclick = () => { fillSheet(); open(sheet); };
 // ── menu ─────────────────────────────────────────────────────────────────────
 function fillMenu() {
   menu.textContent = '';
-  const h = mk('h4', null, '✳ haAi'); if (updateNo()) h.append(mk('span', 'tidy-sm tidy-inl', 'update ' + updateNo()));
+  const h = mk('h4', null, '✳ Alf Ai'); if (updateNo()) h.append(mk('span', 'tidy-sm tidy-inl', 'update ' + updateNo()));
   menu.append(h);
   const go = (t, id) => { const r = mk('button', 'tidy-row'); r.type = 'button'; r.textContent = t; r.onclick = (e) => { e.stopPropagation(); closeAll(); $(id).click(); }; menu.append(r); };   // my69: stop the menu tap reaching the page, or History opened and shut again at once
   if (!document.documentElement.classList.contains('haai-tablet')) { if ($('prev-chat-btn') && !$('prev-chat-btn').classList.contains('hidden')) go('↩ Previous chat', 'prev-chat-btn'); }   // my64: phone only; my69: New chat is back on the bar
@@ -297,7 +297,7 @@ new MutationObserver(drawBars).observe($('usage-bars'), { subtree: true, attribu
 // ── bottom row ───────────────────────────────────────────────────────────────
 const actions = document.querySelector('.composer-actions');
 const keepBtn = $('keep-btn');
-promptInput.placeholder = 'Ask haAi…';
+promptInput.placeholder = 'Ask Alf Ai…';
 keepBtn.textContent = '+';
 keepBtn.setAttribute('aria-label', 'Add this bit to my message');
 const moreBtn = mk('button', 'attach-btn tidy-morebtn'); moreBtn.type = 'button'; moreBtn.title = 'More'; moreBtn.setAttribute('aria-label', 'More');
@@ -390,7 +390,7 @@ messagesEl.addEventListener('scroll', () => jl.classList.toggle('hidden', nearEn
 jl.onclick = () => { messagesEl.scrollTop = messagesEl.scrollHeight; };
 function setWm() {
   wm.textContent = '';
-  wm.append(document.createTextNode('✳ haAi'));
+  wm.append(document.createTextNode('✳ Alf Ai'));
   if (updateNo()) wm.append(mk('small', null, 'update ' + updateNo()));
   wm.classList.toggle('hidden', messagesEl.children.length > 0);
 }
