@@ -11,6 +11,7 @@ import { S } from './state.js';
 import { isOtherChat, onChatsMessage, dispatch } from './multichat.js';   // my58, my77
 import { updateUsage, noteReply } from './usage.js';   // my45
 import { showAccounts, showAccountResult, showStats } from './accounts.js';
+import { showAccountDetails } from './accpage.js';   // my148
 import { showPairCode, showDevices } from './devices.js';
 import { appendLimitNotice, hideAcBanner, refreshBgTasksStrip, showAcBanner } from './banners.js';
 import { clearScreen } from './commands.js';
@@ -596,6 +597,10 @@ function handleOne(msg) {
 
     case 'account_result':
       showAccountResult(msg);
+      break;
+
+    case 'account_details':   // my148: one account's own page
+      showAccountDetails(msg);
       break;
 
     case 'rate_limit':

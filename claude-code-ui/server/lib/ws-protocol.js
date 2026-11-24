@@ -46,6 +46,7 @@ import { awayState, setAway, startMy96 } from './my96.js';   // my96
 import { lotsState, setLots } from './my96.js';   // my97 (my115: lives in my96.js now)
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 import { answerTyped, addWaitingAnswers } from './my146.js';   // my146
+import { accountDetails } from './my148.js';   // my148
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
 // my88: a page that is still open and only reconnects says what it already has (ws.have, from the address it
@@ -515,6 +516,7 @@ const handlers = {
   timed_cancel(_ws, msg) { cancelTimed(String(msg.id || '')); },   // my79 H17
   draft(_ws, msg) { setDraft(msg); },   // my79 H9
   answer_typed(_ws, msg) { answerTyped(msg); },   // my146
+  account_details(ws, msg) { accountDetails(ws, msg, send); },   // my148: one account's own page
   waiting_get(ws) { send(ws, { type: 'waiting', list: handover.getWaiting() }); },
   waiting_done(_ws, msg) {
     handover.waitingDone(String(msg.id || ''));

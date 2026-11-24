@@ -6,6 +6,7 @@
 import { S } from './state.js';
 import { setAuthenticated } from './connection.js';
 import { loginBtn, loginDesc, loginTitle, loginScreen } from './dom.js';
+import { openAccountPage } from './accpage.js';   // my148: each account's own page
 
 const list = document.getElementById('accounts-list');
 const confirmBox = document.getElementById('account-confirm');
@@ -76,7 +77,7 @@ function tbar(label, f, cap, wide) {
   return d;
 }
 function holdButton(a, held) {
-  const b = mk('button', 'settings-btn acc-hold' + (held ? ' active' : ''), held ? 'ACTIVE' : 'Hold'); b.type = 'button';
+  const b = mk('button', 'settings-btn acc-hold' + (held ? ' active' : ''), held ? 'ON HOLD' : 'Hold'); b.type = 'button';
   b.onclick = () => { b.disabled = send({ type: 'account_hold', email: a.email, on: !held }); };   // this one account only
   return b;
 }
@@ -104,7 +105,7 @@ function drawTiles() {
     if (wide) {
       let note = isMain_(e) ? 'Used last. Never past 75%, because you use it in the Claude app too.' : 'Used before it resets. Can go up to 95%.';
       if (turn && turn.email === e) note = turn.on ? `Its turn now, until ${when(turn.close)}.` : `Its turn opens ${when(turn.open)}.`;
-      if (isHeld) note = 'On hold: haAi will not use it until you tap ACTIVE. A reply already running finishes first.';
+      if (isHeld) note = 'On hold: haAi will not use it until you tap ON HOLD to take the hold off. A reply already running finishes first.';
       t.append(mk('div', 'acc-tnote acc-center', note));
       if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', q.forecast));
     } else if (q && q.forecast && /I predict you will use up/.test(q.forecast)) t.append(mk('div', 'acc-tnote acc-center acc-atx', 'May run out before it resets'));
@@ -112,7 +113,13 @@ function drawTiles() {
     if (due) { const c = mk('button', 'settings-btn', 'Cancel'); c.type = 'button'; c.onclick = () => { c.disabled = send({ type: 'account_switch_cancel' }); }; btns.append(c); }
     else { const s = mk('button', 'settings-btn', 'Switch'); s.type = 'button'; if (a.active) s.disabled = true; else s.onclick = () => askSwitch(a); btns.append(s); }
     btns.append(holdButton(a, isHeld));
-    t.append(btns);
+    t.append(btns, mk('div', 'acc-tnote acc-center acc-more', 'Tap for its own page \u203a'));
+    // my148 (Michael 24 Nov): tapping the account (not one of its buttons) opens its own page
+    t.classList.add('acc-tap');
+    t.onclick = (ev) => {
+      if (ev.target.closest('button')) return;
+      openAccountPage(a, { short: shortName(a.email), label: PAID[e] || '', chip: chip.textContent, chipCls: chip.className.replace('acc-chip', '').trim(), cap, held: isHeld });
+    };
     return t;
   };
   const first = saved[0];

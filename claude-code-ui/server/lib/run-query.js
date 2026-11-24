@@ -46,6 +46,7 @@ import { my74Prompt, noteDoneText, noteJobUsage, finishTurn } from './my74.js'; 
 import { checkRun, recordUsage, recordReplyCost, pctOf, five, takeWarning, getPending, setPending, setManual } from './my90.js';   // my90, my95, my99, my122
 import { freshenQuota, renewDone } from './extras.js';   // my99, my115
 import { listAccounts, switchTo } from './accounts.js';   // my90, my123
+import { noteReply } from './my148.js';   // my148: exact tokens per account
 import { my79Prompt } from './my79.js';   // my79
 import { my93Prompt } from './my93.js';   // my93
 import { my96Prompt } from './my96.js';   // my96
@@ -536,6 +537,7 @@ async function runQueryInner(ws, { text, permissionMode, model, effort, add, aut
 
       } else if (event.type === 'assistant' && !isNoResponsePlaceholder(event)) {
         sawReply = true;   // my114
+        try { noteReply(acct, event); } catch {}   // my148
         for (const block of (event.message?.content || [])) {
           if (block.type === 'text' && block.text) {
             vlog(`text: ${block.text.length} chars`);

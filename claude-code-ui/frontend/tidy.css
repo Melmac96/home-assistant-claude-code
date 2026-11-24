@@ -244,3 +244,32 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .acc-quota .aq-forecast{display:flex;align-items:flex-start;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #2a2b30;color:#9c9d9e}
 .acc-quota .aq-forecast.aq-warn{color:#e87777}
 .acc-quota .aq-wi{width:14px;height:14px;flex:none;margin-top:2px}
+
+/* my148 (Michael 24 Nov 2026, Look B + Helpers tab): each account's own page. No white text: grey #9c9d9e. */
+.acc-tap { cursor: pointer; }
+.acc-more { color: #6b9fd4; }
+.ap-page { position: fixed; inset: 0; z-index: 900; background: var(--bg); color: #9c9d9e; overflow-y: auto; padding: 12px 12px 32px; display: flex; flex-direction: column; gap: 12px; font-size: 15px; line-height: 1.4; }
+.ap-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; max-width: 640px; width: 100%; margin: 0 auto; }
+.ap-top b { font-size: 18px; color: #6b9fd4; }
+.ap-back { background: none; border: 0; padding: 4px 0; color: #6b9fd4; font: inherit; cursor: pointer; }
+.ap-body, .ap-pane { display: flex; flex-direction: column; gap: 12px; max-width: 640px; width: 100%; margin: 0 auto; }
+.ap-wait { text-align: center; padding: 24px 0; }
+.ap-fore { border: 1px solid; border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); }
+.ap-tabs { display: flex; gap: 8px; }
+.ap-tabs button { flex: 1; padding: 8px 0; background: none; border: 1px solid var(--border); border-radius: 8px; color: #9c9d9e; font: inherit; font-size: 14px; cursor: pointer; }
+.ap-tabs button.ap-on { border-color: #46bb68; color: #46bb68; }
+.ap-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.ap-card h4 { margin: 0; font-size: 13px; font-weight: 600; color: #6b9fd4; }
+.ap-page small { font-size: 12px; color: #6f7072; }
+.ap-bar { display: flex; flex-direction: column; gap: 4px; }
+.ap-bl { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.ap-bl b { text-align: right; }
+.ap-g { width: 100%; height: auto; display: block; }
+.ap-gx, .ap-gl { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #6f7072; }
+.ap-gx span:last-child { text-align: right; }
+.ap-page table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ap-page th { font-weight: 600; color: #6b9fd4; text-align: right; padding: 4px 0; }
+.ap-page td { text-align: right; padding: 4px 0; border-top: 1px solid var(--surface-2); }
+.ap-page td:first-child, .ap-page th:first-child { text-align: left; }
+.ap-hrs { display: flex; align-items: flex-end; gap: 2px; height: 48px; }
+.ap-hrs i { flex: 1; background: #6b9fd4; border-radius: 1px; }
