@@ -94,9 +94,35 @@ function paneHtml(name, a, now) {
   return card('The account', facts.filter((f) => f[1]).map(([k, v]) => `<div class="ap-bl"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''));
 }
 
+function provPane(name, p, f) {   // his Q2 A (24 Nov): Other Paid / Free accounts
+  if (name === 'Overview') return card(p.label, (p.lines || []).map((l) => `<div class="ap-line">${esc(l)}</div>`).join('') || '<small>No figures yet</small>');
+  if (name === 'Helper jobs') {
+    if (!f) return card('', '<small>No free helper jobs on this account in the last 7 days. The figures above count chats run on it.</small>');
+    const w = f.windows || {}, jobs = { long: 'Reading big files and logs', fast: 'Quick small jobs' };
+    return card(f.name, table([['Uses', (d) => num(w[d]?.uses)], ['No answer', (d) => num(w[d]?.failed)], ['Letters read', (d) => big(w[d]?.chars)],
+      ['Words back', (d) => big(w[d]?.words)], ['Time', (d) => Math.round(w[d]?.secs || 0) + ' s'], ['Cost', () => '$0.00']])) +
+      card('Kinds of job (7 days)', Object.entries(f.jobs || {}).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<div class="ap-bl"><span>${esc(jobs[k] || k)}</span><b>${num(v)}</b></div>`).join('')) +
+      `<small>Last used ${uk(f.last)} UK time. The free helpers' record keeps sizes and times only, never what was read.</small>`;
+  }
+  const facts = [['Name', p.label], ['Kind', p.paid ? 'Paid' : 'Free'], ['Ready to use', p.ready ? 'Yes' : 'No'], ['In use now', p.active ? 'Yes' : 'No'],
+    ['Model', p.model ? p.model.replace(/^[^/]+\//, '') : 'none set'], ['Its id in haAi', p.id]];
+  return card('The account', facts.map(([k, v]) => `<div class="ap-bl"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''));
+}
+
 function draw() {
   if (!page) return;
   const body = page.querySelector('.ap-body'); body.innerHTML = '';
+  if (info && info.prov) {
+    const names = ['Overview', 'Helper jobs', 'Account'];
+    if (!names.includes(tab)) tab = 'Overview';
+    const tabs = mk('div', 'ap-tabs');
+    for (const t of names) { const b = mk('button', t === tab ? 'ap-on' : '', t); b.type = 'button'; b.onclick = () => { tab = t; draw(); }; tabs.append(b); }
+    body.append(tabs);
+    if (tab === 'Helper jobs' && !want) { body.append(mk('div', 'ap-wait', 'Getting the figures...')); return; }
+    if (tab === 'Helper jobs' && want.error) { body.append(mk('div', 'ap-wait', want.error)); return; }
+    body.append(html('div', 'ap-pane', provPane(tab, info.prov, want && want.provider)));
+    return;
+  }
   const a = want && want.details;
   if (!a) { body.append(mk('div', 'ap-wait', want && want.error ? want.error : 'Getting the figures...')); return; }
   body.append(html('div', '', fbox(a)));
@@ -121,6 +147,22 @@ export function openAccountPage(a, extra) {
   draw();
   if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'account_details', email: a.email }));
   else { want = { error: 'haAi is not connected just now, so I could not get the figures.' }; draw(); }
+}
+
+// his Q2 A: the Other Paid / Free tiles open a page too. p = the provider from the stats message
+export function openProviderPage(p) {
+  closeAccountPage();
+  info = { prov: p, email: 'provider:' + p.id }; want = null; tab = 'Overview';
+  page = mk('div', 'ap-page');
+  const top = mk('div', 'ap-top'), back = mk('button', 'ap-back', '‹ Accounts'); back.type = 'button';
+  back.onclick = () => { if (history.state && history.state.apPage) history.back(); else closeAccountPage(); };
+  top.append(back, mk('b', '', p.label), mk('span', 'acc-chip ' + (p.active ? 'acc-b' : p.ready ? 'acc-g' : 'acc-a'), p.active ? 'In use' : p.ready ? 'Ready' : 'Not ready'));
+  page.append(top, mk('div', 'ap-body'));
+  document.body.append(page);
+  try { history.pushState({ apPage: 1 }, ''); } catch { /* not needed */ }
+  draw();
+  if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ type: 'account_details', email: info.email }));
+  else want = { error: 'haAi is not connected just now, so I could not get the figures.' };
 }
 
 export function showAccountDetails(msg) {

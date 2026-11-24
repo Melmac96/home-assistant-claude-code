@@ -6,7 +6,7 @@
 import { S } from './state.js';
 import { setAuthenticated } from './connection.js';
 import { loginBtn, loginDesc, loginTitle, loginScreen } from './dom.js';
-import { openAccountPage } from './accpage.js';   // my148: each account's own page
+import { openAccountPage, openProviderPage } from './accpage.js';   // my148: each account's own page
 
 const list = document.getElementById('accounts-list');
 const confirmBox = document.getElementById('account-confirm');
@@ -319,6 +319,8 @@ export function showStats(msg) {
     else t.append(mk('span', 'acc-chip ' + (p.ready ? 'acc-g' : 'acc-r'), p.ready ? 'Ready' : 'Not ready'));
     const lines = mk('div', 'acc-lines'); for (const l of p.lines || []) lines.append(mk('div', '', l)); t.append(lines);
     if (!p.active && p.ready && freeOn) { const b = mk('button', 'settings-btn', 'Use'); b.type = 'button'; b.onclick = () => { b.disabled = send({ type: 'provider_use', id: p.id }); }; const bb = mk('div', 'acc-tbtns acc-one'); bb.append(b); t.append(bb); }
+    t.append(mk('div', 'acc-tnote acc-center acc-more', 'Tap for its own page \u203a'));   // my148 (his Q2 A)
+    t.classList.add('acc-tap'); t.onclick = (ev) => { if (!ev.target.closest('button')) openProviderPage(p); };
     tiles[p.paid ? 'paid' : 'free'].push(t);
   }
   for (const [k, box] of [['paid', paidProv], ['free', freeProv]]) {

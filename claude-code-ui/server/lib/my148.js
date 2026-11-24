@@ -27,7 +27,9 @@ export function noteReply(acct, event) {
 
 export function accountDetails(ws, msg, send) {
   const email = String(msg.email || '').toLowerCase();
+  const prov = email.startsWith('provider:') ? email.slice(9) : null;   // his Q2 A: Other Paid / Free accounts too
   const reply = (d) => {
+    if (prov) { send(ws, d ? { type: 'account_details', email, made: d.made, provider: (d.providers || {})[prov] || null } : { type: 'account_details', email, error: 'I could not get the figures for this account.' }); return; }
     const a = d && Object.entries(d.accounts || {}).find(([k]) => k.toLowerCase() === email);
     send(ws, a ? { type: 'account_details', email: a[0], made: d.made, details: a[1] }
       : { type: 'account_details', email, error: 'I could not get the figures for this account.' });

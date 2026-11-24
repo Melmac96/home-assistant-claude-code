@@ -273,3 +273,4 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .ap-page td:first-child, .ap-page th:first-child { text-align: left; }
 .ap-hrs { display: flex; align-items: flex-end; gap: 2px; height: 48px; }
 .ap-hrs i { flex: 1; background: #6b9fd4; border-radius: 1px; }
+.ap-line { font-size: 13px; padding: 4px 0; border-top: 1px solid var(--surface-2); } .ap-line:first-of-type { border-top: 0; }
