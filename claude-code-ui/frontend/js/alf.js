@@ -6,19 +6,34 @@
  * Two pictures on top of each other; a new mood fades in over 1 s (his Alf changing speed). Every picture is loaded
  * at the start and the size is fixed in the CSS, so nothing jumps or resizes.
  * my153 (Michael 25 Nov 2026, Look C): his own moving Alf GIFs (whole Alf, animated WebP 107x60) replace the smoke Alf.
+ * my154 (Michael 25 Nov 2026, Q1 D "Do A" + the keyboard one for working): a command that only reads or looks something up
+ * counts as reading (Thinking); real changes and builds show his Working Alf typing on the keyboard (m16, GIF 5).
  */
 import { S } from './state.js';
 import { every } from './util.js';
 import { messagesEl } from './dom.js';
 import { allowanceNow } from './usage.js';
 
-const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14' };
-const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Working', cheeky: 'Question waiting',
+const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16' };
+const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Big idea', working: 'Working', cheeky: 'Question waiting',
   happy: 'Job finished', sorry: 'Something failed', sleepy: 'You are asleep', fedup: 'Account nearly used up' };
-const src = (m) => `alf/${FILE[m]}.webp?v=my153`;
-const READING = /^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead|ToolSearch)$/;
+const src = (m) => `alf/${FILE[m]}.webp?v=my154`;
+const READING = /^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead|ToolSearch|Skill|TodoRead)$/;
+// a command line only counts as reading when every part of it is a look-only command and nothing is written to a file
+const LOOK = /^(cat|head|tail|grep|egrep|zgrep|rg|ls|find|wc|sort|uniq|cut|tr|awk|diff|cmp|stat|file|which|type|echo|printf|date|pwd|du|df|md5sum|sha256sum|ps|pgrep|uptime|free|jq|less|tree|basename|dirname|realpath|readlink|nl|column|true|sleep|test|\[|unzip -l|webpmux -info|ffprobe|git (status|log|diff|show|branch|check-ignore)|ha-tools (state|states|get|history|logs?|search|list))\b/;
+const WRITES = /(^|[^0-9&])>(?!\s*\/dev\/null)|\bsed\s+-i|\btee\b|-X\s*(POST|PUT|DELETE)|\brm\b|\bmv\b|\bcp\b|\bmkdir\b/;
+function lookOnly(cmd) {
+  if (!cmd || WRITES.test(cmd)) return false;
+  return cmd.split(/&&|\|\||;|\||\n/).map((p) => p.trim().replace(/^(cd\s+\S+|[A-Z_]+=\S*)\s*/g, '').trim())
+    .filter(Boolean).every((p) => LOOK.test(p) || /^(sed|awk)\s+-n\b/.test(p) || /^(cd|export)\b/.test(p));
+}
+function reading(t) {
+  if (!t) return true;                                        // no tool yet = thinking it through
+  if (READING.test(t.name || '')) return true;
+  return t.name === 'Bash' && lookOnly(String((t.input || {}).command || ''));
+}
 
-Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my153`; });   // all loaded at the start
+Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my154`; });   // all loaded at the start
 
 const box = document.createElement('span'); box.className = 'alf';
 const a = new Image(), b = new Image(); a.alt = b.alt = ''; a.className = 'on';
@@ -41,7 +56,7 @@ function lastReply() {   // the newest reply after his last message (raw words, 
 }
 function mood() {
   if (window.haaiAlfTest && FILE[window.haaiAlfTest]) return window.haaiAlfTest;
-  if (S.isRunning) return S.lastTool && !READING.test(S.lastTool.name || '') ? 'idea' : 'thinking';
+  if (S.isRunning) return reading(S.lastTool) ? 'thinking' : 'working';
   if (window.haaiAsleep) return 'sleepy';
   if (!messagesEl.querySelector('.bubble-user, .bubble-assistant')) return 'start';
   const r = lastReply();
