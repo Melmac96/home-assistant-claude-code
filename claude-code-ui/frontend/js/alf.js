@@ -5,6 +5,7 @@
  * he is asleep in bed = Sleepy, account nearly used up (5-hour or 7-day 90%+) = Fed up.
  * Two pictures on top of each other; a new mood fades in over 1 s (his Alf changing speed). Every picture is loaded
  * at the start and the size is fixed in the CSS, so nothing jumps or resizes.
+ * my153 (Michael 25 Nov 2026, Look C): his own moving Alf GIFs (whole Alf, animated WebP 107x60) replace the smoke Alf.
  */
 import { S } from './state.js';
 import { every } from './util.js';
@@ -14,10 +15,10 @@ import { allowanceNow } from './usage.js';
 const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14' };
 const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Working', cheeky: 'Question waiting',
   happy: 'Job finished', sorry: 'Something failed', sleepy: 'You are asleep', fedup: 'Account nearly used up' };
-const src = (m) => `alf/${FILE[m]}.svg?v=my151`;
+const src = (m) => `alf/${FILE[m]}.webp?v=my153`;
 const READING = /^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead|ToolSearch)$/;
 
-Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.svg?v=my151`; });   // all loaded at the start
+Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my153`; });   // all loaded at the start
 
 const box = document.createElement('span'); box.className = 'alf';
 const a = new Image(), b = new Image(); a.alt = b.alt = ''; a.className = 'on';
