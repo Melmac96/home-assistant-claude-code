@@ -137,7 +137,9 @@ export function readFileAsDataURL(file) {
 // reads. Non-images (and anything that won't decode) are read as-is.
 export const MAX_IMG_DIM = 1568;
 export function fileToDataURL(file, isImage) {
-  if (!isImage) return readFileAsDataURL(file);
+  // my152: GIFs are sent untouched, or re-encoding would keep only the first
+  // frame and the movement would be lost.
+  if (!isImage || /^image\/gif$/i.test(file.type || '') || /\.gif$/i.test(file.name || '')) return readFileAsDataURL(file);
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
