@@ -142,7 +142,27 @@ r3.append(r3i, r3t);
 // The job line (r3) moves into the opened box. The opened box (the strip) holds every group under its own icon.
 const trk = mk('span', 'h7-trk'), l2 = mk('span', 'h7-l2 hidden'), r4 = mk('span', 'h7-icons hidden');
 r1.replaceChildren(bDot, bStep, trk, bNow, bMore);
-bar.append(r1, l2, r2, r4);
+// my162 (Michael 27 Nov, Q2 A): jobs that carry on by themselves after my reply ends, one line each with their own
+// count ("Filing Alfs 12 of 17"), under the tools line, whether I am working or finished. Finished or stopped jobs
+// stay for 15 minutes (the server tidies them away); a job that died shows as stopped in red.
+const bgRow = mk('span', 'h162-bg hidden');
+bar.append(r1, l2, r2, bgRow, r4);
+let bgList = [];
+export function onBgJobs(msg) { bgList = Array.isArray(msg.jobs) ? msg.jobs : []; drawBg(); }
+function drawBg() {
+  const k = JSON.stringify(bgList); if (bgRow.dataset.k === k) return; bgRow.dataset.k = k;
+  bgRow.textContent = '';
+  for (const j of bgList.slice(0, 3)) {
+    const l = mk('span', `h6-r2 h162-l ${j.state || 'running'}`), i = mk('span', 'h6-i'), t = mk('span', 'h6-t');
+    const count = j.total ? ` ${j.n} of ${j.total}` : '';
+    const now = j.now ? ` · ${j.now}` : '';
+    if (j.state === 'done') { i.textContent = '✓'; t.textContent = `${j.title}: finished${j.total ? `, all ${j.total}` : ''}${now}`; }
+    else if (j.state === 'failed' || j.state === 'stopped') { i.textContent = '⚠'; t.textContent = `${j.title} stopped${count ? ' at' + count : ''}${now}`; }
+    else { i.textContent = '↻'; t.textContent = `${j.title}${count}${j.now ? ' · Now: ' + j.now : ''}`; }
+    l.append(i, t); bgRow.append(l);
+  }
+  bgRow.classList.toggle('hidden', !bgList.length);
+}
 strip.classList.add('h7-open');
 function drawTrack(n, t) {
   const k = `${n}/${t}`; if (trk.dataset.k === k) return; trk.dataset.k = k; trk.textContent = '';

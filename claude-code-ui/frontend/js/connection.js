@@ -4,6 +4,7 @@
  */
 import { onQuickMessage } from './quick.js';   // my28
 import { onHomeHealth } from './homehealth.js';   // my34
+import { onBgJobs } from './batch2.js';   // my162
 import { onKeepMessage } from './keep.js';   // my35
 import { onExtrasMessage } from './extras.js';   // my40
 import { onSearchResults } from './sessions.js';   // my28
@@ -573,6 +574,10 @@ function handleOne(msg) {
 
     case 'home_health':   // my34
       onHomeHealth(msg);
+      break;
+
+    case 'bg_jobs':   // my162: jobs running by themselves, live on the bar
+      onBgJobs(msg);
       break;
 
     case 'search_results':   // my28

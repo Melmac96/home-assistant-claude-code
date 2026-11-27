@@ -314,3 +314,6 @@ body.win-empty #messages,body.win-empty #input-form,body.win-empty .h6-bar,body.
 .win-pick{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);right:auto;width:340px;max-width:calc(100vw - 24px);max-height:calc(100vh - 40px);overflow:auto;z-index:60}
 .win-pick .chat-note{padding:8px 14px 10px;color:#9c9d9e}
 .win-pick .mc-item.win-on{box-shadow:inset 2px 0 0 #46bb68}
+/* my162 background jobs on the working bar: same size and grey as the tools line; finished = green tick, stopped = the page's red */
+.h162-bg{display:flex;flex-direction:column;gap:2px;min-width:0}.h162-bg.hidden{display:none}
+.h162-l.running .h6-i{color:#8aa4b5}.h162-l.done .h6-i{color:#46bb68}.h162-l.stopped,.h162-l.failed,.h162-l.stopped .h6-i,.h162-l.failed .h6-i{color:#e87777}

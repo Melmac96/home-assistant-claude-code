@@ -47,6 +47,7 @@ import { lotsState, setLots } from './my96.js';   // my97 (my115: lives in my96.
 import { startMy79, listTimed, cancelTimed, getDatedChecks, checksAfterTick, getDraft, setDraft } from './my79.js';   // my79
 import { answerTyped, addWaitingAnswers } from './my146.js';   // my146
 import { accountDetails } from './my148.js';   // my148
+import { bgJobsMessage, startBgJobs } from './my162.js';   // my162
 const withPos = (sid) => ({ sid: sid || null, scrollPos: scrollmem.getPos(sid) });   // my73: where he was reading
 
 // my88: a page that is still open and only reconnects says what it already has (ws.have, from the address it
@@ -66,6 +67,7 @@ const sums = (items) => ({ n: items.length, h: items.length ? itemSum(items[item
 
 startSelfUpdateCheck();
 startHomeHealthCheck();
+startBgJobs();   // my162
 startReminders();   // my45
 startBrief();   // my46
 startMy74();   // my74
@@ -118,6 +120,7 @@ function greetFor(ws) {
   send(ws, { type: 'quick', ...handover.getQuick() });
   send(ws, { type: 'self_update', ...getSelfUpdate() });   // my33
   send(ws, { type: 'home_health', ...getHomeHealth() });   // my34
+  send(ws, bgJobsMessage());   // my162: jobs running by themselves
   send(ws, { type: 'keep', list: keep.list() });   // my35
   send(ws, { type: 'stars', list: extras.listStars() });   // my40
   send(ws, { type: 'prefs', ...getPrefs() });   // my41
