@@ -281,3 +281,7 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .alf{position:absolute;left:0;top:50%;width:var(--alfw);height:var(--alf);margin-top:calc(var(--alf) / -2);pointer-events:none}
 .alf img{position:absolute;inset:0;width:100%;height:100%;opacity:0;transition:opacity 1s ease-in-out}
 .alf img.on{opacity:1}
+/* my157 (Michael 27 Nov 2026: "the Alf in the working bar can be a lot bigger, make them autofit into the space it has"): his phone's bigger
+   text made the bar's 3 lines grow while Alf stayed 60px. Every size now follows the bar's own text size (em), so Alf always fills the full
+   inside height of the usual 3-line bar at any text size, drawn at that size from the start (no jump; the rare 4th icon line does not resize him) */
+.h6-bar.has-alf{--alf:calc(3.846em + 10px);--alfw:calc(var(--alf) * 1.7833);min-height:calc(3.846em + 12px)}
