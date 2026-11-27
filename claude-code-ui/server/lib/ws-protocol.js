@@ -378,9 +378,13 @@ const handlers = {
     if (msg.mode === 'extra' || msg.mode === 'extra_free') {
       if (chatList().length >= MAX_RUNNING) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `You already have ${MAX_RUNNING} chats open. A finished one folds away 30 minutes after it ends, or start a New chat here instead.` }); return; }
       if (msg.mode === 'extra_free' && [...chats.values()].some((c) => c.free)) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: 'A grey free-account chat is already open.' }); return; }
-      const slot = makeSlot();
+      // my161: Alf Ai 2 / Alf Ai 3 open their own window's chat, on the account he picked for it
+      const want = [2, 3].includes(Number(msg.win)) ? Number(msg.win) : 0;
+      if (want && [...chats.values()].some((c) => c.win === want)) { send(ws, { type: 'chat_limit', max: MAX_RUNNING, text: `Alf Ai ${want} already has a chat open.` }); return; }
+      const slot = makeSlot(want);
       slot.opened = true;
       if (msg.mode === 'extra_free') { slot.free = true; slot.colour = pickColour(slot); }
+      else if (want && typeof msg.pin === 'string' && listAccounts().saved.some((a) => a.email === msg.pin)) slot.pin = msg.pin;
       ws.chat = slot.id; view.last = slot.id;
       send(ws, { type: 'chat_opened', id: slot.id });
       broadcastChats();
@@ -406,6 +410,17 @@ const handlers = {
     startFresh();
     { const sl = chats.get(ws.chat); if (sl) { sl.asks = false; sl.cost = 0; sl.costLast = {}; sl.finishedAt = 0; } }   // my77: a fresh start in the same chat
     if (msg.save) handover.saveInBackground(old);   // my28: the old chat's notes, behind the scenes
+    broadcastChats();
+  },
+
+  // my161 (Michael 2026-11-27, Q1 B): the account he picks by hand for the chat in Alf Ai 2 or Alf Ai 3 (used from its next reply)
+  chat_pin(ws, msg) {
+    const slot = chats.get(String(msg.id || ''));
+    if (!slot || slot.free || slot.win === 1) return;
+    const a = listAccounts().saved.find((x) => x.email === msg.email);
+    if (!a) { send(ws, { type: 'chat_limit', text: 'That account is not saved.' }); return; }
+    slot.pin = a.email; slot.pinNote = '';
+    log('INFO', `my161: window ${slot.win} (${slot.id}) put on ${a.email} by hand`);
     broadcastChats();
   },
 

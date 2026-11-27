@@ -226,7 +226,9 @@ function drawApp() {
   if (mine && mine >= latest.versionCode) { appOut.append(mk('span', '', `You have the newest Alf Ai app (version ${mine}).`)); return; }
   appOut.append(mk('span', '', mine ? `A newer Alf Ai app is ready: version ${latest.versionCode} (you have ${mine}). ` : `The newest Alf Ai app is version ${latest.versionCode}. `));
   const a = mk('a', 'settings-btn app-get', `Install version ${latest.versionCode}`);
-  a.href = latest.url; a.target = '_blank'; a.rel = 'noopener';
+  // my161: Alf Ai 2 / Alf Ai 3 get their own copy of the same version (haAi-vN-alf2.apk / -alf3.apk)
+  const w = document.body.classList.contains('win-2') ? 2 : document.body.classList.contains('win-3') ? 3 : 0;
+  a.href = w ? latest.url.replace(/\.apk$/, `-alf${w}.apk`) : latest.url; a.target = '_blank'; a.rel = 'noopener';
   appOut.append(a);
 }
 if (appBtn) appBtn.onclick = () => { asked = true; appOut.textContent = 'Checking…'; send({ type: 'app_latest_get' }); };

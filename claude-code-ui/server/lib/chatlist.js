@@ -8,7 +8,8 @@ import { pendingDialogs } from './dialogs.js';
 import { pendingPermissions } from './permissions.js';
 import { sessionTitle } from './sessions.js';
 import { broadcast } from './broadcast.js';
-import { freeServiceNow } from './accounts.js';   // my78
+import { freeServiceNow, listAccounts } from './accounts.js';   // my78; my161 listAccounts
+import { pinOptions } from './my161.js';   // my161
 
 function needsYou(id) {
   for (const d of pendingDialogs.values()) if (d.chat === id) return true;
@@ -26,12 +27,27 @@ export function chatList() {
     const status = needsYou(s.id) || (s.asks && !s.query) ? 'needs' : s.query ? 'working' : s.finishedUnseen ? 'finished' : 'idle';
     out.push({ id: s.id, n: s.n, name: s.label || name || 'New chat', status, account: s.free ? 'Free' : (s.account || ''),
       colour: s.colour ? s.colour.key : '', colourName: s.colour ? s.colour.name : '', hex: s.colour ? s.colour.hex : '',
-      free: !!s.free, ending: !!s.endWhenDone, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '' });   // my78
+      free: !!s.free, ending: !!s.endWhenDone, cost: Math.round(s.cost || 0), service: s.free ? (s.service || freeServiceNow() || 'Free') : '',   // my78
+      win: s.win || 0, pin: s.pin || '', pinNote: s.pinNote || '' });   // my161
   }
+  // my161 (Q3 A): two windows on one account = 'shared' on both tabs
+  const n = {};
+  for (const c of out) { const a = String(c.pin || c.account || '').toLowerCase(); if (a && !c.free) n[a] = (n[a] || 0) + 1; }
+  for (const c of out) { const a = String(c.pin || c.account || '').toLowerCase(); c.shared = !!(a && !c.free && n[a] > 1); }
   return out;
 }
 
-export function chatsMessage() { return { type: 'chats', chat: null, list: chatList(), max: MAX_RUNNING, working: runningChats().length }; }
+/** my161: the accounts a window can be put on (cached 5 s: the chat list is sent often). */
+let optCache = { at: 0, v: [] };
+function accountOptions() {
+  if (Date.now() - optCache.at < 5000) return optCache.v;
+  let v = [];
+  try { v = pinOptions(listAccounts().saved); } catch { /* no accounts readable */ }
+  optCache = { at: Date.now(), v };
+  return v;
+}
+
+export function chatsMessage() { return { type: 'chats', chat: null, list: chatList(), max: MAX_RUNNING, working: runningChats().length, accts: accountOptions() }; }
 
 export function broadcastChats() { broadcast(chatsMessage()); }
 

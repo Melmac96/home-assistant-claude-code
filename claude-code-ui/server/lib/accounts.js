@@ -13,6 +13,8 @@ import path from 'path';
 import { execFile, spawn } from 'child_process';   // my114 spawn; my115: no spawnSync any more
 import { CLAUDE_CONFIG_DIR, DATA_DIR } from './config.js';
 import { log } from './log.js';
+import { chats } from './chats.js';   // my161
+import { pinPick, chooseFree } from './my161.js';   // my161
 import { chooseAccount, tidyState, takeWarning, getPending, setPending, holdBigChat, isMain, fourthEmail, fourthWindow, five, week, isRested, restedMap, capFor } from './my90.js';   // my143; hold buttons
 const lc4 = (e) => String(e || '').toLowerCase();   // my122   // my90
 
@@ -231,12 +233,16 @@ export function pickChatAccount(otherAccounts, slot = null, alone = true) {
   // my90/my95 (Michael 2026-11-13): the account whose 5 hours reset soonest, moving on BEFORE a reply that would pass 95%; none with room = stop.
   tidyState(saved);
   const on = (slot && slot.account) || cur.email;   // my99: the account this chat is on now (moving costs more)
+  // my161 (Michael 2026-11-27, Q3 A): the accounts picked by hand in the other windows count as in use, so a window only shares one when nothing else is left
+  for (const c of chats.values()) if (c !== slot && c.pin && !c.free) used.add(c.pin);
+  // my161 (Q1 B, Q2 A): windows 2 and 3 run on his own pick; when it cannot be used they move on to the next free account by themselves
+  if (slot && slot.pin && !slot.free) { const p = pinPick(slot, saved, used, on); if (p) return as(p); }
   // cache-opt phase 2 (Michael 2026-11-20): a chat over ~45k tokens does not hop accounts (cold cache) unless its account is at the 95% hard stop.
   if (slot && slot.account && slot.ctx && slot.ctx.sid === slot.sessionId && !isRested(slot.account) && holdBigChat(slot.account, slot.ctx.tokens, saved)) {   // hold buttons: a held account never keeps a big chat
     const stayBig = saved.find((x) => x.email === slot.account);
     if (stayBig) { log('INFO', `cache-opt: chat is ${Math.round(slot.ctx.tokens / 1000)}k tokens, stays on ${slot.account} (no cold-cache hop)`); return as(stayBig); }
   }
-  const pick = chooseAccount(saved, used, on) || chooseAccount(saved, new Set(), on);
+  const pick = chooseFree(saved, used, on);   // my161: shares a window's account before using the 4th outside its turn
   // my122 (Michael 2026-11-15): every account at 75% or more = NO stop and NO move: the chat stays on its account and a red warning is shown.
   if (!pick) {
     // my143: never stay on Main past 75% or on the 4th outside its turn; then the other account with the most left

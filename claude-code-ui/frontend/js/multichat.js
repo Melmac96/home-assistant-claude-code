@@ -32,6 +32,23 @@ S.chatsWorking = 0;
 S.only = null;                // a chat shown by itself, or null = all chats together
 S.renderChat = null;          // the chat whose drawing values are in S right now
 
+// ── my161 (Michael 2026-11-27): Alf Ai, Alf Ai 2 and Alf Ai 3 are three whole apps, each a "window" fixed to its own chat ──
+// The app says which window it is (HaAiNative.win()); ?win=N does the same in a browser for tests. 0 = an ordinary page (all as before).
+// Tabs stay at the top; tapping another chat's tab opens that chat's own app. Windows 2 and 3 run on the account he picks by hand.
+export const WIN = (() => {
+  try {
+    const q = Number(new URLSearchParams(location.search).get('win'));
+    if ([1, 2, 3].includes(q)) return q;
+    const n = window.HaAiNative && window.HaAiNative.win ? Number(window.HaAiNative.win()) : 0;
+    return [1, 2, 3].includes(n) ? n : 0;
+  } catch { return 0; }
+})();
+if (WIN) document.body.classList.add('win-mode', `win-${WIN}`);
+const APPNAME = (w) => (w === 1 ? 'Alf Ai' : `Alf Ai ${w}`);
+const mine = () => (WIN ? S.chatList.find((c) => (c.win || 1) === WIN) : null);
+/** Opens another window's app. false = that app is not on this device (or this is not the app). */
+function openWin(w) { try { return !!(window.HaAiNative && window.HaAiNative.openWin && window.HaAiNative.openWin(w)); } catch { return false; } }
+
 // Messages that belong to ONE chat. Everything else (usage, accounts, settings...) is for every screen.
 const PER_CHAT = new Set(['history', 'background_tasks', 'task_notice', 'agent_report', 'cleared', 'user', 'text', 'tool_use', 'tool_result',
   'permission_request', 'permission_resolved', 'result', 'run_idle', 'context_usage', 'compacted', 'user_dialog', 'user_dialog_cancelled',
@@ -160,7 +177,8 @@ function historyFor(id, msg, handleOne) {
     sweep(id, true);
     if (justOpened.has(id) && !(msg.items || []).length && !S.isRunning) {
       justOpened.delete(id);
-      appendInfoLine(`${label(byId(id))} is open. Choose its colour button below, then type your first message.`);
+      const oc = byId(id);   // my161: in Alf Ai 2 / 3 there are no colour buttons: the window is the chat
+      appendInfoLine(WIN && oc ? `${APPNAME(oc.win || WIN)} is open${oc.free ? ' on a free account' : oc.pin ? ` on the ${shortName(oc.pin)} account` : ''}. Type your first message.` : `${label(oc)} is open. Choose its colour button below, then type your first message.`);
       sweep(id, false);
     }
   } finally {
@@ -259,7 +277,7 @@ document.querySelector('#input-form .composer').before(row);
 
 const shortAcct = (a) => (a === 'Free' ? 'Free' : a ? shortName(a) : 'Main');   // my78: Main / 2nd, not the start of the email
 // my78: which service a chat runs on, shown in its typing box
-const service = (c) => (c.free ? (c.service || 'Free') : `Claude${c.account ? ' ' + shortName(c.account) : ''}`);
+const service = (c) => (c.free ? (c.service || 'Free') : `Claude${(c.pin || c.account) ? ' ' + shortName(c.pin || c.account) : ''}`);   // my161: his pick first
 
 function renderBars() {
   const on = merged();
@@ -276,25 +294,38 @@ function renderBars() {
   if (on) {
     const all = mk('button', 'mc-tab mc-all' + (!S.only ? ' sel' : ''), 'All'); all.type = 'button';
     all.onclick = () => { S.only = null; renderBars(); };
-    tabs.append(all);
+    if (!WIN) tabs.append(all);   // my161: each app shows only its own chat
     for (const c of S.chatList) {
       const t = mk('button', 'mc-tab' + (S.only === c.id ? ' sel' : '') + (c.id === S.chat ? ' target' : '') + (c.free ? ' free' : '')); t.type = 'button';
       t.style.setProperty('--mc', c.hex || '#78808a');
       const top = mk('span', 'mc-t1'); top.append(mk('b', 'mc-n', String(c.n)), mk('span', 'mc-name', c.name || 'New chat'));
       const st = mk('span', 'mc-t2');
       const s = mk('span', 'mc-st', LABEL[c.status] || ''); s.style.color = COLOUR[c.status] || ''; st.append(s);
-      st.append(mk('span', 'mc-acct', c.free ? 'Free' : shortAcct(c.account)));
+      const ac = mk('span', 'mc-acct', c.free ? 'Free' : shortAcct(c.pin || c.account) + (c.shared ? ' · shared' : ''));   // my161: his pick, and 'shared' when two windows use one account
+      if (WIN > 1 && c.win === WIN && !c.free) { ac.classList.add('win-acct'); ac.setAttribute('role', 'button'); ac.setAttribute('aria-label', 'Change the account for this window');
+        ac.onclick = (e) => { e.stopPropagation(); showPick('change'); }; }
+      st.append(ac);
       if (!c.free) st.append(mk('span', 'mc-cost', `${c.cost || 0}%`));
       t.append(top, st);
       t.append(endButton(c, 'mc-end'));   // my132: End chat on every tab (was the my78 x, finished chats only)
       t.title = `${label(c)}: ${LABEL[c.status] || ''}`;
-      t.onclick = () => { setTarget(c.id); S.only = c.id; renderBars(); messagesEl.scrollTop = messagesEl.scrollHeight; };
+      t.onclick = () => {
+        if (WIN) {   // my161: another chat's tab opens that chat's own app
+          const w = c.win || 1;
+          if (w === WIN) { messagesEl.scrollTop = messagesEl.scrollHeight; return; }
+          if (!openWin(w)) toast(`${APPNAME(w)} is not on this device yet.`);
+          return;
+        }
+        setTarget(c.id); S.only = c.id; renderBars(); messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
+      if (WIN) t.classList.toggle('win-own', (c.win || 1) === WIN);
       tabs.append(t);
     }
   }
   // colour buttons above the typing box
   row.textContent = '';
-  if (on) {
+  if (WIN) row.classList.add('hidden');   // my161: each app sends only to its own chat
+  if (on && !WIN) {
     row.append(mk('span', 'mc-to', 'Send to'));
     for (const c of S.chatList) {
       const b = mk('button', 'mc-btn' + (c.id === S.chat ? ' sel' : '') + (S.only === c.id ? ' only' : '')); b.type = 'button';
@@ -346,6 +377,12 @@ function renderMenu() {
     menu.append(b);
   };
   item('New chat here', 'Starts this chat again. The old one is kept in Previous chats.', true, '', () => openNewChat());
+  if (WIN) {   // my161: the 2nd and 3rd chats are the Alf Ai 2 and Alf Ai 3 apps
+    for (const w of [1, 2, 3]) if (w !== WIN) item(`Open ${APPNAME(w)}`, S.chatList.some((c) => (c.win || 1) === w) ? 'Its chat is open there.' : 'Opens that app. It asks which account to use.', true, '',
+      () => { if (!openWin(w)) toast(`${APPNAME(w)} is not on this device yet.`); });
+    menu.append(mk('div', 'chat-note', 'Several chats at once use your allowance faster.'));
+    return;
+  }
   for (const k of [2, 3]) {
     const ok = count === k - 1 && count < max;
     item(`Open a ${ORD[k]} chat`, 'Runs alongside, on the account with the most allowance left.', ok,
@@ -368,12 +405,79 @@ newSessionBtn.onclick = (e) => {
 };
 document.addEventListener('click', (e) => { if (!menu.contains(e.target) && !newSessionBtn.contains(e.target)) menu.classList.add('hidden'); });
 
+// ── my161: each window keeps to its own chat; a window with no chat yet asks which account to use ──
+function lockWin() {
+  const m = mine();
+  if (m) {
+    if (S.chat !== m.id) { swapTo(m.id); S.chat = m.id; send({ type: 'chat_target', id: m.id }); }
+    S.only = merged() ? m.id : null;
+    document.body.classList.remove('win-empty');
+    if (pickOpen === 'open') hidePick();
+  } else {
+    document.body.classList.add('win-empty');
+    if (pickOpen !== 'open') showPick('open');
+  }
+}
+const pick = mk('div', 'sessions-panel mc-menu win-pick hidden'); pick.id = 'win-pick';
+document.getElementById('app').append(pick);
+let pickOpen = null;   // 'open' = this window has no chat yet, 'change' = changing its account
+const RANK = ['Main', '2nd', '3rd', '4th', '5th'];
+const rankOf = (e) => { const i = RANK.indexOf(shortName(e)); return i < 0 ? 9 : i; };
+const pct = (v) => (v == null ? 'not known' : `${v}%`);
+function hidePick() { pick.classList.add('hidden'); pickOpen = null; }
+function showPick(kind) {
+  pickOpen = kind;
+  pick.textContent = '';
+  const m = mine();
+  if (WIN === 1) {   // the main window follows the account turns: only a fresh chat to start
+    pick.append(mk('div', 'sessions-head', 'Alf Ai'));
+    const b = mk('button', 'mc-item'); b.type = 'button';
+    b.append(mk('span', 'mc-it', 'Start a chat here'), mk('span', 'mc-sub', 'It uses your account turns, as always.'));
+    b.onclick = () => { hidePick(); send({ type: 'new_session', mode: 'extra', win: 1 }); };
+    pick.append(b); pick.classList.remove('hidden');
+    return;
+  }
+  pick.append(mk('div', 'sessions-head', kind === 'open' ? `${APPNAME(WIN)}: which account?` : `${APPNAME(WIN)}: change the account`));
+  pick.append(mk('div', 'chat-note', 'This window stays on the account you pick. If it runs out, it moves to the next free one by itself and keeps the chat.'));
+  const accts = (S.winAccts || []).slice().sort((x, y) => rankOf(x.email) - rankOf(y.email));
+  const busy = new Set(S.chatList.filter((c) => (c.win || 1) !== WIN && !c.free).map((c) => String(c.pin || c.account).toLowerCase()));
+  for (const a of accts) {
+    const ok = !a.why;
+    const b = mk('button', 'mc-item' + (ok ? '' : ' off') + (m && String(m.pin).toLowerCase() === a.email.toLowerCase() ? ' win-on' : '')); b.type = 'button'; b.disabled = !ok;
+    const t = mk('span', 'mc-it'); t.append(mk('span', null, shortName(a.email)));
+    if (busy.has(a.email.toLowerCase())) t.append(mk('em', 'mc-free', 'In use'));
+    b.append(t, mk('span', 'mc-sub', ok ? `5 hours ${pct(a.five)} · week ${pct(a.week)}` : a.why));
+    b.onclick = () => {
+      hidePick();
+      if (kind === 'open') send({ type: 'new_session', mode: 'extra', win: WIN, pin: a.email });
+      else if (m) send({ type: 'chat_pin', id: m.id, email: a.email });
+    };
+    pick.append(b);
+  }
+  if (kind === 'open') {   // his 27 Nov addition: a free account can be picked too
+    const fi = menuInfo, hasFree = S.chatList.some((c) => c.free);
+    const ok = !!(fi && fi.freeOk) && !hasFree;
+    const b = mk('button', 'mc-item' + (ok ? '' : ' off')); b.type = 'button'; b.disabled = !ok;
+    const t = mk('span', 'mc-it'); t.append(mk('span', null, 'Free account'), mk('em', 'mc-free', 'Free'));
+    b.append(t, mk('span', 'mc-sub', ok ? 'No health, home security, money or passwords: those stay on Claude.' : !fi ? 'Checking the free models…' : hasFree ? 'A free chat is already open.' : (fi.freeWhy || 'No free model is ready.')));
+    b.onclick = () => { hidePick(); send({ type: 'new_session', mode: 'extra_free', win: WIN }); };
+    pick.append(b);
+    if (!fi) send({ type: 'new_chat_menu' });
+  } else {
+    const c = mk('button', 'mc-item'); c.type = 'button'; c.append(mk('span', 'mc-it', 'Keep it as it is'));
+    c.onclick = hidePick; pick.append(c);
+  }
+  pick.classList.remove('hidden');
+}
+if (WIN) document.addEventListener('click', (e) => { if (pickOpen === 'change' && !pick.contains(e.target) && !e.target.closest('.win-acct')) hidePick(); });
+
 /** Server messages about chats. Returns true when it handled the message. */
 export function onChatsMessage(msg) {
   switch (msg.type) {
     case 'chats': {
       const wasMerged = merged();
       S.chatList = msg.list || []; S.chatsMax = msg.max || 3; S.chatsWorking = msg.working || 0;
+      if (msg.accts) S.winAccts = msg.accts;   // my161
       if (msg.viewing) S.chat = msg.viewing;
       else if (!S.chat && S.chatList.length) S.chat = S.chatList[0].id;
       if (S.chat && !byId(S.chat) && S.chatList.length) { swapTo(S.chatList[0].id); S.chat = S.chatList[0].id; send({ type: 'chat_target', id: S.chat }); }
@@ -387,6 +491,7 @@ export function onChatsMessage(msg) {
       const missing = S.chatList.filter((c) => !loaded.has(c.id)).map((c) => c.id);
       if (merged() && missing.length) { for (const m of missing) loaded.add(m); send({ type: 'chat_histories', ids: missing }); }
       if (!merged()) { S.only = null; for (const k of [...loaded]) if (!ids.has(k)) loaded.delete(k); }
+      if (WIN) lockWin();   // my161
       renderBars();
       if (merged() !== wasMerged) markFirsts();
       if (!menu.classList.contains('hidden')) renderMenu();
@@ -397,7 +502,7 @@ export function onChatsMessage(msg) {
     case 'chat_limit': toast(msg.text); return true;
     case 'chat_overlap': toast(`Two chats are changing the same thing (${String(msg.what).split('/').pop()}): ${label(byId(msg.chat))} and ${label(byId(msg.with))}. Check they do not undo each other.`); return true;
     case 'new_chat_ask': askNewChat().then((mode) => { if (mode) send({ type: 'new_session', save: true, mode }); }); return true;
-    case 'new_chat_menu': menuInfo = msg; if (!menu.classList.contains('hidden')) renderMenu(); return true;
+    case 'new_chat_menu': menuInfo = msg; if (!menu.classList.contains('hidden')) renderMenu(); if (pickOpen) showPick(pickOpen); return true;
     default: return false;
   }
 }

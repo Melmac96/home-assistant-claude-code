@@ -17,7 +17,18 @@ export const COLOURS = [
   { key: 'gold', name: 'Gold', hex: '#e6b84a' },
   { key: 'teal', name: 'Teal', hex: '#3fc8b8' },
 ];
-export const FREE_COLOUR = { key: 'grey', name: 'Free', hex: '#9a9da4' };   // grey colour, called "Free" on screen
+export const FREE_COLOUR = { key: 'grey', name: 'Free', hex: '#9a9da4' };
+// my161 (Michael 2026-11-27): each Alf Ai app is a window with its own chat and colour: Alf Ai 2 purple, Alf Ai 3 dark blue.
+export const WIN_COLOURS = {
+  1: { key: 'main', name: 'Main', hex: '#e6b84a' },
+  2: { key: 'purple', name: 'Purple', hex: '#b48cff' },
+  3: { key: 'darkblue', name: 'Dark blue', hex: '#4a72d8' },
+};
+/** my161: the first window (1, 2 or 3) no other chat has. 0 = all three taken. */
+export function freeWin() {
+  const used = new Set([...chats.values()].map((c) => c.win));
+  return [1, 2, 3].find((w) => !used.has(w)) || 0;
+}   // grey colour, called "Free" on screen
 export const CLASH_MS = 10 * 60 * 1000;   // my77: "changed in the last few minutes" = 10 minutes
 export const FOLD_MS = 30 * 60 * 1000;    // my77: a finished chat folds into Previous chats after 30 minutes
 
@@ -26,7 +37,7 @@ export const chats = new Map();   // id -> slot
 export const view = { last: 'c1' };
 let counter = 0;
 
-export function makeSlot() {
+export function makeSlot(win = 0) {
   counter += 1;
   const slot = {
     id: `c${counter}`, n: counter, sessionId: null, query: null, run: null,
@@ -34,6 +45,7 @@ export function makeSlot() {
     account: null,        // email this chat's run is using ('' = the shared main sign-in)
     finishedUnseen: false, touched: new Map(),
     colour: null, free: false, opened: false,   // my77: own colour, grey free-account chat, opened from the New chat list
+    win: win || freeWin(), pin: null, pinNote: '',   // my161: which Alf Ai app it belongs to, his hand-picked account (windows 2 and 3)
     asks: false, cost: 0, costLast: {}, finishedAt: 0, clashOk: new Map(), clashWarned: new Map(),
   };
   slot.colour = pickColour(slot);
@@ -46,6 +58,7 @@ makeSlot();   // c1, the chat that exists at start-up
 /** my77: the first colour no other chat is using (a free chat is grey). */
 export function pickColour(slot) {
   if (slot.free) return FREE_COLOUR;
+  if (WIN_COLOURS[slot.win]) return WIN_COLOURS[slot.win];   // my161
   const used = new Set([...chats.values()].filter((c) => c !== slot && c.colour).map((c) => c.colour.key));
   return COLOURS.find((c) => !used.has(c.key)) || COLOURS[(slot.n - 1) % COLOURS.length];
 }

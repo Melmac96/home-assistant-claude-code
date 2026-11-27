@@ -294,3 +294,23 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 /* my160 (Michael 27 Nov 2026, his Q2 A, Q3 A): Starting, Calm, Thinking, Cheeky, Happy, Sorry and Sleepy are now close-ups of Alf at
    his desk like the Working one (still pictures m21-m27, made with Gemini 3 Pro Image from his desk Alf), so they stay whole too */
 .alf img[src*="/m2"]{transform:none}
+/* my161 (Michael 2026-11-27): Alf Ai 2 and Alf Ai 3 windows. Version 2 'lines only' (his pick): the top panel, working panel and
+   typing panel lines, the Claude badge and the New chat button in the app's own colour; nothing else changes. Main app unchanged. */
+body.win-2{--win:#b48cff;--win-dim:#9070cc}
+body.win-3{--win:#4a72d8;--win-dim:#3a5aae}
+body.win-2 .header,body.win-3 .header{border-bottom-color:var(--win)!important}
+body.win-2 .svc-badge,body.win-3 .svc-badge{border-color:var(--win)!important}
+body.win-2 #new-session-btn,body.win-3 #new-session-btn{background:var(--win-dim)!important}
+body.win-2 .h6-bar,body.win-3 .h6-bar{border-top-color:var(--win)!important}
+body.win-2 #input-form,body.win-2 .input-form,body.win-2 .composer,body.win-3 #input-form,body.win-3 .input-form,body.win-3 .composer{border-top-color:var(--win)!important}
+/* each app shows only its own chat, so its messages look exactly like a single chat (no colour boxes) */
+body.win-mode #messages.mc-on > [data-chat]{box-shadow:none;background-color:transparent;border-radius:0;padding-left:0}
+body.win-mode.mc-many #input-form .composer{border-color:var(--border)}
+body.win-2.mc-many #input-form .composer,body.win-3.mc-many #input-form .composer{border-top-color:var(--win)!important}
+body.win-mode .mc-tab.win-own{border-color:var(--mc);background:color-mix(in srgb,var(--mc) 16%,#101418)}
+body.win-mode .mc-acct.win-acct{text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+/* a window with no chat yet: only the account list shows */
+body.win-empty #messages,body.win-empty #input-form,body.win-empty .h6-bar,body.win-empty #mc-topend{visibility:hidden}
+.win-pick{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);right:auto;width:340px;max-width:calc(100vw - 24px);max-height:calc(100vh - 40px);overflow:auto;z-index:60}
+.win-pick .chat-note{padding:8px 14px 10px;color:#9c9d9e}
+.win-pick .mc-item.win-on{box-shadow:inset 2px 0 0 #46bb68}
