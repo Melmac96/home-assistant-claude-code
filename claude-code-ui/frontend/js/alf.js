@@ -8,16 +8,18 @@
  * my153 (Michael 25 Nov 2026, Look C): his own moving Alf GIFs (whole Alf, animated WebP 107x60) replace the smoke Alf.
  * my154 (Michael 25 Nov 2026, Q1 D "Do A" + the keyboard one for working): a command that only reads or looks something up
  * counts as reading (Thinking); real changes and builds show his Working Alf typing on the keyboard (m16, GIF 5).
+ * my156 (Michael 27 Nov 2026, Q1 B): his NEW Gemini Alfs (master 360 Alf, keyed see-through, 214x120) replace all 10, plus two new
+ * ones from his list: reading his files (Read/Grep/Glob) = Reading a Book (m17), looking something up on the internet = Surfing the Web (m18).
  */
 import { S } from './state.js';
 import { every } from './util.js';
 import { messagesEl } from './dom.js';
 import { allowanceNow } from './usage.js';
 
-const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16' };
-const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Big idea', working: 'Working', cheeky: 'Question waiting',
+const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16', files: 'm17', web: 'm18' };
+const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Big idea', working: 'Working', cheeky: 'Question waiting', files: 'Reading your files', web: 'Looking it up online',
   happy: 'Job finished', sorry: 'Something failed', sleepy: 'You are asleep', fedup: 'Account nearly used up' };
-const src = (m) => `alf/${FILE[m]}.webp?v=my154`;
+const src = (m) => `alf/${FILE[m]}.webp?v=my156`;
 const READING = /^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead|ToolSearch|Skill|TodoRead)$/;
 // a command line only counts as reading when every part of it is a look-only command and nothing is written to a file
 const LOOK = /^(cat|head|tail|grep|egrep|zgrep|rg|ls|find|wc|sort|uniq|cut|tr|awk|diff|cmp|stat|file|which|type|echo|printf|date|pwd|du|df|md5sum|sha256sum|ps|pgrep|uptime|free|jq|less|tree|basename|dirname|realpath|readlink|nl|column|true|sleep|test|\[|unzip -l|webpmux -info|ffprobe|git (status|log|diff|show|branch|check-ignore)|ha-tools (state|states|get|history|logs?|search|list))\b/;
@@ -33,7 +35,7 @@ function reading(t) {
   return t.name === 'Bash' && lookOnly(String((t.input || {}).command || ''));
 }
 
-Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my154`; });   // all loaded at the start
+Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my156`; });   // all loaded at the start
 
 const box = document.createElement('span'); box.className = 'alf';
 const a = new Image(), b = new Image(); a.alt = b.alt = ''; a.className = 'on';
@@ -56,7 +58,12 @@ function lastReply() {   // the newest reply after his last message (raw words, 
 }
 function mood() {
   if (window.haaiAlfTest && FILE[window.haaiAlfTest]) return window.haaiAlfTest;
-  if (S.isRunning) return reading(S.lastTool) ? 'thinking' : 'working';
+  if (S.isRunning) {
+    const n = (S.lastTool && S.lastTool.name) || '';
+    if (/^(WebFetch|WebSearch)$/.test(n)) return 'web';
+    if (/^(Read|Grep|Glob|LS|NotebookRead)$/.test(n)) return 'files';
+    return reading(S.lastTool) ? 'thinking' : 'working';
+  }
   if (window.haaiAsleep) return 'sleepy';
   if (!messagesEl.querySelector('.bubble-user, .bubble-assistant')) return 'start';
   const r = lastReply();
