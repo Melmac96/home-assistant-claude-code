@@ -291,3 +291,6 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
 .alf{overflow:hidden}
 .alf img{transform-origin:50% 7.5%;transform:scale(2.3)}
 .alf img[src*="m16."],.alf img[src*="m17."],.alf img[src*="m18."],.alf img[src*="m19."]{transform:none}   /* my159: Low Allowance stays whole too (the can and car) */
+/* my160 (Michael 27 Nov 2026, his Q2 A, Q3 A): Starting, Calm, Thinking, Cheeky, Happy, Sorry and Sleepy are now close-ups of Alf at
+   his desk like the Working one (still pictures m21-m27, made with Gemini 3 Pro Image from his desk Alf), so they stay whole too */
+.alf img[src*="/m2"]{transform:none}

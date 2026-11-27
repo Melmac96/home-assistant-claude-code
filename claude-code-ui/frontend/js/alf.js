@@ -17,10 +17,10 @@ import { every } from './util.js';
 import { messagesEl } from './dom.js';
 import { allowanceNow } from './usage.js';
 
-const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm19', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16', files: 'm17', web: 'm18' };
+const FILE = { start: 'm21', calm: 'm22', idea: 'm03', sleepy: 'm27', fedup: 'm19', cheeky: 'm24', happy: 'm25', sorry: 'm26', thinking: 'm23', working: 'm16', files: 'm17', web: 'm18' };
 const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Big idea', working: 'Working', cheeky: 'Question waiting', files: 'Reading your files', web: 'Looking it up online',
   happy: 'Job finished', sorry: 'Something failed', sleepy: 'You are asleep', fedup: 'Account nearly used up' };
-const src = (m) => `alf/${FILE[m]}.webp?v=my156`;
+const src = (m) => `alf/${FILE[m]}.webp?v=my160`;
 const READING = /^(Read|Grep|Glob|LS|WebFetch|WebSearch|NotebookRead|ToolSearch|Skill|TodoRead)$/;
 // a command line only counts as reading when every part of it is a look-only command and nothing is written to a file
 const LOOK = /^(cat|head|tail|grep|egrep|zgrep|rg|ls|find|wc|sort|uniq|cut|tr|awk|diff|cmp|stat|file|which|type|echo|printf|date|pwd|du|df|md5sum|sha256sum|ps|pgrep|uptime|free|jq|less|tree|basename|dirname|realpath|readlink|nl|column|true|sleep|test|\[|unzip -l|webpmux -info|ffprobe|git (status|log|diff|show|branch|check-ignore)|ha-tools (state|states|get|history|logs?|search|list))\b/;
@@ -36,7 +36,7 @@ function reading(t) {
   return t.name === 'Bash' && lookOnly(String((t.input || {}).command || ''));
 }
 
-Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my156`; });   // all loaded at the start
+Object.values(FILE).forEach((f) => { const i = new Image(); i.src = `alf/${f}.webp?v=my160`; });   // all loaded at the start
 
 const box = document.createElement('span'); box.className = 'alf';
 const a = new Image(), b = new Image(); a.alt = b.alt = ''; a.className = 'on';
