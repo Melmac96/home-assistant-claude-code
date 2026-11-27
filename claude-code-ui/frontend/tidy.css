@@ -317,3 +317,5 @@ body.win-empty #messages,body.win-empty #input-form,body.win-empty .h6-bar,body.
 /* my162 background jobs on the working bar: same size and grey as the tools line; finished = green tick, stopped = the page's red */
 .h162-bg{display:flex;flex-direction:column;gap:2px;min-width:0}.h162-bg.hidden{display:none}
 .h162-l.running .h6-i{color:#8aa4b5}.h162-l.done .h6-i{color:#46bb68}.h162-l.stopped,.h162-l.failed,.h162-l.stopped .h6-i,.h162-l.failed .h6-i{color:#e87777}
+/* my163 (Michael 27 Nov 2026, Q1 C): the still job Alfs are already trimmed to fill the box (Look C), so they are never zoomed */
+.alf img[src*="/w"]{transform:none}
