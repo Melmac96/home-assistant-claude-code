@@ -10,13 +10,14 @@
  * counts as reading (Thinking); real changes and builds show his Working Alf typing on the keyboard (m16, GIF 5).
  * my156 (Michael 27 Nov 2026, Q1 B): his NEW Gemini Alfs (master 360 Alf, keyed see-through, 214x120) replace all 10, plus two new
  * ones from his list: reading his files (Read/Grep/Glob) = Reading a Book (m17), looking something up on the internet = Surfing the Web (m18).
+ * my159 (Michael 27 Nov 2026, Q3 B): allowance nearly used up (the Fed up mood) now shows his Low Allowance Alf (m19, fuel can and tiny car).
  */
 import { S } from './state.js';
 import { every } from './util.js';
 import { messagesEl } from './dom.js';
 import { allowanceNow } from './usage.js';
 
-const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm08', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16', files: 'm17', web: 'm18' };
+const FILE = { start: 'm01', calm: 'm02', idea: 'm03', sleepy: 'm06', fedup: 'm19', cheeky: 'm10', happy: 'm11', sorry: 'm12', thinking: 'm14', working: 'm16', files: 'm17', web: 'm18' };
 const NAME = { start: 'New chat', calm: 'Waiting for you', thinking: 'Reading', idea: 'Big idea', working: 'Working', cheeky: 'Question waiting', files: 'Reading your files', web: 'Looking it up online',
   happy: 'Job finished', sorry: 'Something failed', sleepy: 'You are asleep', fedup: 'Account nearly used up' };
 const src = (m) => `alf/${FILE[m]}.webp?v=my156`;

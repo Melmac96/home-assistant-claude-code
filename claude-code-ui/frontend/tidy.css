@@ -290,4 +290,4 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
    Surfing the Web are desk scenes that already fill the space, so they stay whole. Fixed from the first draw, only the fade moves */
 .alf{overflow:hidden}
 .alf img{transform-origin:50% 7.5%;transform:scale(2.3)}
-.alf img[src*="m16."],.alf img[src*="m17."],.alf img[src*="m18."]{transform:none}
+.alf img[src*="m16."],.alf img[src*="m17."],.alf img[src*="m18."],.alf img[src*="m19."]{transform:none}   /* my159: Low Allowance stays whole too (the can and car) */
