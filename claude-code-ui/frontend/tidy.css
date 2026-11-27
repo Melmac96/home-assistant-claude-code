@@ -285,3 +285,9 @@ html:not(.haai-tv) .h2-step { zoom: var(--reply-ts, 1); }
    text made the bar's 3 lines grow while Alf stayed 60px. Every size now follows the bar's own text size (em), so Alf always fills the full
    inside height of the usual 3-line bar at any text size, drawn at that size from the start (no jump; the rare 4th icon line does not resize him) */
 .h6-bar.has-alf{--alf:calc(3.846em + 10px);--alfw:calc(var(--alf) * 1.7833);min-height:calc(3.846em + 12px)}
+/* my158 (Michael 27 Nov 2026, his Look A): the new whole-body Alf is tall and thin, so he left lots of room either side. Alf now shows
+   head and shoulders (zoomed 2.3 times, the top of his head kept near the top), the bar stays the same size. Working, Reading a Book and
+   Surfing the Web are desk scenes that already fill the space, so they stay whole. Fixed from the first draw, only the fade moves */
+.alf{overflow:hidden}
+.alf img{transform-origin:50% 7.5%;transform:scale(2.3)}
+.alf img[src*="m16."],.alf img[src*="m17."],.alf img[src*="m18."]{transform:none}
