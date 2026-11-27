@@ -20,7 +20,7 @@ export const COLOURS = [
 export const FREE_COLOUR = { key: 'grey', name: 'Free', hex: '#9a9da4' };
 // my161 (Michael 2026-11-27): each Alf Ai app is a window with its own chat and colour: Alf Ai 2 purple, Alf Ai 3 dark blue.
 export const WIN_COLOURS = {
-  1: { key: 'main', name: 'Main', hex: '#e6b84a' },
+  1: { key: 'purple', name: 'Purple', hex: '#b48cff' },   // his Q1 C 27 Nov: the main chat's tab stays as it is now
   2: { key: 'purple', name: 'Purple', hex: '#b48cff' },
   3: { key: 'darkblue', name: 'Dark blue', hex: '#4a72d8' },
 };
