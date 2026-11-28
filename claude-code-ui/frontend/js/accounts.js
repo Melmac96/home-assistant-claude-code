@@ -61,6 +61,7 @@ const UKT = { timeZone: 'Europe/London' };
 const hmT = (d) => d.toLocaleTimeString('en-GB', { ...UKT, hour: '2-digit', minute: '2-digit' });
 const dayT = (d) => d.toLocaleDateString('en-GB', { ...UKT, day: 'numeric', month: 'short' });
 const when = (ms) => { const d = new Date(ms); return dayT(d) === dayT(new Date()) ? hmT(d) + ' today' : d.toLocaleDateString('en-GB', { ...UKT, weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + hmT(d); };
+const whenS = (ms) => { const d = new Date(ms); return dayT(d) === dayT(new Date()) ? hmT(d) + ' today' : d.toLocaleDateString('en-GB', { ...UKT, weekday: 'short' }) + ' ' + hmT(d); };   // my164: short form for the small boxes
 const lvl = (p, cap) => (p >= cap ? 'r' : p >= 50 ? 'a' : 'g');
 function fig(q, key) {   // { p, reset } or null; a window that has reset since counts as 0
   const w = q && q[key]; if (!w || w.used == null) return null;
@@ -73,7 +74,7 @@ function tbar(label, f, cap, wide) {
   const t = mk('div', 'acc-track'), fill = mk('i', f ? 'acc-' + lvl(f.p, cap) + 'bg' : '');
   fill.style.width = (f ? Math.min(f.p, 100) : 0) + '%'; t.append(fill);
   d.append(top, t);
-  if (wide && f && f.reset) d.append(mk('div', 'acc-tnote', 'Resets ' + when(f.reset)));
+  if (f && f.reset) d.append(mk('div', 'acc-tnote', 'Resets ' + (wide ? when(f.reset) : whenS(f.reset))));   // my164 (Michael 28 Nov 2026): 5 hour and 7 day reset times in every account box, not just Main
   return d;
 }
 function holdButton(a, held) {
